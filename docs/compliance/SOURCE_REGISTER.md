@@ -83,6 +83,69 @@ Before a source is marked `VERIFIED`, record an answer with evidence for each:
   advertisements on a defined set of boards. It is **never** described as total
   Australian vacancies (ADR-0002).
 
+**Verification attempted 2026-08-28. Not completed. Status stays `UNVERIFIED`.**
+
+The primary source could not be read from the development environment, and the
+secondary source is not specific enough to rely on.
+
+**What happened with jobsandskills.gov.au.** Requests to `www.jobsandskills.gov.au`
+complete the TCP connection (0.14s) and the TLS handshake (0.35s), then receive
+no HTTP response at all until timeout. The apex domain answers normally and
+redirects to `www`. A connection that is accepted and then silently dropped at
+the application layer is a deliberate block, not a network fault.
+
+No attempt was made to work around it. Rotating user agents, spoofing browser
+headers or routing through a proxy to defeat that filter would be bypassing an
+access control, which the constitution prohibits regardless of the reason. The
+block may be geographic, may target automated clients, or may be temporary.
+
+**What data.gov.au provided.** The Internet Vacancy Index dataset is listed, and
+its licence metadata is:
+
+| Field                   | Value                                            |
+| ----------------------- | ------------------------------------------------ |
+| `license_id`            | `other-open`                                     |
+| `license_title`         | Other (Open)                                     |
+| `license_url`           | not set                                          |
+| Publishing organisation | Department of Employment and Workplace Relations |
+| `metadata_modified`     | 2023-08-11                                       |
+
+This is **not sufficient to mark the source verified.** "Other (Open)" names no
+licence, carries no URL, and states no attribution requirement. The record is
+three years stale and attributed to a predecessor department rather than to JSA.
+It establishes that the data is intended to be open; it does not establish the
+terms, and the register requires terms.
+
+**Corroborated, and useful.** The data.gov.au description confirms the semantic
+constraint independently:
+
+> This index is based on a count of online job advertisements newly lodged on
+> three main job boards (SEEK, CareerOne and Australian JobSearch) during the
+> month.
+
+Treat the specific board list as indicative rather than current, since that
+description dates from 2023 and Australian JobSearch has since been replaced by
+Workforce Australia. The principle holds regardless: the IVI is a count of
+advertisements on a defined set of boards, not a measure of all vacancies.
+
+**Indicative, from search result summaries only, and not to be relied on.** The
+IVI appears to publish by IVI Region, by SA4 (series added in 2024 and backcast
+to 2019), and by state, using ANZSCO at the 2 and 4 digit levels as recently as
+the June 2026 release. If the SA4 series was introduced in 2024 it would follow
+ASGS Edition 3, which was current then, but that is inference and has not been
+confirmed against the methodology document.
+
+**To close this out**, one of the following is needed:
+
+1. Someone able to reach the site reads
+   `jobsandskills.gov.au/copyright-and-disclaimer` and the IVI methodology page,
+   and records the licence, the attribution wording, and the ASGS edition the
+   SA4 series uses.
+2. The block turns out to be temporary and a later attempt succeeds.
+
+Until then JSA stays `UNVERIFIED` and therefore not production eligible, which
+means the product cannot launch, because JSA carries it alone.
+
 ### ABS: Australian Statistical Geography Standard boundaries
 
 - **Key:** `abs-asgs`
@@ -237,8 +300,9 @@ Independent of any terms, and not subject to trade-off:
 
 ## Change log
 
-| Date       | Change                                                                                                                                                         |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                    |
-| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.  |
-| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected. |
+| Date       | Change                                                                                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                                                                                              |
+| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                            |
+| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                           |
+| 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`. |
