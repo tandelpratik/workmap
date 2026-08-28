@@ -169,3 +169,8 @@ A milestone is incomplete if:
 - source rules are violated
 - accessibility requirements are ignored
 - design constitution is violated
+
+
+## Current source state
+
+JSA is the active live MVP source. Adzuna is pending because current onboarding requires organization/website details that are not currently available. Never fabricate or bypass. SyntheticJobSource is development-only and must be excluded from production/public data.

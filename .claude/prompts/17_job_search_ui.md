@@ -1,60 +1,9 @@
-# Prompt 17 — Job Discovery UI
+# Prompt 17 — Job Discovery UI With Source-Aware States
 
-## Context
+Build the job discovery UI using the source abstraction.
 
-This is an actual production product. The initial environment is free/low-cost, but the implementation must be maintainable and commercially upgradable.
+During development, synthetic records may be used only behind an explicit development flag and must be visibly labelled as development data.
 
-## Read first
+In production, when no authorized individual-job source is active, show a truthful unavailable/coming-soon state rather than fake listings.
 
-- `CLAUDE.md`
-- `01_PRODUCT_SPEC.md`
-- `02_ARCHITECTURE.md`
-- `03_DESIGN_SYSTEM.md`
-- `04_DATA_STRATEGY.md`
-- `05_HEATMAP_GEOSPATIAL_SPEC.md`
-- `06_FREE_TIER_MVP.md`
-- `07_COMMERCIAL_READINESS.md`
-- all relevant previous milestone documentation
-
-## Required workflow
-
-Before changing code:
-1. Inspect the repository.
-2. Identify what already exists.
-3. Identify affected files/modules.
-4. State a short implementation plan.
-5. Check for conflicts with existing architecture.
-
-## Implementation objective
-
-Build the public job-search interface following the editorial/cartographic design system. Avoid generic AI/SaaS cards. Provide search, filters, result count, sort, job rows, source, salary, location, skills and freshness. Ensure URL state is shareable/bookmarkable. Provide empty/error/loading states and responsive behavior.
-
-## Engineering requirements
-
-- Keep source-specific code isolated.
-- Preserve provenance.
-- Validate external and user data.
-- Avoid hard-coded business data.
-- Do not fabricate missing values.
-- Keep the design consistent with `03_DESIGN_SYSTEM.md`.
-- Keep WorkMap branding configurable.
-- Do not add paid infrastructure without evidence.
-- Prefer explicit, testable modules.
-- Handle loading, empty, error and unavailable states.
-
-## Verification
-
-After implementation:
-- run formatter
-- run lint
-- run typecheck
-- run relevant tests
-- inspect the final diff
-- update documentation
-- report files changed and verification results
-
-## Scope control
-
-Do not implement the next milestone.
-Do not silently redesign unrelated areas.
-If a requirement is impossible or a source permission is unclear, stop that part and document the blocker rather than guessing.
+Support keyword, occupation, location, employment type, remote type and date filters. Follow the editorial/cartographic design system and avoid generic AI/SaaS cards.

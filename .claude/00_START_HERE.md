@@ -45,3 +45,8 @@ WorkMap
 See where the work is.
 
 The name may change later. Do not couple the technical architecture to it.
+
+
+## Current implementation path
+
+JSA → geography → analytics → heatmap → occupation intelligence → synthetic job development → future authorized job provider.
