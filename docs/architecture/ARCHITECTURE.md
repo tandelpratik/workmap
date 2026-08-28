@@ -1,0 +1,146 @@
+# Architecture
+
+The consolidated technical view. Individual decisions and their trade-offs live
+in the [architecture decision records](../adr/README.md); this document describes
+the resulting system.
+
+Binding rules come from `.claude/CLAUDE.md`. Where this document and the
+constitution disagree, the constitution wins.
+
+## Shape of the system
+
+```text
+  SOURCES            adapters translate, they do not decide
+  ├── Adzuna            ──▶ integrations/adzuna
+  └── JSA IVI           ──▶ integrations/jsa
+                                  │
+                                  ▼
+                            ingestion/            validate ▸ map ▸ upsert
+                                  │               idempotent, resumable
+                                  ▼
+                            CANONICAL DATA        db/ + domain/
+                                  │
+              ┌───────────────────┼───────────────────┐
+              ▼                   ▼                   ▼
+           search/            analytics/          geography/
+              │                   │                   │
+              └───────────────────┼───────────────────┘
+                                  ▼
+                                api/               contracts + provenance
+                                  ▼
+                            app/ + components/     editorial + cartographic
+```
+
+## Module map
+
+| Directory | Responsibility | May import |
+| --- | --- | --- |
+| `app/` | Routes, pages, layouts, route handlers | components, api, config, lib |
+| `components/` | Presentation | lib, config, types |
+| `config/` | Brand, feature flags, tunable thresholds | types |
+| `domain/` | Entities, value objects, ports, rules | types, lib |
+| `db/` | Prisma schema, repositories | domain, types |
+| `integrations/` | Provider clients, DTOs, mappers | domain, types, lib |
+| `ingestion/` | Import orchestration, runs, quarantine | domain, db, integrations |
+| `analytics/` | Aggregation and summary refresh | domain, db |
+| `geography/` | Geography registry, geometry manifest | domain, db |
+| `search/` | Query building, ranking | domain, db |
+| `skills/` | Deterministic extraction, matching | domain, db |
+| `salary/` | Distribution, suppression thresholds | domain, db |
+| `lib/` | Framework-neutral utilities | types |
+| `types/` | Shared type declarations | nothing |
+| `tests/` | Unit, integration, contract tests | anything |
+| `scripts/` | Offline build tasks (geometry, data prep) | anything |
+
+### The dependency rule
+
+**Dependencies point inward.** `domain/` is the centre and imports no outer
+module. In particular, `domain/` importing `integrations/` is forbidden and
+enforced by lint (ADR-0001), not by convention.
+
+`components/` never queries the database and never calls a provider. Data
+reaches it through `app/` or `api/`.
+
+## Data flow
+
+1. **Fetch.** An adapter calls a provider, respecting rate limits, and returns
+   raw records plus a cursor.
+2. **Validate.** Zod parses each record. Failures are quarantined with the error;
+   the run continues (ADR-0005, ADR-0008).
+3. **Map.** A provider mapper produces canonical objects. Unavailable fields are
+   marked unavailable, never invented.
+4. **Persist.** Upsert on `(sourceKey, sourceId)`; `contentHash` skips unchanged
+   records. Provenance is written with the record.
+5. **Aggregate.** Scheduled refresh recomputes summary tables, recording sample
+   size and basis (ADR-0004).
+6. **Serve.** API returns values wrapped in provenance, with missingness explicit
+   (ADR-0002).
+7. **Render.** Loading, empty, error and unavailable are all implemented; every
+   visualisation has an accessible equivalent.
+
+## Two data lineages
+
+The most important structural rule in the system.
+
+| | Official | Derived |
+| --- | --- | --- |
+| Source | JSA IVI and other published datasets | Listings indexed by this platform |
+| Means | An indicator of online advertised demand | A description of our own corpus |
+| Storage | `MarketObservation` | Summary tables from `JobListing` |
+| Label | Named dataset and reference period | Explicitly marked as platform-derived |
+| Combined? | **Never** into one value | **Never** into one value |
+
+JSA IVI is an online job-advertisement indicator. It is never presented as total
+Australian vacancies. See ADR-0002.
+
+## Naming
+
+- Domain and API vocabulary is generic: `Job`, `Company`, `Geography`,
+  `/api/jobs`. The brand never appears in a technical identifier (ADR-0007).
+- Provider names appear only inside `integrations/`, where they are correct.
+- Database identifiers follow the same rule as domain types.
+
+## Visual grammar
+
+From the design constitution, and structural rather than decorative:
+
+- **WHERE** is a map. **WHAT** is a matrix. **WHEN** is a trend.
+- Editorial and cartographic: paper surfaces, ink text, thin rules, typography-led
+  hierarchy, generous whitespace.
+- The map is a primary interface, not a widget inside nested cards.
+- Listings are editorial rows, not oversized cards.
+- Explicitly excluded: AI gradients, glassmorphism, glowing cards, gradient text,
+  sparkle iconography, generic dashboard card grids, oversized SaaS heroes.
+
+## Accessibility
+
+Not a later milestone, but a structural requirement:
+
+- Every map state has an equivalent table (geography, value, change, rank).
+- Meaning is never encoded by colour alone; state is also conveyed by text or
+  pattern.
+- Semantic headings, labelled controls, visible focus, keyboard operability.
+- Legends state metric, units, scale, period and source.
+
+## Scaling path
+
+Each step happens only when a measurement justifies it (ADR-0004, ADR-0006).
+
+```text
+now       Next.js on Vercel + Neon Postgres + cron ingestion
+  ↓       search latency or corpus size crosses recorded thresholds
+next      read replica, materialised views, tuned indexes
+  ↓       ingestion volume outgrows batched cron
+then      dedicated worker process on a container host
+  ↓       search capability genuinely absent
+later     dedicated search engine
+  ↓       traffic justifies the cost
+finally   hosted observability, edge caching, additional providers
+```
+
+The domain model does not change at any step. That is the point of ADR-0001.
+
+## Current status
+
+No application code exists yet. Milestone 02 implements the scaffold described
+here.
