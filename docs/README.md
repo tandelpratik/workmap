@@ -34,6 +34,7 @@ verified. No product features and no labour market data yet. Setup instructions
 are in the [root README](../README.md).
 
 **Source position:** JSA is the active source and carries the launch product.
+JSA IVI and ABS ASGS are both verified as CC BY 4.0 and production eligible.
 Adzuna is blocked at onboarding and no job listings ship until it or another
 authorized provider is activated. A development-only synthetic source exists for
 building the job pipeline and can never run in production. See

@@ -4,8 +4,8 @@ The constitution requires every source to have a documented compliance status
 before production use. This register is that document.
 
 **Status of this register: incomplete.** It was created at milestone 01 so that
-no source can quietly reach production unverified. One source (`abs-asgs`) has
-now been verified against its published terms; the rest have not. Milestone 30
+no source can quietly reach production unverified. Two sources (`jsa-ivi` and `abs-asgs`) have now been verified against their
+published terms; the rest have not. Milestone 30
 completes the remainder, and any milestone that touches a specific source must
 verify that source first.
 
@@ -39,13 +39,13 @@ this register.
 
 ## Current state
 
-| Source      | Kind                | Activation         | Compliance     | Production eligible      |
-| ----------- | ------------------- | ------------------ | -------------- | ------------------------ |
-| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `UNVERIFIED`   | No, pending verification |
-| `abs-asgs`  | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0       |
-| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                       |
-| `adzuna`    | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No                       |
-| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                |
+| Source      | Kind                | Activation         | Compliance     | Production eligible |
+| ----------- | ------------------- | ------------------ | -------------- | ------------------- |
+| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0  |
+| `abs-asgs`  | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0  |
+| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                  |
+| `adzuna`    | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No                  |
+| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**           |
 
 ## What every source must answer
 
@@ -71,17 +71,88 @@ Before a source is marked `VERIFIED`, record an answer with evidence for each:
 - **Key:** `jsa-ivi`
 - **Kind:** Labour-market indicator
 - **Activation:** `ACTIVE`. Designated the live MVP source.
-- **Compliance:** `UNVERIFIED`
+- **Compliance:** `VERIFIED`
+- **Verified on:** 2026-08-28, from the copyright and disclaimer page, supplied
+  by the product owner because the site is unreachable from the development
+  environment (see the earlier attempt below).
 - **Needed by:** Milestone 05 (importer), 06 (history)
-- **Open questions:** licence terms of the published data files; required
-  attribution wording; permitted derived and aggregated publication;
-  redistribution of the underlying series.
-- **Critical path:** This is now the only source of public value at launch. Its
-  licence verification blocks production, not just a feature. Verify before
-  milestone 05 rather than at milestone 30.
-- **Semantic constraint (already binding):** IVI counts online job
-  advertisements on a defined set of boards. It is **never** described as total
-  Australian vacancies (ADR-0002).
+
+**Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0).
+
+> All content on the Jobs and Skills Australia website is provided under a
+> Creative Commons Attribution 4.0 International Licence with the exception of:
+> content supplied by third parties, the Commonwealth Coat of Arms, material
+> protected by a trade mark, any images and/or photographs.
+
+**Answers to the twelve questions**
+
+| Question              | Answer                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Commercial use        | Permitted. CC BY 4.0 places no restriction on commercial use                                                        |
+| Display rights        | Permitted, no volume or extent limit                                                                                |
+| Redistribution        | Permitted                                                                                                           |
+| Derived data          | Permitted. Aggregation and reformatting are adaptations, which CC BY allows                                         |
+| Caching and retention | No restriction stated                                                                                               |
+| Deletion obligations  | None stated                                                                                                         |
+| Attribution           | Required: "© Commonwealth of Australia". Full wording below                                                         |
+| Branding constraints  | Coat of Arms, trade marks, third-party content and **all images and photographs** are excluded and must not be used |
+| Application links     | Not applicable to this source                                                                                       |
+| Rate limits           | None stated. Data files are downloaded periodically, not fetched per request                                        |
+| Acceptable use        | See the linking clause below                                                                                        |
+| Terms reviewed        | 2026-08-28                                                                                                          |
+
+**Required attribution.** The site mandates "© Commonwealth of Australia". CC BY
+4.0 additionally requires a licence notice, a link to the licence, and an
+indication that changes were made. The product aggregates and reformats, so the
+change indication applies. The string the product must display:
+
+> Based on Jobs and Skills Australia data. Internet Vacancy Index,
+> © Commonwealth of Australia, licensed under
+> [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Figures have been
+> aggregated and reformatted for display.
+
+**A clause worth flagging.** Under an "Attribution" heading, the page also says:
+
+> You may link to this website at your full expense and responsibility. In doing
+> so you must not alter any of the website's contents, frame or reformat the
+> files, pages, images, information and materials from this website on any other
+> website. We reserve the right to prevent linking.
+
+Read in isolation, "reformat the ... information and materials ... on any other
+website" would forbid exactly what this product does. Read in context it is
+scoped by "In doing so", meaning while linking, and concerns framing and
+mirroring their pages rather than reuse of CC BY licensed data. The two readings
+cannot both be right: the CC BY grant above it explicitly permits adaptation and
+redistribution, and a CC BY licence once granted is irrevocable.
+
+**Operating rules adopted, which satisfy either reading:**
+
+- Never frame, iframe, mirror or reproduce JSA pages.
+- Reuse the data, not their presentation of it.
+- Always attribute as above, and state that figures were adapted.
+- Link to JSA pages plainly, without altering or wrapping them.
+
+**Recommended before monetisation:** written confirmation from
+`copyright@dewr.gov.au` that reuse of IVI data in a commercial product is within
+the CC BY grant. `07_COMMERCIAL_READINESS.md` requires commercial rights to be
+verified before monetisation, and a one-line email removes the only ambiguity in
+this entry.
+
+**No warranty.** JSA states it makes no representation about the accuracy,
+reliability, currency or completeness of the material. The product must not
+present IVI figures as guaranteed accurate, and must show reference periods so a
+reader can judge currency.
+
+**Semantic constraint (binding):** IVI counts online job advertisements on a
+defined set of boards. It is **never** described as total Australian vacancies
+(ADR-0002).
+
+**Still open, and not a licence question:** which ASGS edition the IVI SA4
+series is reported against. That lives in the IVI methodology, not here, and it
+determines whether milestone 05 joins to Edition 4 or must also load Edition 3.
+
+**Evidence:** `jobsandskills.gov.au/copyright-and-disclaimer`, contents supplied
+by the product owner on 2026-08-28.
 
 **Verification attempted 2026-08-28. Not completed. Status stays `UNVERIFIED`.**
 
@@ -135,16 +206,14 @@ the June 2026 release. If the SA4 series was introduced in 2024 it would follow
 ASGS Edition 3, which was current then, but that is inference and has not been
 confirmed against the methodology document.
 
-**To close this out**, one of the following is needed:
+**Resolved the same day.** The product owner supplied the contents of
+`jobsandskills.gov.au/copyright-and-disclaimer`, which is recorded above. The
+licence question is closed. The IVI methodology page was not supplied, so the
+ASGS edition question remains open.
 
-1. Someone able to reach the site reads
-   `jobsandskills.gov.au/copyright-and-disclaimer` and the IVI methodology page,
-   and records the licence, the attribution wording, and the ASGS edition the
-   SA4 series uses.
-2. The block turns out to be temporary and a later attempt succeeds.
-
-Until then JSA stays `UNVERIFIED` and therefore not production eligible, which
-means the product cannot launch, because JSA carries it alone.
+The access block itself is unchanged: the site is still unreachable from this
+environment, so any future JSA page this project needs has to be supplied the
+same way, or fetched from somewhere that can reach it.
 
 ### ABS: Australian Statistical Geography Standard boundaries
 
@@ -306,3 +375,4 @@ Independent of any terms, and not subject to trade-off:
 | 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                            |
 | 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                           |
 | 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`. |
+| 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                |

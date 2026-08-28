@@ -20,13 +20,28 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     displayName: 'Jobs and Skills Australia',
     kind: 'MARKET_INDICATOR',
     activation: 'ACTIVE',
-    complianceStatus: 'UNVERIFIED',
+    complianceStatus: 'VERIFIED',
     attributionRequired: true,
+    // The site requires "© Commonwealth of Australia". CC BY 4.0 additionally
+    // requires a licence notice, a link, and an indication that changes were
+    // made, and we aggregate and reformat. Stored verbatim: the UI renders this
+    // and must not paraphrase a licence requirement.
+    attributionText:
+      'Based on Jobs and Skills Australia data. Internet Vacancy Index, ' +
+      '© Commonwealth of Australia, licensed under CC BY 4.0. Figures have been ' +
+      'aggregated and reformatted for display.',
+    termsUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    homepageUrl: 'https://www.jobsandskills.gov.au/data/internet-vacancy-index',
     notes:
-      'Internet Vacancy Index. Designated the active market intelligence source and ' +
-      'the only source of public value at launch, so licence verification blocks ' +
-      'production rather than a feature. Counts online job advertisements on a ' +
-      'defined set of boards; never described as total Australian vacancies.',
+      'Internet Vacancy Index. Verified 2026-08-28 as CC BY 4.0: commercial use, ' +
+      'redistribution and adaptation permitted with attribution. Excluded from the ' +
+      'licence and never used: third-party content, the Commonwealth Coat of Arms, ' +
+      'trade marks, and all images and photographs. The site also carries a linking ' +
+      'clause forbidding framing or reformatting its pages on another website; we ' +
+      'read that as governing page framing rather than the CC BY data grant, and ' +
+      'never frame or mirror JSA pages. Counts online job advertisements on a ' +
+      'defined set of boards; never described as total Australian vacancies. JSA ' +
+      'publishes no warranty as to accuracy, currency or completeness.',
   },
   {
     key: 'abs-asgs',

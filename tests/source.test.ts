@@ -97,7 +97,7 @@ describe('source registry', () => {
     // happen as a side effect of an unrelated edit. Adding a key here requires
     // a matching entry in docs/compliance/SOURCE_REGISTER.md with evidence.
     const eligible = sourceDescriptors.filter(isProductionEligible).map((d) => d.key);
-    expect(eligible).toEqual(['abs-asgs']);
+    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs']);
   });
 
   it('gives every verified source that requires attribution its exact wording', () => {
