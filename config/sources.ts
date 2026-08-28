@@ -33,12 +33,27 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     displayName: 'Australian Bureau of Statistics',
     kind: 'GEOGRAPHY',
     activation: 'ACTIVE',
-    complianceStatus: 'UNVERIFIED',
+    complianceStatus: 'VERIFIED',
     attributionRequired: true,
+    // CC BY 4.0 requires attribution, a licence notice, a link to the licence,
+    // and an indication that changes were made. The product simplifies geometry
+    // for display (ADR-0003), so the change indication is mandatory. Stored
+    // verbatim: the UI renders this string and must not paraphrase it.
+    attributionText:
+      'Based on Australian Bureau of Statistics data. Australian Statistical ' +
+      'Geography Standard (ASGS) Edition 4, July 2026 to June 2031. ' +
+      '© Commonwealth of Australia, administered by the ABS, licensed under ' +
+      'CC BY 4.0. Boundaries have been simplified for display.',
+    termsUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    homepageUrl:
+      'https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files',
     notes:
-      'Australian Statistical Geography Standard boundaries. Licence not yet ' +
-      'confirmed for the release the product will use. No boundary file is ' +
-      'committed before confirmation.',
+      'Australian Statistical Geography Standard boundaries. Verified 2026-08-28 ' +
+      'as CC BY 4.0: commercial use, redistribution and adaptation all permitted ' +
+      'with attribution. Edition 4 Main Structure (SA4, State, Australia) was ' +
+      'released 22 July 2026 on the GDA2020 datum. The Coat of Arms, ABS logo and ' +
+      'trade marks are excluded from the licence and are never used. Which ASGS ' +
+      'edition JSA IVI reports against is still open; see the source register.',
   },
   {
     key: 'anzsco',

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDatabase } from '@/db/client';
 import { sourceDescriptors } from '@/config/sources';
+import { isProductionEligible } from '@/domain/source';
 
 /**
  * Database tests.
@@ -401,12 +402,26 @@ withDatabase('seeded source registry', () => {
     }
   });
 
-  it('has no source marked production eligible yet', async () => {
+  it('agrees with the code about which sources are production eligible', async () => {
     const db = prisma();
-    const eligible = await db.source.findMany({
+    const rows = await db.source.findMany({
       where: { activation: 'ACTIVE', complianceStatus: 'VERIFIED' },
+      select: { key: true },
     });
-    // No licence has been read. Anything here would be a compliance failure.
-    expect(eligible).toEqual([]);
+
+    const expected = sourceDescriptors.filter(isProductionEligible).map((d) => d.key);
+    // A source the database considers usable but the code does not, or the
+    // reverse, is a compliance failure whichever way round it is.
+    expect(rows.map((r) => r.key).sort()).toEqual([...expected].sort());
+  });
+
+  it('stores the required attribution wording for every verified source', async () => {
+    const db = prisma();
+    const rows = await db.source.findMany({
+      where: { complianceStatus: 'VERIFIED', attributionRequired: true },
+    });
+    for (const row of rows) {
+      expect(row.attributionText, `"${row.key}" must carry its attribution`).toBeTruthy();
+    }
   });
 });

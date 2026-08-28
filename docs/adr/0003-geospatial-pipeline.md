@@ -107,3 +107,21 @@ boundary release, and it is recorded as `UNVERIFIED` in
 [the source register](../compliance/SOURCE_REGISTER.md). Milestone 04 must
 confirm the licence and required attribution wording before any boundary file is
 committed or displayed.
+
+### Resolved, 2026-08-28
+
+Verified. The ASGS Edition 4 digital boundary files page carries an explicit
+CC BY 4.0 statement, which permits commercial use, redistribution and
+adaptation with attribution. Simplifying geometry is an adaptation and is
+allowed, and it obliges the product to indicate that changes were made. The
+required wording and full evidence are in
+[the source register](../compliance/SOURCE_REGISTER.md).
+
+Two things this decision did not anticipate:
+
+- **ASGS Edition 4 is now current**, released 22 July 2026 on the GDA2020 datum.
+  Edition 3 lapsed in June 2026. The `asgs_edition` column added at milestone 03
+  covers this, which is why edition was made part of geography identity.
+- **Which edition JSA IVI reports against is still unknown.** Joining JSA data
+  to Edition 4 boundaries when it publishes against Edition 3 regions would
+  mislabel geography. Resolve before milestone 05.

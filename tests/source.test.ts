@@ -91,9 +91,26 @@ describe('source registry', () => {
     }
   });
 
-  it('has no production eligible source, because no licence has been verified', () => {
-    const eligible = sourceDescriptors.filter(isProductionEligible);
-    expect(eligible.map((d) => d.key)).toEqual([]);
+  it('marks exactly the sources whose licence has been verified as eligible', () => {
+    // Deliberately an exact list rather than a count or a predicate. A source
+    // becoming production eligible is a compliance decision, and must never
+    // happen as a side effect of an unrelated edit. Adding a key here requires
+    // a matching entry in docs/compliance/SOURCE_REGISTER.md with evidence.
+    const eligible = sourceDescriptors.filter(isProductionEligible).map((d) => d.key);
+    expect(eligible).toEqual(['abs-asgs']);
+  });
+
+  it('gives every verified source that requires attribution its exact wording', () => {
+    // A licence that requires attribution is only satisfied if the wording is
+    // actually available to render.
+    for (const d of sourceDescriptors) {
+      if (d.complianceStatus === 'VERIFIED' && d.attributionRequired) {
+        expect(
+          d.attributionText,
+          `"${d.key}" is verified and requires attribution, so it must carry the wording`,
+        ).toBeTruthy();
+      }
+    }
   });
 
   it('keeps the synthetic source development only', () => {
