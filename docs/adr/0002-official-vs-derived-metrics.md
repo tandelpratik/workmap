@@ -12,11 +12,11 @@ remotely the same thing:
 
 1. **Official indicators.** The JSA Internet Vacancy Index counts online job
    advertisements on a defined set of job boards, using a published methodology.
-   It is an *indicator of advertised demand*, not a count of Australian
+   It is an _indicator of advertised demand_, not a count of Australian
    vacancies. Many real vacancies never appear online at all.
 2. **Platform-derived analytics.** Counts and rates computed from the listings
    this platform has indexed, for example "listings mentioning SQL". These
-   describe *our corpus*, whose coverage is partial and provider-dependent.
+   describe _our corpus_, whose coverage is partial and provider-dependent.
 
 Conflating them is the single largest credibility and legal risk in the product.
 The constitution forbids describing IVI as total vacancies, and commercial
@@ -49,12 +49,12 @@ type MetricBasis = 'OFFICIAL' | 'DERIVED';
 
 interface MetricProvenance {
   basis: MetricBasis;
-  sourceKey: string;          // "jsa-ivi"
-  sourceDisplayName: string;  // "Jobs and Skills Australia"
-  dataset: string;            // "Internet Vacancy Index"
-  measure: string;            // "Online job advertisements"
-  referencePeriod: string;    // "2026-07"
-  retrievedAt: string;        // ISO timestamp of import
+  sourceKey: string; // "jsa-ivi"
+  sourceDisplayName: string; // "Jobs and Skills Australia"
+  dataset: string; // "Internet Vacancy Index"
+  measure: string; // "Online job advertisements"
+  referencePeriod: string; // "2026-07"
+  retrievedAt: string; // ISO timestamp of import
   methodologyUrl?: string;
   sourceVersion?: string;
 }
@@ -72,10 +72,10 @@ missing into zero.
 ```ts
 type MetricValue =
   | { state: 'PRESENT'; value: number }
-  | { state: 'ZERO' }              // genuinely measured as zero
-  | { state: 'UNAVAILABLE' }       // not yet imported / source gap
-  | { state: 'SUPPRESSED' }        // withheld by the publisher
-  | { state: 'NOT_COVERED' };      // outside the dataset's scope
+  | { state: 'ZERO' } // genuinely measured as zero
+  | { state: 'UNAVAILABLE' } // not yet imported / source gap
+  | { state: 'SUPPRESSED' } // withheld by the publisher
+  | { state: 'NOT_COVERED' }; // outside the dataset's scope
 ```
 
 `SUPPRESSED` and `NOT_COVERED` are distinct on purpose: the first means the
@@ -87,12 +87,12 @@ visually **and** in the accessible table, not by colour alone.
 
 Enforced in copy, and testable:
 
-| Never | Use instead |
-| --- | --- |
-| "Total vacancies" for IVI | "Online job advertisements (JSA IVI)" |
-| "All jobs in Australia" | "Job advertisements indexed by <productName>" |
-| "Jobs available" for derived counts | "Listings indexed, last 30 days" |
-| Unlabelled mixed chart | Separate, individually attributed series |
+| Never                               | Use instead                                   |
+| ----------------------------------- | --------------------------------------------- |
+| "Total vacancies" for IVI           | "Online job advertisements (JSA IVI)"         |
+| "All jobs in Australia"             | "Job advertisements indexed by <productName>" |
+| "Jobs available" for derived counts | "Listings indexed, last 30 days"              |
+| Unlabelled mixed chart              | Separate, individually attributed series      |
 
 Every visualisation must let a reader determine: what is measured, source,
 reference period, geographic level, and whether it is official or derived. This

@@ -27,14 +27,14 @@ interface ImportRun {
   sourceKey: string;
   dataset: string;
   status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
-  cursor: string | null;      // resume point, source-defined
+  cursor: string | null; // resume point, source-defined
   recordsSeen: number;
   recordsWritten: number;
   recordsSkipped: number;
   recordsQuarantined: number;
   startedAt: Date;
   finishedAt: Date | null;
-  error: string | null;       // redacted; never contains credentials
+  error: string | null; // redacted; never contains credentials
 }
 ```
 

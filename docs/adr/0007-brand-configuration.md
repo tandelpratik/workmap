@@ -26,10 +26,10 @@ user-visible brand value. Technical identifiers never contain the brand.**
 
 ```ts
 interface BrandConfig {
-  productName: string;       // "WorkMap"
-  shortName: string;         // "WorkMap"
-  tagline: string;           // "See where the work is."
-  legalName: string;         // display name for legal/public pages
+  productName: string; // "WorkMap"
+  shortName: string; // "WorkMap"
+  tagline: string; // "See where the work is."
+  legalName: string; // display name for legal/public pages
   domain: string;
   contactEmail: string;
   social: {
@@ -49,14 +49,14 @@ immediately rather than rendering an empty heading in production.
 
 ### Naming rules
 
-| Concern | Rule | Example |
-| --- | --- | --- |
-| Domain types | Generic | `Job`, `Company`, `User`, `Geography` |
-| API routes | Generic | `/api/jobs`, `/api/market` |
-| Database tables | Generic | `job`, `company`, `geography` |
-| Adapters | Provider-named | `AdzunaJobSourceAdapter` |
-| Env vars | Neutral or provider-named | `DATABASE_URL`, `ADZUNA_APP_ID` |
-| Package name | Neutral | see below |
+| Concern         | Rule                      | Example                               |
+| --------------- | ------------------------- | ------------------------------------- |
+| Domain types    | Generic                   | `Job`, `Company`, `User`, `Geography` |
+| API routes      | Generic                   | `/api/jobs`, `/api/market`            |
+| Database tables | Generic                   | `job`, `company`, `geography`         |
+| Adapters        | Provider-named            | `AdzunaJobSourceAdapter`              |
+| Env vars        | Neutral or provider-named | `DATABASE_URL`, `ADZUNA_APP_ID`       |
+| Package name    | Neutral                   | see below                             |
 
 Provider names in `integrations/` are correct and expected; they identify a real
 external system. The brand is what must stay out.

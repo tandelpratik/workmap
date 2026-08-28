@@ -10,14 +10,14 @@ The product owner reported that Adzuna onboarding is blocked: the available path
 requires organization and website details that do not exist yet. Three new
 specifications and seven amended files landed in `.claude/`:
 
-| File | Change |
-| --- | --- |
-| `08_SOURCE_STATUS.md` | New. JSA active, Adzuna pending/blocked, synthetic development-only |
-| `09_SYNTHETIC_JOB_SOURCE.md` | New. Fixture rules and prohibited uses |
-| `docs/SOURCE_ACTIVATION_RUNBOOK.md` | New. Adzuna activation procedure |
-| `CLAUDE.md` | Added a current source state section |
-| `00_START_HERE.md` | Added the revised implementation path |
-| `prompts/12`, `13`, `17`, `18`, `24` | Rewritten around a pending job provider |
+| File                                 | Change                                                              |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `08_SOURCE_STATUS.md`                | New. JSA active, Adzuna pending/blocked, synthetic development-only |
+| `09_SYNTHETIC_JOB_SOURCE.md`         | New. Fixture rules and prohibited uses                              |
+| `docs/SOURCE_ACTIVATION_RUNBOOK.md`  | New. Adzuna activation procedure                                    |
+| `CLAUDE.md`                          | Added a current source state section                                |
+| `00_START_HERE.md`                   | Added the revised implementation path                               |
+| `prompts/12`, `13`, `17`, `18`, `24` | Rewritten around a pending job provider                             |
 
 ## Why milestone 01 output needed revising
 

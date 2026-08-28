@@ -1,0 +1,11 @@
+.next/
+node_modules/
+out/
+build/
+coverage/
+db/generated/
+data/
+*.topojson
+*.geojson
+package-lock.json
+.claude/

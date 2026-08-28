@@ -1,0 +1,92 @@
+@import 'tailwindcss';
+
+/**
+ * Design tokens (03_DESIGN_SYSTEM.md).
+ *
+ * The reference is an atlas and a newspaper data section, not an AI product.
+ * Warm paper surfaces, near-black ink, warm neutral rules, one restrained
+ * accent. No gradients, no glass, no glow.
+ *
+ * The palette is deliberately light-only for now. Paper and ink is a light
+ * metaphor, and a half-built dark theme is worse than none. Tokens are defined
+ * so a dark scheme can be added in one place later.
+ */
+
+@theme {
+  /* Surfaces */
+  --color-paper: #fbfaf7;
+  --color-paper-raised: #ffffff;
+  --color-paper-sunken: #f4f2ec;
+
+  /* Ink */
+  --color-ink: #17150f;
+  --color-ink-muted: #56524a;
+  --color-ink-faint: #8a857b;
+
+  /* Rules and borders, warm rather than grey */
+  --color-rule: #e2ded4;
+  --color-rule-strong: #c9c3b5;
+
+  /*
+   * A single editorial accent. Rust rather than blue or purple, which read as
+   * generic software. Used for emphasis and interaction, never as decoration.
+   */
+  --color-accent: #9c3d22;
+  --color-accent-muted: #b86a52;
+
+  /* Semantic states, distinguishable without relying on hue alone */
+  --color-state-available: #2f5d3f;
+  --color-state-pending: #8a6a1f;
+  --color-state-blocked: #8c2f2f;
+
+  /* Typography */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Measure for readable body text */
+  --spacing-measure: 34rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  /* Prevents layout shift between pages that do and do not scroll. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numerals should align in tables and data displays. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Visible focus is an accessibility requirement, not a preference. The default
+ * outline is replaced rather than removed.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Respect a reduced-motion preference everywhere, by default. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

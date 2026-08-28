@@ -59,13 +59,13 @@ availability on the current plan must be confirmed at deployment (milestone 34).
 These shape the design and **must be re-verified against current plan limits at
 milestone 34** rather than trusted from memory:
 
-| Constraint | Consequence |
-| --- | --- |
-| Function execution time is bounded | Ingestion is batched and resumable (ADR-0005) |
+| Constraint                              | Consequence                                                       |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| Function execution time is bounded      | Ingestion is batched and resumable (ADR-0005)                     |
 | Cron frequency is limited on free plans | Schedules sized to publication cadence, not to freshness appetite |
-| No long-running process | No in-process scheduler, no background worker |
-| Serverless connection churn | Pooled connections are mandatory |
-| Free-tier bandwidth and build limits | Small payloads, cached static geometry (ADR-0003) |
+| No long-running process                 | No in-process scheduler, no background worker                     |
+| Serverless connection churn             | Pooled connections are mandatory                                  |
+| Free-tier bandwidth and build limits    | Small payloads, cached static geometry (ADR-0003)                 |
 
 ### Exit path
 

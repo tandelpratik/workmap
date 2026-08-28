@@ -71,8 +71,8 @@ Every adapter declares itself, and that declaration is data the system can act o
 
 ```ts
 interface SourceDescriptor {
-  key: string;                 // stable identifier, e.g. "adzuna", "jsa-ivi"
-  displayName: string;         // for attribution in the UI
+  key: string; // stable identifier, e.g. "adzuna", "jsa-ivi"
+  displayName: string; // for attribution in the UI
   kind: 'JOB_LISTING' | 'MARKET_INDICATOR' | 'GEOGRAPHY' | 'CLASSIFICATION';
   attributionRequired: boolean;
   complianceStatus: 'VERIFIED' | 'UNVERIFIED' | 'RESTRICTED';

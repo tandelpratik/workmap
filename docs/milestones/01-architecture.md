@@ -16,19 +16,21 @@ decision recorded in ADR-0006.
 
 ## Decisions taken by the product owner
 
-| Question | Decision |
-| --- | --- |
-| Hosting | Vercel |
-| Database | Neon serverless PostgreSQL |
+| Question        | Decision                          |
+| --------------- | --------------------------------- |
+| Hosting         | Vercel                            |
+| Database        | Neon serverless PostgreSQL        |
 | Version control | Initialise git locally, no remote |
 
 ## Files changed
 
 Version control:
+
 - `.gitignore`: Node/Next output, environment files, reproducible data artefacts
 - `.gitattributes`: line-ending normalisation, binary and generated-file handling
 
 Documentation:
+
 - `docs/README.md`
 - `docs/architecture/ARCHITECTURE.md`
 - `docs/adr/README.md`

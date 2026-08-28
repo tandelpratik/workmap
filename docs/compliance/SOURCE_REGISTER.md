@@ -17,34 +17,34 @@ terms, and access is unavailable regardless.
 
 ### Compliance status
 
-| Status | Meaning |
-| --- | --- |
-| `VERIFIED` | Terms read, permissions confirmed, evidence recorded below |
-| `UNVERIFIED` | Not yet confirmed. **Must not be used in production.** |
-| `RESTRICTED` | Permitted for some uses only; restrictions recorded |
-| `PROHIBITED` | Not permitted. Do not integrate. |
+| Status       | Meaning                                                    |
+| ------------ | ---------------------------------------------------------- |
+| `VERIFIED`   | Terms read, permissions confirmed, evidence recorded below |
+| `UNVERIFIED` | Not yet confirmed. **Must not be used in production.**     |
+| `RESTRICTED` | Permitted for some uses only; restrictions recorded        |
+| `PROHIBITED` | Not permitted. Do not integrate.                           |
 
 ### Activation state
 
-| State | Meaning |
-| --- | --- |
-| `ACTIVE` | Authorized and configured; may run in production |
-| `PENDING` | Adapter exists, access not yet obtained |
-| `BLOCKED` | Access attempt stopped by an unmet requirement |
-| `DEVELOPMENT_ONLY` | Must never run in production |
+| State              | Meaning                                          |
+| ------------------ | ------------------------------------------------ |
+| `ACTIVE`           | Authorized and configured; may run in production |
+| `PENDING`          | Adapter exists, access not yet obtained          |
+| `BLOCKED`          | Access attempt stopped by an unmet requirement   |
+| `DEVELOPMENT_ONLY` | Must never run in production                     |
 
 Both values appear on the source descriptor (ADR-0001, ADR-0009) and must match
 this register.
 
 ## Current state
 
-| Source | Kind | Activation | Compliance | Production eligible |
-| --- | --- | --- | --- | --- |
-| `jsa-ivi` | Market indicator | `ACTIVE` | `UNVERIFIED` | No, pending verification |
-| `abs-asgs` | Geography | `ACTIVE` | `UNVERIFIED` | No, pending verification |
-| `anzsco` | Classification | `PENDING` | `UNVERIFIED` | No |
-| `adzuna` | Job listings | `BLOCKED` | `UNVERIFIED` | No |
-| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never** |
+| Source      | Kind                | Activation         | Compliance     | Production eligible      |
+| ----------- | ------------------- | ------------------ | -------------- | ------------------------ |
+| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `UNVERIFIED`   | No, pending verification |
+| `abs-asgs`  | Geography           | `ACTIVE`           | `UNVERIFIED`   | No, pending verification |
+| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                       |
+| `adzuna`    | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No                       |
+| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                |
 
 ## What every source must answer
 
@@ -165,7 +165,7 @@ Independent of any terms, and not subject to trade-off:
 
 ## Change log
 
-| Date | Change |
-| --- | --- |
-| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`. |
+| Date       | Change                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                   |
 | 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`. |

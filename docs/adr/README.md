@@ -10,17 +10,17 @@ decision does not.
 
 ## Index
 
-| ADR | Title | Status |
-| --- | --- | --- |
-| [0001](0001-provider-neutral-domain.md) | Provider-neutral domain with source adapters | Accepted |
-| [0002](0002-official-vs-derived-metrics.md) | Strict separation of official and derived metrics | Accepted |
-| [0003](0003-geospatial-pipeline.md) | Geospatial pipeline (registry in Postgres, geometry as artefact) | Accepted |
-| [0004](0004-postgresql-first.md) | PostgreSQL-first search and analytics | Accepted |
-| [0005](0005-idempotent-ingestion.md) | Idempotent, resumable batch ingestion | Accepted |
-| [0006](0006-deployment-vercel-neon.md) | Deployment on Vercel with Neon PostgreSQL | Accepted |
-| [0007](0007-brand-configuration.md) | Brand as configuration, never as namespace | Accepted |
-| [0008](0008-validation-errors-observability.md) | Validation boundaries, error taxonomy and free-tier observability | Accepted |
-| [0009](0009-source-activation-and-synthetic-containment.md) | Source activation states and synthetic data containment | Accepted |
+| ADR                                                         | Title                                                             | Status   |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- | -------- |
+| [0001](0001-provider-neutral-domain.md)                     | Provider-neutral domain with source adapters                      | Accepted |
+| [0002](0002-official-vs-derived-metrics.md)                 | Strict separation of official and derived metrics                 | Accepted |
+| [0003](0003-geospatial-pipeline.md)                         | Geospatial pipeline (registry in Postgres, geometry as artefact)  | Accepted |
+| [0004](0004-postgresql-first.md)                            | PostgreSQL-first search and analytics                             | Accepted |
+| [0005](0005-idempotent-ingestion.md)                        | Idempotent, resumable batch ingestion                             | Accepted |
+| [0006](0006-deployment-vercel-neon.md)                      | Deployment on Vercel with Neon PostgreSQL                         | Accepted |
+| [0007](0007-brand-configuration.md)                         | Brand as configuration, never as namespace                        | Accepted |
+| [0008](0008-validation-errors-observability.md)             | Validation boundaries, error taxonomy and free-tier observability | Accepted |
+| [0009](0009-source-activation-and-synthetic-containment.md) | Source activation states and synthetic data containment           | Accepted |
 
 ## Status values
 
@@ -35,6 +35,6 @@ overlap, the later record wins. ADR-0001 and ADR-0002 are amended by ADR-0009.
 ## Relationship to the constitution
 
 `.claude/CLAUDE.md` is the constitution: it states non-negotiable rules.
-These records explain *how* the implementation satisfies those rules, and record
+These records explain _how_ the implementation satisfies those rules, and record
 the trade-offs chosen where the constitution left room. Where an ADR and the
 constitution disagree, the constitution wins and the ADR is defective.

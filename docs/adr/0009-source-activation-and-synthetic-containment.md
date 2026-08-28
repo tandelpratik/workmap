@@ -39,10 +39,10 @@ the first.
 
 ```ts
 type SourceActivation =
-  | 'ACTIVE'             // authorized, configured, may run in production
-  | 'PENDING'            // adapter exists, access not yet obtained
-  | 'BLOCKED'            // access attempt stopped by an unmet requirement
-  | 'DEVELOPMENT_ONLY';  // must never run in production
+  | 'ACTIVE' // authorized, configured, may run in production
+  | 'PENDING' // adapter exists, access not yet obtained
+  | 'BLOCKED' // access attempt stopped by an unmet requirement
+  | 'DEVELOPMENT_ONLY'; // must never run in production
 ```
 
 The descriptor from ADR-0001 gains `activation` alongside `complianceStatus`,
@@ -58,11 +58,11 @@ function isProductionEligible(d: SourceDescriptor): boolean {
 No call site evaluates this itself. A source is eligible or it is not, and the
 answer comes from one function.
 
-| Source | Activation | Compliance | Production eligible |
-| --- | --- | --- | --- |
-| `jsa-ivi` | ACTIVE | UNVERIFIED | No, pending licence verification |
-| `adzuna` | BLOCKED | UNVERIFIED | No |
-| `synthetic` | DEVELOPMENT_ONLY | Not applicable | Never |
+| Source      | Activation       | Compliance     | Production eligible              |
+| ----------- | ---------------- | -------------- | -------------------------------- |
+| `jsa-ivi`   | ACTIVE           | UNVERIFIED     | No, pending licence verification |
+| `adzuna`    | BLOCKED          | UNVERIFIED     | No                               |
+| `synthetic` | DEVELOPMENT_ONLY | Not applicable | Never                            |
 
 ### Part 2: Synthetic containment in five layers
 

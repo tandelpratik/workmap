@@ -106,7 +106,7 @@ events to a hosted backend when volume justifies the cost.
 ## Alternatives rejected
 
 - **Trust provider responses, validate only user input.** External sources are
-  the *more* likely source of malformed data, and they change without notice.
+  the _more_ likely source of malformed data, and they change without notice.
 - **TypeScript types as validation.** Types vanish at runtime and assert nothing
   about a JSON response.
 - **A hosted APM now.** Recurring cost before there is traffic to observe.

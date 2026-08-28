@@ -24,14 +24,14 @@ artefact). They are versioned together and joined by code, never by shape.**
 
 A `Geography` table holding identity and hierarchy only, no geometry:
 
-| Column | Purpose |
-| --- | --- |
-| `code` | Official identifier, e.g. ASGS SA4 code |
-| `name` | Official name |
-| `level` | `COUNTRY` \| `STATE` \| `SA4` |
-| `parentCode` | Hierarchy link |
-| `asgsEdition` | ASGS release the code belongs to |
-| `sourceKey` | Provenance of the record |
+| Column        | Purpose                                 |
+| ------------- | --------------------------------------- |
+| `code`        | Official identifier, e.g. ASGS SA4 code |
+| `name`        | Official name                           |
+| `level`       | `COUNTRY` \| `STATE` \| `SA4`           |
+| `parentCode`  | Hierarchy link                          |
+| `asgsEdition` | ASGS release the code belongs to        |
+| `sourceKey`   | Provenance of the record                |
 
 Boundary codes change between ASGS editions. Storing `asgsEdition` means a future
 edition can be loaded alongside the current one rather than silently corrupting
@@ -73,7 +73,7 @@ here so the deferral is a decision rather than an oversight.
 - A level a source does not publish is `NOT_COVERED`
   ([ADR-0002](0002-official-vs-derived-metrics.md)), not interpolated, not
   estimated from a parent.
-- Simplified geometry is a *display* generalisation and must be described as
+- Simplified geometry is a _display_ generalisation and must be described as
   such; it is never presented as exact cadastral boundary.
 - Suburb/city level is out of scope unless a source supports it directly.
 

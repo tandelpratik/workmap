@@ -11,12 +11,12 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Engineering documentation
 
-| Document | Purpose |
-| --- | --- |
-| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) | Consolidated technical view: modules, boundaries, data flow |
-| [adr/README.md](adr/README.md) | Architecture decision records and their status |
+| Document                                                       | Purpose                                                             |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)   | Consolidated technical view: modules, boundaries, data flow         |
+| [adr/README.md](adr/README.md)                                 | Architecture decision records and their status                      |
 | [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md) | Per-source compliance status. **All sources currently unverified.** |
-| [milestones/](milestones/) | One record per completed milestone |
+| [milestones/](milestones/)                                     | One record per completed milestone                                  |
 
 ## Reading order for a new contributor
 
@@ -28,8 +28,9 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Milestone 01 complete (architecture), revised at 01a after Adzuna onboarding was
-blocked. No application code yet.
+Milestone 02 complete. The scaffold exists and all checks pass; there are no
+product features and no data yet. Setup instructions are in the
+[root README](../README.md).
 
 **Source position:** JSA is the active source and carries the launch product.
 Adzuna is blocked at onboarding and no job listings ship until it or another

@@ -1,0 +1,16 @@
+// Prisma schema.
+//
+// No models yet. Milestone 03 defines the domain schema: geography registry,
+// market observations, job listings, import runs and quarantine.
+//
+// Connection strings are configured in prisma.config.ts and db/client.ts
+// rather than here, because Prisma 7 no longer accepts them in the schema.
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
