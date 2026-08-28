@@ -9,3 +9,8 @@ data/
 *.geojson
 package-lock.json
 .claude/
+
+# Generated geography artefacts. Reformatting them inflates the payloads that
+# the build deliberately minified.
+public/geography/
+data/geography/

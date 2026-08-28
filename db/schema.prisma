@@ -258,6 +258,16 @@ model Geography {
 
   asgsEdition String @map("asgs_edition")
 
+  /// False for classification areas that exist as codes but have no boundary:
+  /// offshore and migratory areas, "no usual address", and "outside Australia".
+  /// They are recorded because sources report against them, and they must never
+  /// be given invented geometry or drawn on the map (ADR-0003). The map and the
+  /// accessible table must show them as not mappable rather than as missing.
+  hasGeometry Boolean @map("has_geometry")
+
+  /// Area as published by the ABS. Null where the area has no extent.
+  areaSqKm Decimal? @map("area_sq_km") @db.Decimal(14, 4)
+
   parentId String?     @map("parent_id")
   parent   Geography?  @relation("GeographyHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children Geography[] @relation("GeographyHierarchy")
@@ -272,7 +282,11 @@ model Geography {
   series           LabourMarketSeries[]
   geographyMetrics GeographyMetric[]
 
-  @@unique([code, asgsEdition])
+  /// Level is part of identity because ASGS codes are unique only within a
+  /// level, not across the standard. "ZZZ" is both a COUNTRY and an SA4
+  /// ("Outside Australia"). Without level in the key the SA4 row silently
+  /// overwrites the country row on upsert, which is how this was found.
+  @@unique([code, level, asgsEdition])
   @@index([level, asgsEdition])
   @@index([parentId])
   @@map("geography")

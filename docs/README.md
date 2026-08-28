@@ -28,9 +28,10 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Milestone 03 complete. The scaffold and the canonical schema exist, applied to
-a real database, and all checks pass. There are no product features and no
-third-party data yet. Setup instructions are in the [root README](../README.md).
+Milestone 04 complete. Scaffold, canonical schema and Australian geography
+(ASGS Edition 4: 2 country, 10 state and 108 SA4 areas) are loaded and
+verified. No product features and no labour market data yet. Setup instructions
+are in the [root README](../README.md).
 
 **Source position:** JSA is the active source and carries the launch product.
 Adzuna is blocked at onboarding and no job listings ship until it or another

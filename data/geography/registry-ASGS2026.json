@@ -1,0 +1,962 @@
+[
+  {
+    "code": "AUS",
+    "name": "Australia",
+    "level": "COUNTRY",
+    "parentCode": null,
+    "hasGeometry": true,
+    "areaSqKm": 7688095.2271
+  },
+  {
+    "code": "ZZZ",
+    "name": "Outside Australia",
+    "level": "COUNTRY",
+    "parentCode": null,
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "1",
+    "name": "New South Wales",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 800797.7073
+  },
+  {
+    "code": "2",
+    "name": "Victoria",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 227496.2547
+  },
+  {
+    "code": "3",
+    "name": "Queensland",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 1730173.1675
+  },
+  {
+    "code": "4",
+    "name": "South Australia",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 984229.3082
+  },
+  {
+    "code": "5",
+    "name": "Western Australia",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 2526632.7624
+  },
+  {
+    "code": "6",
+    "name": "Tasmania",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 68017.5646
+  },
+  {
+    "code": "7",
+    "name": "Northern Territory",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 1348134.5876
+  },
+  {
+    "code": "8",
+    "name": "Australian Capital Territory",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 2358.1328
+  },
+  {
+    "code": "9",
+    "name": "Other Territories",
+    "level": "STATE",
+    "parentCode": "AUS",
+    "hasGeometry": true,
+    "areaSqKm": 255.742
+  },
+  {
+    "code": "Z",
+    "name": "Outside Australia",
+    "level": "STATE",
+    "parentCode": "ZZZ",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "101",
+    "name": "Capital Region",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 51896.2445
+  },
+  {
+    "code": "102",
+    "name": "Central Coast",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 1681.009
+  },
+  {
+    "code": "103",
+    "name": "Central West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 70297.0605
+  },
+  {
+    "code": "104",
+    "name": "Coffs Harbour - Grafton",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 13229.7573
+  },
+  {
+    "code": "105",
+    "name": "Far West and Orana",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 339355.6495
+  },
+  {
+    "code": "106",
+    "name": "Hunter Valley exc Newcastle",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 21491.2923
+  },
+  {
+    "code": "107",
+    "name": "Illawarra",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 1539.2408
+  },
+  {
+    "code": "108",
+    "name": "Mid North Coast",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 18851.4993
+  },
+  {
+    "code": "109",
+    "name": "Murray",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 97796.4912
+  },
+  {
+    "code": "110",
+    "name": "New England and North West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 99139.9014
+  },
+  {
+    "code": "111",
+    "name": "Newcastle and Lake Macquarie",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 870.5824
+  },
+  {
+    "code": "112",
+    "name": "Richmond - Tweed",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 10271.3204
+  },
+  {
+    "code": "113",
+    "name": "Riverina",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 56984.9808
+  },
+  {
+    "code": "114",
+    "name": "Southern Highlands and Shoalhaven",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 6704.9619
+  },
+  {
+    "code": "115",
+    "name": "Sydney - Baulkham Hills and Hawkesbury",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 3251.4981
+  },
+  {
+    "code": "116",
+    "name": "Sydney - Blacktown",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 240.8836
+  },
+  {
+    "code": "117",
+    "name": "Sydney - City and Inner South",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 66.117
+  },
+  {
+    "code": "118",
+    "name": "Sydney - Eastern Suburbs",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 57.7341
+  },
+  {
+    "code": "119",
+    "name": "Sydney - Inner South West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 163.9273
+  },
+  {
+    "code": "120",
+    "name": "Sydney - Inner West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 64.5756
+  },
+  {
+    "code": "121",
+    "name": "Sydney - North Sydney and Hornsby",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 275.0992
+  },
+  {
+    "code": "122",
+    "name": "Sydney - Northern Beaches",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 254.2073
+  },
+  {
+    "code": "123",
+    "name": "Sydney - Outer South West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 1277.2421
+  },
+  {
+    "code": "124",
+    "name": "Sydney - Outer West and Blue Mountains",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 3968.1295
+  },
+  {
+    "code": "125",
+    "name": "Sydney - Parramatta",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 162.8356
+  },
+  {
+    "code": "126",
+    "name": "Sydney - Ryde",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 69.3368
+  },
+  {
+    "code": "127",
+    "name": "Sydney - South West",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 540.2775
+  },
+  {
+    "code": "128",
+    "name": "Sydney - Sutherland",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 295.8523
+  },
+  {
+    "code": "197",
+    "name": "Migratory - Offshore - Shipping (NSW)",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "199",
+    "name": "No usual address (NSW)",
+    "level": "SA4",
+    "parentCode": "1",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "201",
+    "name": "Ballarat",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 10287.4759
+  },
+  {
+    "code": "202",
+    "name": "Bendigo",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 11841.906
+  },
+  {
+    "code": "203",
+    "name": "Geelong",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 4428.7034
+  },
+  {
+    "code": "204",
+    "name": "Hume",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 34006.4773
+  },
+  {
+    "code": "205",
+    "name": "Latrobe - Gippsland",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 41553.1091
+  },
+  {
+    "code": "206",
+    "name": "Melbourne - Inner",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 142.4579
+  },
+  {
+    "code": "207",
+    "name": "Melbourne - Inner East",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 146.7435
+  },
+  {
+    "code": "208",
+    "name": "Melbourne - Inner South",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 161.4966
+  },
+  {
+    "code": "209",
+    "name": "Melbourne - North East",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 1851.2651
+  },
+  {
+    "code": "210",
+    "name": "Melbourne - North West",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 1619.689
+  },
+  {
+    "code": "211",
+    "name": "Melbourne - Outer East",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 1878.5575
+  },
+  {
+    "code": "212",
+    "name": "Melbourne - South East",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 1922.2793
+  },
+  {
+    "code": "213",
+    "name": "Melbourne - West",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 1416.3528
+  },
+  {
+    "code": "214",
+    "name": "Mornington Peninsula",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 853.7661
+  },
+  {
+    "code": "215",
+    "name": "North West",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 78072.9853
+  },
+  {
+    "code": "216",
+    "name": "Shepparton",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 10933.866
+  },
+  {
+    "code": "217",
+    "name": "Warrnambool and South West",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 26379.1239
+  },
+  {
+    "code": "297",
+    "name": "Migratory - Offshore - Shipping (Vic)",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "299",
+    "name": "No usual address (Vic)",
+    "level": "SA4",
+    "parentCode": "2",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "301",
+    "name": "Brisbane - East",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 653.133
+  },
+  {
+    "code": "302",
+    "name": "Brisbane - North",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 186.9482
+  },
+  {
+    "code": "303",
+    "name": "Brisbane - South",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 265.3445
+  },
+  {
+    "code": "304",
+    "name": "Brisbane - West",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 269.6406
+  },
+  {
+    "code": "305",
+    "name": "Brisbane Inner City",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 81.7395
+  },
+  {
+    "code": "306",
+    "name": "Cairns",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 21321.4669
+  },
+  {
+    "code": "307",
+    "name": "Darling Downs - Maranoa",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 166346.8121
+  },
+  {
+    "code": "308",
+    "name": "Central Queensland",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 117587.8561
+  },
+  {
+    "code": "309",
+    "name": "Gold Coast",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 1857.7777
+  },
+  {
+    "code": "310",
+    "name": "Ipswich",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 6681.1788
+  },
+  {
+    "code": "311",
+    "name": "Logan - Beaudesert",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 2586.1636
+  },
+  {
+    "code": "312",
+    "name": "Mackay - Isaac - Whitsunday",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 90140.189
+  },
+  {
+    "code": "313",
+    "name": "Moreton Bay - North",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 4344.4564
+  },
+  {
+    "code": "314",
+    "name": "Moreton Bay - South",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 773.4051
+  },
+  {
+    "code": "315",
+    "name": "Queensland - Outback",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 1183193.5781
+  },
+  {
+    "code": "316",
+    "name": "Sunshine Coast",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 3085.9119
+  },
+  {
+    "code": "317",
+    "name": "Toowoomba",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 2258.7948
+  },
+  {
+    "code": "318",
+    "name": "Townsville",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 80036.0983
+  },
+  {
+    "code": "319",
+    "name": "Wide Bay",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 48502.6729
+  },
+  {
+    "code": "397",
+    "name": "Migratory - Offshore - Shipping (Qld)",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "399",
+    "name": "No usual address (Qld)",
+    "level": "SA4",
+    "parentCode": "3",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "401",
+    "name": "Adelaide - Central and Hills",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 1497.2719
+  },
+  {
+    "code": "402",
+    "name": "Adelaide - North",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 939.9952
+  },
+  {
+    "code": "403",
+    "name": "Adelaide - South",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 663.0817
+  },
+  {
+    "code": "404",
+    "name": "Adelaide - West",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 159.5387
+  },
+  {
+    "code": "405",
+    "name": "Barossa - Yorke - Mid North",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 37716.3852
+  },
+  {
+    "code": "406",
+    "name": "South Australia - Outback",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 877770.5504
+  },
+  {
+    "code": "407",
+    "name": "South Australia - South East",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 65482.4851
+  },
+  {
+    "code": "497",
+    "name": "Migratory - Offshore - Shipping (SA)",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "499",
+    "name": "No usual address (SA)",
+    "level": "SA4",
+    "parentCode": "4",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "501",
+    "name": "Bunbury",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 24802.4119
+  },
+  {
+    "code": "502",
+    "name": "Mandurah",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 1032.8632
+  },
+  {
+    "code": "503",
+    "name": "Perth - Inner",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 92.254
+  },
+  {
+    "code": "504",
+    "name": "Perth - North East",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 1762.4315
+  },
+  {
+    "code": "505",
+    "name": "Perth - North West",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 884.014
+  },
+  {
+    "code": "506",
+    "name": "Perth - South East",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 2023.9924
+  },
+  {
+    "code": "507",
+    "name": "Perth - South West",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 621.018
+  },
+  {
+    "code": "509",
+    "name": "Western Australia - Wheat Belt",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 197345.534
+  },
+  {
+    "code": "510",
+    "name": "Western Australia - Outback (North)",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 926023.1724
+  },
+  {
+    "code": "511",
+    "name": "Western Australia - Outback (South)",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 1372045.071
+  },
+  {
+    "code": "597",
+    "name": "Migratory - Offshore - Shipping (WA)",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "599",
+    "name": "No usual address (WA)",
+    "level": "SA4",
+    "parentCode": "5",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "601",
+    "name": "Hobart",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 1695.3865
+  },
+  {
+    "code": "602",
+    "name": "Launceston and North East",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 19975.3361
+  },
+  {
+    "code": "603",
+    "name": "South East",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 23822.0524
+  },
+  {
+    "code": "604",
+    "name": "West and North West",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 22524.7896
+  },
+  {
+    "code": "697",
+    "name": "Migratory - Offshore - Shipping (Tas)",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "699",
+    "name": "No usual address (Tas)",
+    "level": "SA4",
+    "parentCode": "6",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "701",
+    "name": "Darwin",
+    "level": "SA4",
+    "parentCode": "7",
+    "hasGeometry": true,
+    "areaSqKm": 3167.7033
+  },
+  {
+    "code": "702",
+    "name": "Northern Territory - Outback",
+    "level": "SA4",
+    "parentCode": "7",
+    "hasGeometry": true,
+    "areaSqKm": 1344966.8843
+  },
+  {
+    "code": "797",
+    "name": "Migratory - Offshore - Shipping (NT)",
+    "level": "SA4",
+    "parentCode": "7",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "799",
+    "name": "No usual address (NT)",
+    "level": "SA4",
+    "parentCode": "7",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "801",
+    "name": "Australian Capital Territory",
+    "level": "SA4",
+    "parentCode": "8",
+    "hasGeometry": true,
+    "areaSqKm": 2358.1328
+  },
+  {
+    "code": "897",
+    "name": "Migratory - Offshore - Shipping (ACT)",
+    "level": "SA4",
+    "parentCode": "8",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "899",
+    "name": "No usual address (ACT)",
+    "level": "SA4",
+    "parentCode": "8",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "901",
+    "name": "Other Territories",
+    "level": "SA4",
+    "parentCode": "9",
+    "hasGeometry": true,
+    "areaSqKm": 255.742
+  },
+  {
+    "code": "997",
+    "name": "Migratory - Offshore - Shipping (OT)",
+    "level": "SA4",
+    "parentCode": "9",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "999",
+    "name": "No usual address (OT)",
+    "level": "SA4",
+    "parentCode": "9",
+    "hasGeometry": false,
+    "areaSqKm": null
+  },
+  {
+    "code": "ZZZ",
+    "name": "Outside Australia",
+    "level": "SA4",
+    "parentCode": "Z",
+    "hasGeometry": false,
+    "areaSqKm": null
+  }
+]

@@ -8,7 +8,8 @@ The product name is configuration, not identity. See
 
 ## Status
 
-Schema in place, no product features yet and no third-party data. Milestone 03 of 35.
+Australian geography loaded (ASGS Edition 4). No product features yet and no
+labour market data. Milestone 04 of 35.
 
 JSA is the designated market intelligence source. No authorized job listing
 provider is active, so the product ships without job listings until one is.

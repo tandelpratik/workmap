@@ -15,3 +15,6 @@
 # Generated geometry artefacts: large, machine-produced, diff-noisy.
 *.topojson -diff
 *.geojson -diff
+
+# Generated TopoJSON is large and machine-produced.
+*.topo.json -diff

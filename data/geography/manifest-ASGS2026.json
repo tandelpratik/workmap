@@ -1,0 +1,53 @@
+{
+  "edition": "ASGS2026",
+  "editionLabel": "ASGS Edition 4, July 2026 to June 2031",
+  "datum": "GDA2020",
+  "sourceKey": "abs-asgs",
+  "licence": "CC BY 4.0",
+  "generatedAt": "2026-08-28T10:48:50.179Z",
+  "simplification": {
+    "overview": {
+      "retain": "0.7%",
+      "minIslandVertices": 20
+    },
+    "detail": {
+      "retain": "12%",
+      "minIslandVertices": 0
+    }
+  },
+  "sources": {
+    "COUNTRY": {
+      "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files/AUS_2026_AUST_SHP_GDA2020.zip",
+      "sha256": "c2841a89e15a56e4598779d10c6329176befe6ae6bae0208d871ae1f295cc9d3",
+      "bytes": 19220628
+    },
+    "STATE": {
+      "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files/STE_2026_AUST_SHP_GDA2020.zip",
+      "sha256": "057befed53bc7bd095e54d1594fe32925ed324443df767d66a889c52ba655c03",
+      "bytes": 21331858
+    },
+    "SA4": {
+      "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files/SA4_2026_AUST_SHP_GDA2020.zip",
+      "sha256": "d2df15ee57dac089457fd6ff27e342d4f6286ab0dbc587fff20cf05664657323",
+      "bytes": 29543412
+    }
+  },
+  "registry": {
+    "path": "data/geography/registry-ASGS2026.json",
+    "records": 120,
+    "withoutGeometry": 21
+  },
+  "artefacts": {
+    "geography/sa4-overview-ASGS2026.topo.json": 142120,
+    "geography/state-overview-ASGS2026.topo.json": 101193,
+    "sa4-detail-ASGS2026/sa4-1.topo.json": 390553,
+    "sa4-detail-ASGS2026/sa4-2.topo.json": 207641,
+    "sa4-detail-ASGS2026/sa4-3.topo.json": 495209,
+    "sa4-detail-ASGS2026/sa4-4.topo.json": 168488,
+    "sa4-detail-ASGS2026/sa4-5.topo.json": 678584,
+    "sa4-detail-ASGS2026/sa4-6.topo.json": 213389,
+    "sa4-detail-ASGS2026/sa4-7.topo.json": 283581,
+    "sa4-detail-ASGS2026/sa4-8.topo.json": 8447,
+    "sa4-detail-ASGS2026/sa4-9.topo.json": 9128
+  }
+}

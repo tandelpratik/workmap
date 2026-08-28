@@ -84,6 +84,7 @@ withDatabase('schema safety mechanisms', () => {
         name: 'Test Region',
         level: 'SA4',
         asgsEdition: TEST_EDITION,
+        hasGeometry: true,
         sourceKey: TEST_SOURCE,
       },
     });

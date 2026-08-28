@@ -1,0 +1,4 @@
+Based on Australian Bureau of Statistics data. Australian Statistical Geography Standard (ASGS) Edition 4, July 2026 to June 2031. © Commonwealth of Australia, administered by the ABS, licensed under CC BY 4.0. Boundaries have been simplified for display.
+
+Licence: https://creativecommons.org/licenses/by/4.0/
+Source: https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files
