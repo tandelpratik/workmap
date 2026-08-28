@@ -13,6 +13,10 @@ const migrationUrl = process.env['DIRECT_DATABASE_URL'] ?? process.env['DATABASE
 
 export default defineConfig({
   schema: 'db/schema.prisma',
+  migrations: {
+    // Run after migrations are applied. Seeds the source registry only.
+    seed: 'tsx db/seed.ts',
+  },
   datasource: {
     // Migrations and introspection use the direct connection, because some DDL
     // does not execute correctly through a connection pooler. The application

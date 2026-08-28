@@ -28,9 +28,9 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Milestone 02 complete. The scaffold exists and all checks pass; there are no
-product features and no data yet. Setup instructions are in the
-[root README](../README.md).
+Milestone 03 complete. The scaffold and the canonical schema exist, applied to
+a real database, and all checks pass. There are no product features and no
+third-party data yet. Setup instructions are in the [root README](../README.md).
 
 **Source position:** JSA is the active source and carries the launch product.
 Adzuna is blocked at onboarding and no job listings ship until it or another

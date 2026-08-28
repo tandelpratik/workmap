@@ -8,7 +8,7 @@ The product name is configuration, not identity. See
 
 ## Status
 
-Scaffold only. No product features yet, and no data. Milestone 02 of 35.
+Schema in place, no product features yet and no third-party data. Milestone 03 of 35.
 
 JSA is the designated market intelligence source. No authorized job listing
 provider is active, so the product ships without job listings until one is.

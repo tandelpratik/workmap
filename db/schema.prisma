@@ -1,10 +1,15 @@
-// Prisma schema.
+// Canonical database schema.
 //
-// No models yet. Milestone 03 defines the domain schema: geography registry,
-// market observations, job listings, import runs and quarantine.
+// Connection strings live in prisma.config.ts (migrations, direct endpoint) and
+// db/client.ts (application, pooled endpoint). Prisma 7 no longer accepts them
+// in this file.
 //
-// Connection strings are configured in prisma.config.ts and db/client.ts
-// rather than here, because Prisma 7 no longer accepts them in the schema.
+// Conventions:
+//   - Models are PascalCase, tables and columns snake_case via @map.
+//   - Money and metric values are Decimal, never Float.
+//   - A field the source did not supply is null. There is no UNKNOWN member and
+//     no zero default, because absence must not be confused with a measurement.
+//   - Every externally sourced row carries its provenance.
 
 generator client {
   provider = "prisma-client"
@@ -13,4 +18,734 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// What a source supplies. One registry covers all of them (ADR-0001).
+enum SourceKind {
+  JOB_LISTING
+  MARKET_INDICATOR
+  GEOGRAPHY
+  CLASSIFICATION
+
+  @@map("source_kind")
+}
+
+/// Is the source turned on? Independent of whether we are permitted to use it
+/// (ADR-0009).
+enum SourceActivation {
+  ACTIVE
+  PENDING
+  BLOCKED
+  DEVELOPMENT_ONLY
+
+  @@map("source_activation")
+}
+
+/// Are we permitted to use it? Independent of whether it is turned on.
+enum ComplianceStatus {
+  VERIFIED
+  UNVERIFIED
+  RESTRICTED
+  PROHIBITED
+
+  @@map("compliance_status")
+}
+
+/// Which lineage a number belongs to. These never mix in one value (ADR-0002,
+/// ADR-0009).
+enum MetricBasis {
+  OFFICIAL
+  DERIVED
+  SYNTHETIC
+
+  @@map("metric_basis")
+}
+
+/// Missingness is modelled, never coerced to zero (ADR-0002).
+enum ValueState {
+  /// Measured, and the value is present.
+  PRESENT
+  /// Genuinely measured as zero.
+  ZERO
+  /// Not yet imported, or a gap in the source.
+  UNAVAILABLE
+  /// The publisher held a value and withheld it, or our sample is too small.
+  SUPPRESSED
+  /// Outside the scope of the dataset. The question does not apply.
+  NOT_COVERED
+
+  @@map("value_state")
+}
+
+enum PeriodGranularity {
+  MONTH
+  QUARTER
+  YEAR
+
+  @@map("period_granularity")
+}
+
+enum GeographyLevel {
+  COUNTRY
+  STATE
+  SA4
+
+  @@map("geography_level")
+}
+
+enum JobStatus {
+  ACTIVE
+  EXPIRED
+  WITHDRAWN
+
+  @@map("job_status")
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CASUAL
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+  APPRENTICESHIP
+
+  @@map("employment_type")
+}
+
+enum RemoteType {
+  ONSITE
+  HYBRID
+  REMOTE
+
+  @@map("remote_type")
+}
+
+enum SalaryPeriod {
+  HOUR
+  DAY
+  WEEK
+  MONTH
+  YEAR
+
+  @@map("salary_period")
+}
+
+/// Whether a salary was stated by the employer or estimated by the provider.
+/// The two must never be presented identically (ADR-0002).
+enum SalaryBasis {
+  REPORTED
+  SOURCE_ESTIMATED
+
+  @@map("salary_basis")
+}
+
+enum DescriptionFormat {
+  HTML
+  TEXT
+
+  @@map("description_format")
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+
+  @@map("ingestion_status")
+}
+
+/// Where in the pipeline a record failed (ADR-0005).
+enum IngestionErrorKind {
+  TRANSPORT
+  VALIDATION
+  MAPPING
+  PERSISTENCE
+
+  @@map("ingestion_error_kind")
+}
+
+enum SkillKind {
+  TECHNICAL
+  TOOL
+  CERTIFICATION
+  LANGUAGE
+  DOMAIN
+  SOFT
+
+  @@map("skill_kind")
+}
+
+/// How a skill came to be attached to a job. Skills are never inferred into
+/// existence; the method is recorded so derived analytics can be qualified.
+enum SkillExtractionMethod {
+  DETERMINISTIC
+  MANUAL
+
+  @@map("skill_extraction_method")
+}
+
+// ---------------------------------------------------------------------------
+// Source registry
+// ---------------------------------------------------------------------------
+
+/// Every external source, of any kind. Mirrors the descriptors declared in
+/// code (ADR-0001, ADR-0009); the seed keeps the two in step and a test asserts
+/// they agree.
+///
+/// Production use requires activation ACTIVE and compliance VERIFIED together.
+model Source {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  displayName String     @map("display_name")
+  kind        SourceKind
+
+  activation       SourceActivation
+  complianceStatus ComplianceStatus @map("compliance_status")
+
+  /// Attribution required by the licence, stored verbatim so the UI cannot
+  /// paraphrase a legal requirement.
+  attributionRequired Boolean @default(true) @map("attribution_required")
+  attributionText     String? @map("attribution_text")
+
+  termsUrl       String? @map("terms_url")
+  methodologyUrl String? @map("methodology_url")
+  homepageUrl    String? @map("homepage_url")
+
+  /// Null means no documented limit, not "unlimited".
+  rateLimitRequests  Int? @map("rate_limit_requests")
+  rateLimitPerSecond Int? @map("rate_limit_per_second")
+
+  /// Why a source is blocked or restricted, for operators.
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs           Job[]
+  geographies    Geography[]
+  occupations    Occupation[]
+  series         LabourMarketSeries[]
+  ingestionRuns  IngestionRun[]
+  geographyMetrics GeographyMetric[]
+
+  @@index([kind])
+  @@index([activation])
+  @@map("source")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data
+// ---------------------------------------------------------------------------
+
+/// Geography registry. Identity and hierarchy only; geometry is a static build
+/// artefact and is deliberately not stored here (ADR-0003).
+///
+/// Boundary codes change between ASGS editions, so the edition is part of the
+/// identity. That allows a new edition to load alongside the current one
+/// instead of silently corrupting historical series.
+model Geography {
+  id   String         @id @default(cuid())
+  code String
+  name String
+  level GeographyLevel
+
+  asgsEdition String @map("asgs_edition")
+
+  parentId String?     @map("parent_id")
+  parent   Geography?  @relation("GeographyHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children Geography[] @relation("GeographyHierarchy")
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  locations        Location[]
+  series           LabourMarketSeries[]
+  geographyMetrics GeographyMetric[]
+
+  @@unique([code, asgsEdition])
+  @@index([level, asgsEdition])
+  @@index([parentId])
+  @@map("geography")
+}
+
+/// Occupation classification (ANZSCO). Version is part of the identity for the
+/// same reason as the ASGS edition above.
+model Occupation {
+  id    String @id @default(cuid())
+  code  String
+  name  String
+  /// ANZSCO hierarchy depth: 1 major group through to 6 occupation.
+  level Int
+
+  classificationVersion String @map("classification_version")
+
+  parentId String?      @map("parent_id")
+  parent   Occupation?  @relation("OccupationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children Occupation[] @relation("OccupationHierarchy")
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs   Job[]
+  series LabourMarketSeries[]
+
+  @@unique([code, classificationVersion])
+  @@index([level, classificationVersion])
+  @@index([parentId])
+  @@map("occupation")
+}
+
+model Company {
+  id String @id @default(cuid())
+
+  name String
+  /// Case-folded, punctuation-stripped form used to merge the same employer
+  /// arriving from different sources. A deliberate simplification: two distinct
+  /// employers sharing a normalised name will merge. Revisit if that is
+  /// observed rather than assumed.
+  normalizedName String @unique @map("normalized_name")
+
+  website String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs Job[]
+
+  @@map("company")
+}
+
+/// A place as reported by a source, plus the official geography it resolved to.
+///
+/// Coordinates are stored only when a source supplies them. They are never
+/// derived, estimated or geocoded into existence (ADR-0003).
+model Location {
+  id String @id @default(cuid())
+
+  /// Exactly what the source said, preserved for provenance and re-resolution.
+  rawText String @map("raw_text")
+  /// Stable key derived from rawText, so repeated imports reuse one row.
+  normalizedKey String @unique @map("normalized_key")
+
+  suburb    String?
+  city      String?
+  stateCode String? @map("state_code")
+  postcode  String?
+
+  /// Null when the raw text could not be resolved to an official geography.
+  /// Unresolved is recorded as unresolved, never guessed to a parent.
+  geographyId String?    @map("geography_id")
+  geography   Geography? @relation(fields: [geographyId], references: [id], onDelete: SetNull)
+
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs Job[]
+
+  @@index([geographyId])
+  @@index([stateCode])
+  @@map("location")
+}
+
+// ---------------------------------------------------------------------------
+// Job listings
+// ---------------------------------------------------------------------------
+
+/// An individual job advertisement from one source.
+///
+/// Idempotency: (source_key, source_id) is unique, so ingestion upserts and
+/// never blind-inserts. content_hash lets an unchanged record skip the write
+/// and update only last_seen_at (ADR-0005).
+///
+/// Containment: is_synthetic is NOT NULL DEFAULT false. The safe value is the
+/// default, so a write path that forgets the field marks the record real, which
+/// is the direction that fails safely for a record from a real provider
+/// (ADR-0009).
+model Job {
+  id String @id @default(cuid())
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+  /// The identifier the source uses. Opaque to us.
+  sourceId  String @map("source_id")
+  /// Provider-side version or revision marker, when one is published.
+  sourceVersion String? @map("source_version")
+
+  /// Hash of the normalised payload, used to skip unchanged records.
+  contentHash String @map("content_hash")
+
+  /// Development fixture, never servable in production (ADR-0009).
+  isSynthetic Boolean @default(false) @map("is_synthetic")
+  /// Which fixture set produced a synthetic record. Null for real records.
+  syntheticFixtureVersion String? @map("synthetic_fixture_version")
+
+  title       String
+  /// Untrusted third-party content. Sanitised at render, never stored
+  /// pre-trusted (ADR-0008).
+  description       String?           @db.Text
+  descriptionFormat DescriptionFormat? @map("description_format")
+
+  companyId String?  @map("company_id")
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  locationId String?   @map("location_id")
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  /// Null when the listing could not be mapped to a classification. An
+  /// unmapped listing is recorded as unmapped, never guessed into a plausible
+  /// code.
+  occupationId String?     @map("occupation_id")
+  occupation   Occupation? @relation(fields: [occupationId], references: [id], onDelete: SetNull)
+
+  employmentType EmploymentType? @map("employment_type")
+  remoteType     RemoteType?     @map("remote_type")
+
+  salaryMin      Decimal?      @map("salary_min") @db.Decimal(12, 2)
+  salaryMax      Decimal?      @map("salary_max") @db.Decimal(12, 2)
+  /// ISO 4217. Null when no salary was supplied.
+  salaryCurrency String?       @map("salary_currency") @db.Char(3)
+  salaryPeriod   SalaryPeriod? @map("salary_period")
+  /// Whether the employer stated the figure or the provider estimated it.
+  salaryBasis    SalaryBasis?  @map("salary_basis")
+
+  /// Where an applicant is sent. Required: a listing we cannot send anyone to
+  /// has no product value.
+  applyUrl  String  @map("apply_url")
+  sourceUrl String? @map("source_url")
+
+  /// As reported by the source. Null when not published.
+  postedAt  DateTime? @map("posted_at")
+  expiresAt DateTime? @map("expires_at")
+
+  /// Freshness lifecycle (ADR-0005). Records are expired, not deleted, because
+  /// history is what makes trends possible.
+  firstSeenAt    DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt     DateTime  @default(now()) @map("last_seen_at")
+  lastVerifiedAt DateTime? @map("last_verified_at")
+  expiredAt      DateTime? @map("expired_at")
+  retrievedAt    DateTime  @default(now()) @map("retrieved_at")
+
+  status JobStatus @default(ACTIVE)
+
+  duplicateGroupId String?             @map("duplicate_group_id")
+  duplicateGroup   JobDuplicateGroup?  @relation(fields: [duplicateGroupId], references: [id], onDelete: SetNull)
+  /// Whether this row is the representative of its duplicate group.
+  isCanonical      Boolean             @default(true) @map("is_canonical")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  skills JobSkill[]
+
+  @@unique([sourceKey, sourceId])
+  @@index([contentHash])
+  @@index([isSynthetic])
+  @@index([status, lastSeenAt])
+  @@index([occupationId])
+  @@index([locationId])
+  @@index([companyId])
+  @@index([postedAt])
+  @@index([duplicateGroupId])
+  @@map("job")
+}
+
+/// A set of listings judged to describe the same vacancy, usually the same role
+/// advertised through several channels.
+model JobDuplicateGroup {
+  id String @id @default(cuid())
+
+  /// Deterministic signature the grouping was derived from, so a decision can
+  /// be explained and recomputed.
+  signature String @unique
+
+  /// The row chosen to represent the group. Nullable while a group is being
+  /// assembled.
+  canonicalJobId String? @unique @map("canonical_job_id")
+
+  memberCount Int @default(0) @map("member_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs Job[]
+
+  @@map("job_duplicate_group")
+}
+
+model Skill {
+  id String @id @default(cuid())
+
+  name           String
+  normalizedName String    @unique @map("normalized_name")
+  kind           SkillKind
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs JobSkill[]
+
+  @@index([kind])
+  @@map("skill")
+}
+
+/// Join between a job and a skill, carrying how the link was made.
+model JobSkill {
+  jobId   String @map("job_id")
+  job     Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skillId String @map("skill_id")
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  method SkillExtractionMethod @default(DETERMINISTIC)
+
+  /// The text the match was made against, so an extraction can be audited.
+  matchedText String? @map("matched_text")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([jobId, skillId])
+  @@index([skillId])
+  @@map("job_skill")
+}
+
+// ---------------------------------------------------------------------------
+// Labour market intelligence
+// ---------------------------------------------------------------------------
+
+/// The definition of a measured series: what is counted, for whom, where, on
+/// what basis. Observations hang off this, so provenance is stated once rather
+/// than repeated on every data point.
+model LabourMarketSeries {
+  id String @id @default(cuid())
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+
+  /// Named dataset within the source, for example "Internet Vacancy Index".
+  dataset String
+  /// What is counted, for example "Online job advertisements".
+  measure String
+  /// Unit of the values, for example "advertisements" or "index points".
+  unit    String
+
+  basis MetricBasis
+
+  geographyId String?    @map("geography_id")
+  geography   Geography? @relation(fields: [geographyId], references: [id], onDelete: Restrict)
+
+  occupationId String?     @map("occupation_id")
+  occupation   Occupation? @relation(fields: [occupationId], references: [id], onDelete: Restrict)
+
+  granularity PeriodGranularity
+
+  /// Stable key derived from the dimensions above, so repeated imports resolve
+  /// to one series.
+  seriesKey String @unique @map("series_key")
+
+  methodologyUrl String? @map("methodology_url")
+  description    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  metrics LabourMarketMetric[]
+
+  @@index([sourceKey, dataset])
+  @@index([geographyId])
+  @@index([occupationId])
+  @@index([basis])
+  @@map("labour_market_series")
+}
+
+/// One observation in a series.
+///
+/// value is null unless value_state is PRESENT or ZERO. A database CHECK
+/// constraint enforces that, so missing data cannot become zero through an
+/// application bug (ADR-0002).
+model LabourMarketMetric {
+  id String @id @default(cuid())
+
+  seriesId String             @map("series_id")
+  series   LabourMarketSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  /// First day of the reference period.
+  periodStart DateTime @map("period_start") @db.Date
+
+  value      Decimal?   @db.Decimal(18, 4)
+  valueState ValueState @map("value_state")
+
+  /// Provider revision, where the source publishes one. Revisions of official
+  /// statistics are normal and must be traceable.
+  sourceVersion String?  @map("source_version")
+  retrievedAt   DateTime @default(now()) @map("retrieved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([seriesId, periodStart])
+  @@index([periodStart])
+  @@map("labour_market_metric")
+}
+
+/// Precomputed per-geography figures that serve the heatmap (ADR-0004).
+///
+/// This is a projection, refreshed on a schedule, never computed during a
+/// request. basis is part of the identity, so an official figure and a derived
+/// figure for the same geography and period are separate rows and can never be
+/// merged into one number (ADR-0002).
+model GeographyMetric {
+  id String @id @default(cuid())
+
+  geographyId String    @map("geography_id")
+  geography   Geography @relation(fields: [geographyId], references: [id], onDelete: Cascade)
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+
+  measure String
+  basis   MetricBasis
+
+  /// Null for an all-occupations figure.
+  occupationId String? @map("occupation_id")
+
+  periodStart DateTime          @map("period_start") @db.Date
+  granularity PeriodGranularity
+
+  value      Decimal?   @db.Decimal(18, 4)
+  valueState ValueState @map("value_state")
+
+  /// Change against the previous period. Null when there is no prior period to
+  /// compare against, which is different from a change of zero.
+  change        Decimal? @db.Decimal(18, 4)
+  changePercent Decimal? @map("change_percent") @db.Decimal(9, 4)
+  /// Rank within the level, where the measure supports ranking.
+  rank          Int?
+
+  /// Underlying observation count. Drives suppression: a statistic below the
+  /// configured threshold is stored as SUPPRESSED rather than shown with a
+  /// caveat (ADR-0004).
+  sampleSize Int? @map("sample_size")
+
+  computedAt DateTime @default(now()) @map("computed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([geographyId, measure, basis, periodStart, occupationId])
+  @@index([measure, periodStart, basis])
+  @@index([geographyId])
+  @@map("geography_metric")
+}
+
+// ---------------------------------------------------------------------------
+// Ingestion
+// ---------------------------------------------------------------------------
+
+/// One import, resumable across invocations (ADR-0005).
+///
+/// An invocation claims a run, processes a bounded batch, persists the cursor
+/// and counters, and returns. A partial unique index (added in the migration)
+/// permits only one RUNNING run per source and dataset, so an overlapping cron
+/// firing becomes a no-op rather than a double import.
+model IngestionRun {
+  id String @id @default(cuid())
+
+  sourceKey String @map("source_key")
+  source    Source @relation(fields: [sourceKey], references: [key], onDelete: Restrict)
+  dataset   String
+
+  status IngestionStatus @default(PENDING)
+
+  /// Resume point, defined by the source. Null before the first batch.
+  cursor String?
+
+  recordsSeen        Int @default(0) @map("records_seen")
+  recordsWritten     Int @default(0) @map("records_written")
+  recordsSkipped     Int @default(0) @map("records_skipped")
+  recordsQuarantined Int @default(0) @map("records_quarantined")
+
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+
+  /// Redacted failure summary. Never contains credentials (ADR-0008).
+  error String?
+
+  /// "cron" or "manual". Operational provenance for the run itself.
+  triggeredBy String? @map("triggered_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  errors IngestionError[]
+
+  @@index([sourceKey, dataset, status])
+  @@index([startedAt])
+  @@map("ingestion_run")
+}
+
+/// A quarantined record (ADR-0005).
+///
+/// A record failing validation is stored here with its raw payload and the
+/// error, and the run continues. Dropping it silently would hide a source
+/// schema change; aborting the run would let one bad record block an import.
+model IngestionError {
+  id String @id @default(cuid())
+
+  runId String       @map("run_id")
+  run   IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  sourceKey String  @map("source_key")
+  /// The source identifier of the offending record, when it could be read.
+  sourceId  String? @map("source_id")
+
+  kind    IngestionErrorKind
+  message String
+
+  /// The payload as received, for diagnosis. Treated as untrusted on read.
+  rawPayload Json? @map("raw_payload")
+
+  occurredAt DateTime  @default(now()) @map("occurred_at")
+  /// Set when an operator has dealt with it.
+  resolvedAt DateTime? @map("resolved_at")
+
+  @@index([runId])
+  @@index([sourceKey, sourceId])
+  @@index([occurredAt])
+  @@map("ingestion_error")
+}
+
+// ---------------------------------------------------------------------------
+// Operational events
+// ---------------------------------------------------------------------------
+
+/// Significant operational events, so incidents can be reconstructed from data
+/// without a paid observability stack (ADR-0008).
+model SystemEvent {
+  id String @id @default(cuid())
+
+  kind     String
+  message  String
+  severity String   @default("info")
+  context  Json?
+
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([kind, occurredAt])
+  @@index([occurredAt])
+  @@map("system_event")
 }
