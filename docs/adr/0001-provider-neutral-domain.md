@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-28
 - **Milestone:** 01 (Product & Architecture)
+- **Amended by:** [ADR-0009](0009-source-activation-and-synthetic-containment.md)
 
 ## Context
 

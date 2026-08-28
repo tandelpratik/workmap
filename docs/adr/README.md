@@ -20,12 +20,17 @@ decision does not.
 | [0006](0006-deployment-vercel-neon.md) | Deployment on Vercel with Neon PostgreSQL | Accepted |
 | [0007](0007-brand-configuration.md) | Brand as configuration, never as namespace | Accepted |
 | [0008](0008-validation-errors-observability.md) | Validation boundaries, error taxonomy and free-tier observability | Accepted |
+| [0009](0009-source-activation-and-synthetic-containment.md) | Source activation states and synthetic data containment | Accepted |
 
 ## Status values
 
 - **Proposed**: written, not yet agreed.
 - **Accepted**: agreed and binding on implementation.
 - **Superseded**: replaced by a later record, which must be named.
+
+A record may also be **amended** by a later one. An amendment extends or narrows
+a decision without reversing it, and both records stay in force. Where the two
+overlap, the later record wins. ADR-0001 and ADR-0002 are amended by ADR-0009.
 
 ## Relationship to the constitution
 

@@ -28,4 +28,11 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Milestone 01 complete (architecture). No application code yet.
+Milestone 01 complete (architecture), revised at 01a after Adzuna onboarding was
+blocked. No application code yet.
+
+**Source position:** JSA is the active source and carries the launch product.
+Adzuna is blocked at onboarding and no job listings ship until it or another
+authorized provider is activated. A development-only synthetic source exists for
+building the job pipeline and can never run in production. See
+[ADR-0009](adr/0009-source-activation-and-synthetic-containment.md).
