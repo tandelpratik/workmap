@@ -96,6 +96,28 @@ const schema = baseSchema.superRefine((value, ctx) => {
   }
 });
 
+/**
+ * Drops variables that are present but empty.
+ *
+ * An empty environment variable is not a value. Shells, CI systems and hosting
+ * dashboards all make it trivially easy to define a name with nothing after
+ * the equals sign, and in every one of them that is indistinguishable from
+ * leaving it unset.
+ *
+ * Treating the two differently cost a production outage: `ADZUNA_COUNTRY` was
+ * defined and empty, which failed a length rule instead of falling back to its
+ * default, and took down every route on the deployment.
+ */
+function withoutEmptyValues(
+  source: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  const populated: Record<string, string | undefined> = {};
+  for (const [name, value] of Object.entries(source)) {
+    if (value !== undefined && value.trim() !== '') populated[name] = value;
+  }
+  return populated;
+}
+
 export class EnvironmentError extends Error {
   override readonly name = 'EnvironmentError';
 
@@ -111,7 +133,7 @@ export class EnvironmentError extends Error {
  * process environment.
  */
 export function parseEnv(source: Record<string, string | undefined>): Env {
-  const result = schema.safeParse(source);
+  const result = schema.safeParse(withoutEmptyValues(source));
 
   if (!result.success) {
     // Only field names and messages are surfaced. Values are never included,
@@ -151,13 +173,15 @@ export type EnvInspection =
     };
 
 export function inspectEnv(source: Record<string, string | undefined>): EnvInspection {
-  const result = schema.safeParse(source);
+  const populated = withoutEmptyValues(source);
+  const result = schema.safeParse(populated);
   if (result.success) return { ok: true, env: result.data };
 
   // Determined from the raw input rather than from a validation message, so it
   // cannot be broken by rewording an error string.
   const fatal =
-    source['APP_ENV'] === 'production' && source['ALLOW_SYNTHETIC_SOURCES'] === 'true';
+    populated['APP_ENV'] === 'production' &&
+    populated['ALLOW_SYNTHETIC_SOURCES'] === 'true';
 
   const fields = [
     ...new Set(result.error.issues.map((issue) => issue.path.join('.') || '(root)')),

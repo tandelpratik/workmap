@@ -137,10 +137,44 @@ describe('inspecting an environment without insisting it be valid', () => {
   });
 
   it('reports every problem at once, not just the first', () => {
-    const inspection = inspectEnv({ APP_ENV: 'nonsense', ADZUNA_APP_ID: '' });
+    // Both values are present and wrong. An empty value would not qualify:
+    // that is treated as unset, which the block below covers.
+    const inspection = inspectEnv({ APP_ENV: 'nonsense', ADZUNA_COUNTRY: 'aus' });
     expect(inspection.ok).toBe(false);
     if (inspection.ok) return;
     expect(inspection.fields).toContain('APP_ENV');
-    expect(inspection.fields).toContain('ADZUNA_APP_ID');
+    expect(inspection.fields).toContain('ADZUNA_COUNTRY');
+  });
+});
+
+describe('an empty variable is treated as unset', () => {
+  it('falls back to the default rather than failing a format rule', () => {
+    // The production outage this prevents: ADZUNA_COUNTRY was defined and
+    // empty, which failed a length rule instead of defaulting, and took every
+    // route on the deployment down.
+    const env = parseEnv({ ADZUNA_COUNTRY: '' });
+    expect(env.ADZUNA_COUNTRY).toBe('au');
+  });
+
+  it('applies to optional credentials too', () => {
+    const env = parseEnv({ ADZUNA_APP_ID: '', ADZUNA_APP_KEY: '   ' });
+    expect(env.ADZUNA_APP_ID).toBeUndefined();
+    expect(env.ADZUNA_APP_KEY).toBeUndefined();
+  });
+
+  it('still reports a required variable that is empty as missing', () => {
+    // Emptiness must not become a way to smuggle past a requirement.
+    const inspection = inspectEnv({ APP_ENV: 'production', DATABASE_URL: '' });
+    expect(inspection.ok).toBe(false);
+    expect(inspection.ok === false && inspection.fields).toContain('DATABASE_URL');
+  });
+
+  it('does not let an empty value disarm the synthetic gate', () => {
+    const inspection = inspectEnv({
+      APP_ENV: 'production',
+      DATABASE_URL: 'postgresql://u:p@h.example/db',
+      ALLOW_SYNTHETIC_SOURCES: 'true',
+    });
+    expect(inspection.ok === false && inspection.fatal).toBe(true);
   });
 });
