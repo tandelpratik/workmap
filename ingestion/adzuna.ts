@@ -22,7 +22,8 @@ import { logger } from '@/lib/logger';
 import {
   australianStateCode,
   buildGeographyLookup,
-  resolveGeography,
+  resolveGeographyAtLevel,
+  type DimensionResolution,
   type GeographyLookup,
 } from './dimensions';
 
@@ -73,6 +74,8 @@ export interface AdzunaIngestOutcome {
   readonly unchanged: number;
   readonly quarantined: number;
   readonly expired: number;
+  /** Locations that resolved to an official area this run, having not before. */
+  readonly relinked: number;
 }
 
 interface Caches {
@@ -147,11 +150,22 @@ async function resolveLocation(
   const cached = caches.locations.get(key);
   if (cached !== undefined) return cached;
 
+  // Adzuna states its hierarchy broadest first: ["Australia", "Victoria", ...].
+  // The country is index 0 and the state index 1, so each is resolved at the
+  // level the provider placed it, rather than by searching every level and
+  // giving up when a name exists at two of them.
+  const countryName = job.location.area[0] ?? null;
   const stateName = job.location.area[1] ?? null;
-  const resolved =
-    stateName === null
-      ? null
-      : resolveGeography(caches.geography, { code: null, name: stateName });
+
+  let resolved: DimensionResolution | null = null;
+  if (stateName !== null) {
+    resolved = resolveGeographyAtLevel(caches.geography, stateName, 'STATE');
+  } else if (countryName !== null) {
+    // A nationwide advertisement names only the country. That is a real
+    // location, not a missing one, so it links to the country rather than
+    // being dropped.
+    resolved = resolveGeographyAtLevel(caches.geography, countryName, 'COUNTRY');
+  }
 
   const data = {
     stateCode: stateName === null ? null : australianStateCode(stateName),
@@ -209,6 +223,7 @@ async function writeJob(
     sourceCategoryTag: job.category?.tag ?? null,
     sourceCategoryLabel: job.category?.label ?? null,
     employmentType: job.employmentType,
+    sourceContractType: job.sourceContractType,
     remoteType: job.remoteType,
     salaryMin: job.salary?.min ?? null,
     salaryMax: job.salary?.max ?? null,
@@ -238,6 +253,48 @@ async function writeJob(
     data: { sourceKey: job.sourceKey, sourceId: job.sourceId, ...data },
   });
   return 'created';
+}
+
+/**
+ * Re-resolves locations that did not link to an official area last time.
+ *
+ * Runs every ingest, and matters because resolution improves independently of
+ * the data: a fix to the matching rules, or a future geography load, should
+ * heal existing rows without re-fetching anything from the provider. Nothing
+ * re-resolves a location that already has a link, so this is a small query and
+ * a handful of updates.
+ *
+ * The state code is used where one was derived, because it is unambiguous;
+ * otherwise the raw text is tried at country level, which is what a nationwide
+ * advertisement gives us.
+ */
+async function relinkUnresolvedLocations(
+  database: Database,
+  lookup: GeographyLookup,
+): Promise<number> {
+  const unresolved = await database.location.findMany({
+    where: { geographyId: null },
+    select: { id: true, rawText: true, stateCode: true },
+  });
+
+  let linked = 0;
+
+  for (const location of unresolved) {
+    const resolved =
+      location.stateCode === null
+        ? resolveGeographyAtLevel(lookup, location.rawText, 'COUNTRY')
+        : resolveGeographyAtLevel(lookup, location.stateCode, 'STATE');
+
+    if (resolved.status !== 'RESOLVED') continue;
+
+    await database.location.update({
+      where: { id: location.id },
+      data: { geographyId: resolved.id },
+    });
+    linked += 1;
+  }
+
+  return linked;
 }
 
 /**
@@ -352,6 +409,7 @@ export async function ingestAdzuna(
   let unchanged = 0;
   let quarantined = 0;
   let expired = 0;
+  let relinked = 0;
   let requests = 0;
 
   try {
@@ -412,6 +470,7 @@ export async function ingestAdzuna(
       }
     }
 
+    relinked = await relinkUnresolvedLocations(database, caches.geography);
     expired = await expireStale(database, expireAfterDays);
 
     await database.ingestionRun.update({
@@ -450,9 +509,20 @@ export async function ingestAdzuna(
     unchanged,
     quarantined,
     expired,
+    relinked,
   });
 
-  return ok({ runId, requests, seen, created, updated, unchanged, quarantined, expired });
+  return ok({
+    runId,
+    requests,
+    seen,
+    created,
+    updated,
+    unchanged,
+    quarantined,
+    expired,
+    relinked,
+  });
 }
 
 /**

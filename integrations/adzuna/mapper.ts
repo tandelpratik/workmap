@@ -111,24 +111,24 @@ function readSalary(job: AdzunaJob, country: string): Salary | null {
 }
 
 /**
- * Adzuna states two things the schema holds in one column: the contract type
- * (permanent or contract) and the schedule (full or part time).
+ * Adzuna states two independent things: the schedule (full or part time) and
+ * the contract relationship (permanent or contract). Both are kept.
  *
- * The contract relationship wins where both are present, because "this is a
- * contract role" is the more consequential fact for someone deciding whether
- * to apply. Anything unrecognised yields null: an unmapped listing is recorded
- * as unmapped, never guessed.
+ * employmentType carries the schedule, which is what someone filters on, and
+ * falls back to CONTRACT only when no schedule was stated. The relationship
+ * itself is preserved verbatim in sourceContractType, so a part-time contract
+ * role reads as both rather than as whichever one this function preferred.
+ * Anything unrecognised yields null: an unmapped listing is recorded as
+ * unmapped, never guessed.
  */
 function readEmploymentType(job: AdzunaJob): EmploymentType | null {
-  if (job.contract_type?.toLowerCase() === 'contract') return 'CONTRACT';
-
   switch (job.contract_time?.toLowerCase()) {
     case 'full_time':
       return 'FULL_TIME';
     case 'part_time':
       return 'PART_TIME';
     default:
-      return null;
+      return job.contract_type?.toLowerCase() === 'contract' ? 'CONTRACT' : null;
   }
 }
 
@@ -166,6 +166,7 @@ export function mapJob(job: AdzunaJob, country: string): NormalizedJob {
             longitude: job.longitude ?? null,
           },
     employmentType: readEmploymentType(job),
+    sourceContractType: job.contract_type ?? null,
     // Adzuna does not publish a remote indicator. Inferring one from words in
     // the title would be a guess presented as a filter.
     remoteType: null,

@@ -3,7 +3,8 @@
 - **Date:** 2026-08-29
 - **Prompts:** `12_adzuna_adapter`, `13_job_ingestion`, `14_job_normalization`,
   `16_job_search_api`, `17_job_search_ui`
-- **Outcome:** Complete and running. The first working product surface.
+- **Outcome:** Complete and running against the live API. The first working
+  product surface.
 
 ## Why these ran out of sequence
 
@@ -114,15 +115,15 @@ does it, and deletes rather than expires, which is correct exactly here.
 
 ## Verification
 
-| Check                                        | Result                                          |
-| -------------------------------------------- | ----------------------------------------------- |
-| `vitest run`                                 | 185 tests, all pass (31 new)                    |
-| `eslint`, `tsc --noEmit`, `prettier --check` | Pass                                            |
-| `next build`                                 | Pass                                            |
-| Page rendered from a running server          | Correct unconfigured state, attribution present |
-| `GET /api/jobs`                              | 200 with an empty result set                    |
-| `GET /api/jobs?page=notanumber`              | 400, naming the offending field                 |
-| Ingestion against a live Adzuna key          | **Not run.** No credentials in `.env` yet       |
+| Check                                        | Result                                           |
+| -------------------------------------------- | ------------------------------------------------ |
+| `vitest run`                                 | 191 tests, all pass (37 new)                     |
+| `eslint`, `tsc --noEmit`, `prettier --check` | Pass                                             |
+| `next build`                                 | Pass                                             |
+| Page rendered from a running server          | Correct unconfigured state, attribution present  |
+| `GET /api/jobs`                              | 200 with an empty result set                     |
+| `GET /api/jobs?page=notanumber`              | 400, naming the offending field                  |
+| Ingestion against a live Adzuna key          | Run twice. See the live verification table above |
 
 The ingestion test runs the real pipeline against a stubbed client inside a
 transaction that is rolled back, so it exercises the schema, the constraints and
@@ -130,12 +131,66 @@ the content-hash idempotency without spending a request from the daily budget or
 leaving invented listings in the database. It asserts the second run writes
 nothing.
 
+## What the first live calls changed
+
+Credentials arrived the same day, so the assumptions above were checked against
+real payloads rather than left standing. Three things came out of it.
+
+**The salary period assumption was correct.** Figures run from 62,104 to 520,000
+AUD, and one of them is a psychiatry locum advertised at $2,000 per day stored
+as 520,000, which is that rate annualised. `SALARY_PERIOD = 'YEAR'` holds.
+
+**Two independent facts were being collapsed into one.** The very first live
+listing was an ALDI duty manager with `contract_time: "part_time"` and
+`contract_type: "contract"`. The mapper preferred one and discarded the other,
+so it displayed as "Contract" and lost the schedule. Both are now kept:
+`employmentType` carries the schedule and `source_contract_type` preserves the
+relationship verbatim. Across 250 advertisements the two axes are clearly
+independent: 143 full time, 71 part time, 4 contract-without-schedule, against
+117 permanent and 25 contract.
+
+**Location resolution had a real bug, in two forms.** 21 of 250 listings failed
+to link to an official area:
+
+- 15 nationwide advertisements state only `["Australia"]`, with no state at
+  index 1, so nothing resolved. They now link at country level, which is what
+  the advertisement actually says.
+- 6 Canberra advertisements failed because the ASGS registry holds **two** areas
+  named "Australian Capital Territory", the state and the single SA4 inside it.
+  The cross-level ambiguity guard from milestone 04 correctly refused to guess.
+  The guard was right; the caller was wrong to ask without a level. Adzuna
+  states its hierarchy broadest first, so the level is known, and
+  `resolveGeographyAtLevel` uses it.
+
+Fixing the rule does not fix rows already stored, because an unchanged
+advertisement is never rewritten. So relinking unresolved locations is now a
+step of every run: resolution improves independently of the data, and a future
+geography load should heal existing rows without re-fetching anything. The next
+run reported `relinked: 2`, clearing both cases.
+
+## Live verification
+
+| Run                             | Result                                                              |
+| ------------------------------- | ------------------------------------------------------------------- |
+| First ingest, 5 requests        | 250 seen, 250 created, 0 quarantined                                |
+| Second ingest, 12 minutes later | 198 unchanged with no writes, 50 new, 2 revised, 2 relinked         |
+| Search `q=nurse`                | 11 listings                                                         |
+| Search `where=VIC`              | 39 listings                                                         |
+| Search `q=nurse&where=VIC`      | 0, genuinely: the filters compose as an AND and the sample is small |
+
+The second run is the idempotency proof that the fixture test could only
+approximate: on real data, four fifths of the page cost a hash comparison and no
+write. The 50 new records are newer advertisements entering a date-sorted
+window, not duplicates.
+
+Coverage worth knowing: only 9 of the first 250 listings carried a salary at
+all, and none were Jobsworth estimates, so the estimate labelling path is
+implemented and tested but has not yet met live data.
+
 ## Open issues
 
-1. **No live API call has been made.** Credentials are not yet in `.env`. The
-   two things to confirm on the first real response are that salary figures are
-   annual, which is assumed from their documentation, and that the mapped fields
-   match a real payload rather than the documented example.
+1. **Adzuna Jobsworth estimates have not been seen live.** None of the first 250
+   listings carried one, so that labelling path is tested only against fixtures.
 2. **The Adzuna logo and Jobsworth icon are missing.** Launch blocker, and the
    assets can only be obtained by hand.
 3. **Search is `ILIKE`, not full text.** Adequate for thousands of rows and not
@@ -147,7 +202,7 @@ nothing.
 ## Sign-off
 
 - [x] Implementation complete
-- [x] Tests pass, 185 of 185
+- [x] Tests pass, 191 of 191
 - [x] Typecheck, lint, format, build pass
 - [x] Accessibility: semantic list, labelled search form, visible focus, salary
       basis conveyed in text rather than by colour

@@ -25,6 +25,7 @@ import {
 } from '@/integrations/adzuna/mapper';
 import { adzunaSearchSchema } from '@/integrations/adzuna/types';
 import { ingestAdzuna } from '@/ingestion/adzuna';
+import { buildGeographyLookup, resolveGeographyAtLevel } from '@/ingestion/dimensions';
 
 try {
   process.loadEnvFile('.env');
@@ -36,6 +37,9 @@ const withDatabase = describe.skipIf(!process.env['DATABASE_URL']);
 
 const credentials = { appId: 'test-id', appKey: 'test-key', country: 'au' };
 
+/** Distinct from any real advertisement identifier. */
+const FIXTURE_SOURCE_ID = '129698749';
+
 /**
  * A page shaped like the example in Adzuna's own documentation, moved to
  * Australia. The employers and figures are invented; only the shape is real.
@@ -44,7 +48,7 @@ function samplePage(overrides: Record<string, unknown>[] = []) {
   return {
     results: [
       {
-        id: '129698749',
+        id: FIXTURE_SOURCE_ID,
         title: ' <strong>Registered</strong> Nurse ',
         description: 'Caring for patients in a busy ward. &amp; more.',
         created: '2026-08-20T18:07:39Z',
@@ -107,6 +111,7 @@ describe('content hash', () => {
     company: { name: 'Example Health' },
     location: { rawText: 'Sydney', area: [], latitude: null, longitude: null },
     employmentType: 'FULL_TIME',
+    sourceContractType: 'permanent',
     remoteType: null,
     salary: null,
     applyUrl: 'https://example.test/1',
@@ -167,7 +172,7 @@ describe('mapping an Adzuna payload', () => {
     const [job] = mapSample().jobs;
 
     expect(job?.sourceKey).toBe(ADZUNA_SOURCE_KEY);
-    expect(job?.sourceId).toBe('129698749');
+    expect(job?.sourceId).toBe(FIXTURE_SOURCE_ID);
     expect(job?.title).toBe('Registered Nurse');
     expect(job?.company?.name).toBe('Example Health');
     expect(job?.location?.rawText).toBe('Sydney, New South Wales');
@@ -208,9 +213,33 @@ describe('mapping an Adzuna payload', () => {
     expect(mapSearchResponse(parsed, 'zz').jobs[0]?.salary).toBeNull();
   });
 
-  it('prefers the contract relationship over the schedule', () => {
+  it('keeps the schedule and the contract relationship separately', () => {
+    // A real listing on the first live call was a part-time contract role.
+    // Collapsing the two axes into one column dropped one of them, which
+    // misdescribed the job.
     const parsed = adzunaSearchSchema.parse({
-      results: [{ ...samplePage().results[0], contract_type: 'contract' }],
+      results: [
+        {
+          ...samplePage().results[0],
+          contract_type: 'contract',
+          contract_time: 'part_time',
+        },
+      ],
+    });
+    const [job] = mapSearchResponse(parsed, 'au').jobs;
+    expect(job?.employmentType).toBe('PART_TIME');
+    expect(job?.sourceContractType).toBe('contract');
+  });
+
+  it('falls back to the contract relationship when no schedule is stated', () => {
+    const parsed = adzunaSearchSchema.parse({
+      results: [
+        {
+          ...samplePage().results[0],
+          contract_type: 'contract',
+          contract_time: undefined,
+        },
+      ],
     });
     expect(mapSearchResponse(parsed, 'au').jobs[0]?.employmentType).toBe('CONTRACT');
   });
@@ -237,6 +266,51 @@ describe('mapping an Adzuna payload', () => {
     const [job] = mapSearchResponse(parsed, 'au').jobs;
     expect(job?.sourceId).toBe('42');
     expect(job?.salary?.basis).toBe('SOURCE_ESTIMATED');
+  });
+});
+
+describe('resolving a location at a known level', () => {
+  // The real registry shape that broke every Canberra advertisement: the ACT
+  // exists as a state and as the single SA4 inside it, with the same name.
+  const lookup = buildGeographyLookup([
+    { id: 'aus', code: 'AUS', name: 'Australia', level: 'COUNTRY' },
+    { id: 'act-state', code: '8', name: 'Australian Capital Territory', level: 'STATE' },
+    { id: 'act-sa4', code: '801', name: 'Australian Capital Territory', level: 'SA4' },
+    { id: 'nsw', code: '1', name: 'New South Wales', level: 'STATE' },
+  ]);
+
+  it('picks the state when the provider placed the name at state level', () => {
+    expect(
+      resolveGeographyAtLevel(lookup, 'Australian Capital Territory', 'STATE'),
+    ).toEqual({ status: 'RESOLVED', id: 'act-state', level: 'STATE' });
+  });
+
+  it('picks the SA4 of the same name when asked for that level', () => {
+    expect(
+      resolveGeographyAtLevel(lookup, 'Australian Capital Territory', 'SA4'),
+    ).toEqual({ status: 'RESOLVED', id: 'act-sa4', level: 'SA4' });
+  });
+
+  it('resolves an abbreviation at the level asked for', () => {
+    expect(resolveGeographyAtLevel(lookup, 'ACT', 'STATE')).toEqual({
+      status: 'RESOLVED',
+      id: 'act-state',
+      level: 'STATE',
+    });
+  });
+
+  it('links a nationwide advertisement to the country', () => {
+    expect(resolveGeographyAtLevel(lookup, 'Australia', 'COUNTRY')).toEqual({
+      status: 'RESOLVED',
+      id: 'aus',
+      level: 'COUNTRY',
+    });
+  });
+
+  it('still refuses a name that is not in the registry at that level', () => {
+    expect(resolveGeographyAtLevel(lookup, 'Victoria', 'STATE').status).toBe(
+      'UNRESOLVED',
+    );
   });
 });
 
@@ -426,8 +500,10 @@ withDatabase('ingesting into the database', () => {
             triggeredBy: 'test',
           });
 
+          // Scoped to this fixture's own identifier. The table holds real
+          // ingested advertisements, so "the first adzuna job" is not this one.
           const stored = await tx.job.findFirst({
-            where: { sourceKey: 'adzuna' },
+            where: { sourceKey: 'adzuna', sourceId: FIXTURE_SOURCE_ID },
             select: {
               title: true,
               descriptionIsExcerpt: true,
@@ -469,8 +545,12 @@ withDatabase('ingesting into the database', () => {
     expect(storedState).toBe('NSW');
     expect(linkedToGeography).toBe(true);
 
-    // Rolled back: nothing invented reached the database.
-    const remaining = await database.value.job.count({ where: { sourceKey: 'adzuna' } });
+    // Rolled back: the fixture reached the constraints and not the database.
+    // Asserted by identifier rather than by an empty table, because real
+    // advertisements live alongside it.
+    const remaining = await database.value.job.count({
+      where: { sourceKey: 'adzuna', sourceId: FIXTURE_SOURCE_ID },
+    });
     expect(remaining).toBe(0);
   }, 180_000);
 });

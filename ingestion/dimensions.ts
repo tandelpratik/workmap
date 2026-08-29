@@ -117,10 +117,51 @@ export function buildGeographyLookup(
 
 function unique(
   candidates: readonly GeographyCandidate[] | undefined,
+  level?: GeographyLevel,
 ): GeographyCandidate | 'AMBIGUOUS' | null {
-  if (candidates === undefined || candidates.length === 0) return null;
-  if (candidates.length > 1) return 'AMBIGUOUS';
-  return candidates[0] ?? null;
+  const scoped =
+    level === undefined
+      ? candidates
+      : candidates?.filter((candidate) => candidate.level === level);
+
+  if (scoped === undefined || scoped.length === 0) return null;
+  if (scoped.length > 1) return 'AMBIGUOUS';
+  return scoped[0] ?? null;
+}
+
+/**
+ * Resolves a name when the caller already knows which level it belongs to.
+ *
+ * The general resolver treats a name matching two levels as ambiguous, which is
+ * right when the level is unknown and wrong when it is not. Real Adzuna data
+ * showed why both exist: the ASGS registry contains two areas called
+ * "Australian Capital Territory", the state and the SA4 inside it, so every
+ * Canberra advertisement failed to resolve. A provider that states its
+ * hierarchy broadest-first has told us the level, and using that is reading the
+ * source rather than guessing past it.
+ */
+export function resolveGeographyAtLevel(
+  lookup: GeographyLookup,
+  name: string,
+  level: GeographyLevel,
+): DimensionResolution {
+  const normalised = normaliseName(name);
+  const aliased = stateAliases[normalised] ?? normalised;
+  const match = unique(lookup.byName.get(aliased), level);
+
+  if (match === 'AMBIGUOUS') {
+    return {
+      status: 'UNRESOLVED',
+      reason: `Name "${name}" matches more than one ${level} area, so it is ambiguous.`,
+    };
+  }
+  if (match === null) {
+    return {
+      status: 'UNRESOLVED',
+      reason: `No ${level} in the registry is named "${name}". The source's own label is kept.`,
+    };
+  }
+  return { status: 'RESOLVED', id: match.id, level: match.level };
 }
 
 /**

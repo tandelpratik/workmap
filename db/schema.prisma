@@ -438,6 +438,14 @@ model Job {
   sourceCategoryTag   String? @map("source_category_tag")
   sourceCategoryLabel String? @map("source_category_label")
 
+  /// The contract relationship as the source stated it, for example
+  /// "permanent" or "contract".
+  ///
+  /// Separate from employmentType because providers state two independent
+  /// things: the relationship, and the schedule. A part-time contract is both,
+  /// and collapsing them into one column would silently discard one of them.
+  sourceContractType String? @map("source_contract_type")
+
   employmentType EmploymentType? @map("employment_type")
   remoteType     RemoteType?     @map("remote_type")
 

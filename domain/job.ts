@@ -92,6 +92,15 @@ export interface NormalizedJob {
   readonly company: JobCompany | null;
   readonly location: JobLocation | null;
   readonly employmentType: EmploymentType | null;
+  /**
+   * The contract relationship as the source worded it, for example
+   * "permanent" or "contract".
+   *
+   * Kept beside employmentType rather than folded into it. Providers state the
+   * relationship and the schedule independently, and a part-time contract role
+   * is both: choosing one would misdescribe the job to an applicant.
+   */
+  readonly sourceContractType: string | null;
   readonly remoteType: RemoteType | null;
   readonly salary: Salary | null;
   /** Where an applicant is sent. A listing without one has no product value. */
@@ -114,6 +123,7 @@ export interface JobListing {
   readonly description: string | null;
   readonly descriptionIsExcerpt: boolean;
   readonly employmentType: EmploymentType | null;
+  readonly contractTypeLabel: string | null;
   readonly salary: Salary | null;
   readonly categoryLabel: string | null;
   readonly applyUrl: string;
@@ -165,6 +175,7 @@ export function contentHashOf(job: NormalizedJob): string {
     job.location?.latitude ?? null,
     job.location?.longitude ?? null,
     job.employmentType,
+    job.sourceContractType,
     job.remoteType,
     job.salary?.min ?? null,
     job.salary?.max ?? null,

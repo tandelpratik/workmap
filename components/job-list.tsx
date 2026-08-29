@@ -88,6 +88,9 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
                 <>
                   <span className="text-ink-faint"> · </span>
                   {job.locationLabel}
+                  {/* Their display_name stops at the suburb, so the state is
+                      added from the resolved location rather than left off. */}
+                  {job.stateCode === null ? null : `, ${job.stateCode}`}
                 </>
               )}
             </p>
@@ -101,6 +104,9 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
             <p className="text-ink-faint mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs tracking-wide uppercase">
               {job.employmentType === null ? null : (
                 <span>{employmentLabels[job.employmentType]}</span>
+              )}
+              {job.contractTypeLabel === null ? null : (
+                <span>{job.contractTypeLabel}</span>
               )}
               {job.categoryLabel === null ? null : <span>{job.categoryLabel}</span>}
               {job.postedAt === null ? null : (

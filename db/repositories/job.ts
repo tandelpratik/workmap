@@ -54,6 +54,7 @@ interface JobRow {
   description: string | null;
   descriptionIsExcerpt: boolean;
   employmentType: string | null;
+  sourceContractType: string | null;
   salaryMin: { toString(): string } | null;
   salaryMax: { toString(): string } | null;
   salaryCurrency: string | null;
@@ -89,6 +90,20 @@ function toSalary(row: JobRow): Salary | null {
   };
 }
 
+/**
+ * The provider's contract word, in sentence case for display.
+ *
+ * Only presented when it adds something: "permanent" alongside a full-time
+ * schedule is the default assumption and saying it twice is noise, whereas
+ * "contract" changes what someone is applying for.
+ */
+function contractLabel(value: string | null): string | null {
+  if (value === null) return null;
+  const normalised = value.trim().toLowerCase();
+  if (normalised === '' || normalised === 'permanent') return null;
+  return normalised.charAt(0).toUpperCase() + normalised.slice(1);
+}
+
 function toDomain(row: JobRow): JobListing {
   return {
     id: row.id,
@@ -99,6 +114,7 @@ function toDomain(row: JobRow): JobListing {
     description: row.description,
     descriptionIsExcerpt: row.descriptionIsExcerpt,
     employmentType: row.employmentType as EmploymentType | null,
+    contractTypeLabel: contractLabel(row.sourceContractType),
     salary: toSalary(row),
     categoryLabel: row.sourceCategoryLabel,
     applyUrl: row.applyUrl,
@@ -114,6 +130,7 @@ const jobSelect = {
   description: true,
   descriptionIsExcerpt: true,
   employmentType: true,
+  sourceContractType: true,
   salaryMin: true,
   salaryMax: true,
   salaryCurrency: true,
