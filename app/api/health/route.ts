@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkDatabase } from '@/db/client';
-import { getEnv, isSyntheticAllowed } from '@/config/env';
+import { inspectEnv, isSyntheticAllowed } from '@/config/env';
 import { logger } from '@/lib/logger';
 
 /**
@@ -10,6 +10,11 @@ import { logger } from '@/lib/logger';
  * secrets, no connection strings and no internal error detail, because it is
  * reachable without authentication.
  *
+ * It also survives a broken environment and names the offending variables. A
+ * health endpoint that fails whenever configuration is wrong is unavailable
+ * exactly when it is needed, which is how a single mistyped variable became an
+ * opaque 500 across an entire deployment with nothing to diagnose it by.
+ *
  * Never cached: a cached health check reports the past.
  */
 export const dynamic = 'force-dynamic';
@@ -18,7 +23,7 @@ export const revalidate = 0;
 type CheckState = 'ok' | 'not_configured' | 'unreachable';
 
 interface HealthResponse {
-  status: 'ok' | 'degraded';
+  status: 'ok' | 'degraded' | 'misconfigured';
   appEnv: string;
   buildId: string;
   time: string;
@@ -27,6 +32,9 @@ interface HealthResponse {
   };
   /** Confirms the synthetic boot gate from ADR-0009 at a glance. */
   syntheticSourcesAllowed: boolean;
+  /** Names of environment variables that failed validation. Never their values. */
+  invalidVariables?: readonly string[];
+  issues?: readonly string[];
 }
 
 function buildId(): string {
@@ -38,7 +46,31 @@ function buildId(): string {
 }
 
 export async function GET() {
-  const env = getEnv();
+  const inspection = inspectEnv(process.env);
+
+  if (!inspection.ok) {
+    // The variable names and the validation messages are safe to return: the
+    // parser is built never to include values, several of which are secrets.
+    logger.error('Health check found an invalid environment', {
+      invalidVariables: inspection.fields,
+    });
+
+    return NextResponse.json(
+      {
+        status: 'misconfigured',
+        appEnv: process.env['APP_ENV'] ?? 'unset',
+        buildId: buildId(),
+        time: new Date().toISOString(),
+        checks: { database: { state: 'not_configured' } },
+        syntheticSourcesAllowed: false,
+        invalidVariables: inspection.fields,
+        issues: inspection.issues,
+      } satisfies HealthResponse,
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
+  const env = inspection.env;
   const result = await checkDatabase();
 
   let database: HealthResponse['checks']['database'];

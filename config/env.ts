@@ -125,16 +125,77 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   return result.data;
 }
 
+/**
+ * The result of looking at the environment without insisting it be valid.
+ *
+ * Two kinds of misconfiguration are not the same thing, and treating them the
+ * same is what made a deployed typo indistinguishable from a crash:
+ *
+ *   - **Fatal.** Serving synthetic job advertisements in production. The
+ *     process must refuse to start (ADR-0009). There is no degraded mode in
+ *     which publishing invented vacancies is acceptable.
+ *   - **Degrading.** A missing database URL, a malformed country code. The
+ *     product already models "not configured" as a first-class state and
+ *     renders it honestly, so the server can start, say what is wrong, and
+ *     serve the unavailable states rather than returning an opaque 500 from
+ *     every route including the health check.
+ */
+export type EnvInspection =
+  | { readonly ok: true; readonly env: Env }
+  | {
+      readonly ok: false;
+      /** Variable names only. Values are never included; several are secrets. */
+      readonly fields: readonly string[];
+      readonly issues: readonly string[];
+      readonly fatal: boolean;
+    };
+
+export function inspectEnv(source: Record<string, string | undefined>): EnvInspection {
+  const result = schema.safeParse(source);
+  if (result.success) return { ok: true, env: result.data };
+
+  // Determined from the raw input rather than from a validation message, so it
+  // cannot be broken by rewording an error string.
+  const fatal =
+    source['APP_ENV'] === 'production' && source['ALLOW_SYNTHETIC_SOURCES'] === 'true';
+
+  const fields = [
+    ...new Set(result.error.issues.map((issue) => issue.path.join('.') || '(root)')),
+  ];
+  const issues = result.error.issues.map(
+    (issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`,
+  );
+
+  return { ok: false, fields, issues, fatal };
+}
+
 let cached: Env | undefined;
 
 /**
- * The validated environment. Throws on first access if configuration is
- * invalid, which is what makes the failure loud and early.
+ * The validated environment. Throws if configuration is invalid.
+ *
+ * Used where a valid environment is a precondition. Callers that can degrade
+ * gracefully should use tryGetEnv instead, so a misconfigured deployment
+ * renders an honest "unavailable" rather than a stack trace.
  */
 export function getEnv(): Env {
   if (!cached) {
     cached = parseEnv(process.env);
   }
+  return cached;
+}
+
+/**
+ * The validated environment, or null when it is invalid.
+ *
+ * The non-throwing counterpart to getEnv, for the paths that already know how
+ * to say "this is not available" (ADR-0008).
+ */
+export function tryGetEnv(): Env | null {
+  if (cached) return cached;
+  const inspection = inspectEnv(process.env);
+  if (!inspection.ok) return null;
+  cached = inspection.env;
   return cached;
 }
 
@@ -150,7 +211,10 @@ export function resetEnvCache(): void {
  * lives in one place.
  */
 export function isSyntheticAllowed(): boolean {
-  const env = getEnv();
+  // Fails closed on an unreadable environment: if we cannot tell which
+  // environment this is, fixtures are not served (ADR-0009).
+  const env = tryGetEnv();
+  if (env === null) return false;
   return env.APP_ENV !== 'production' && env.ALLOW_SYNTHETIC_SOURCES;
 }
 
@@ -168,7 +232,8 @@ export interface AdzunaCredentials {
  * (ADR-0008, ADR-0009).
  */
 export function getAdzunaCredentials(): AdzunaCredentials | null {
-  const env = getEnv();
+  const env = tryGetEnv();
+  if (env === null) return null;
   if (!env.ADZUNA_APP_ID || !env.ADZUNA_APP_KEY) return null;
   return {
     appId: env.ADZUNA_APP_ID,

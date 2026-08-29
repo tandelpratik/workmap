@@ -1,6 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from './generated/client/client';
-import { getEnv } from '@/config/env';
+import { tryGetEnv } from '@/config/env';
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 
@@ -26,7 +26,7 @@ declare global {
 let client: PrismaClient | undefined;
 
 export function isDatabaseConfigured(): boolean {
-  return Boolean(getEnv().DATABASE_URL);
+  return Boolean(tryGetEnv()?.DATABASE_URL);
 }
 
 /**
@@ -36,7 +36,19 @@ export function isDatabaseConfigured(): boolean {
  * no database.
  */
 export function getDatabase(): Result<PrismaClient, Failure> {
-  const env = getEnv();
+  const env = tryGetEnv();
+
+  // An unreadable environment is reported the same way as an absent database.
+  // Both mean the same thing to a caller: this cannot be queried, and the UI
+  // must say so rather than crash (ADR-0008).
+  if (env === null) {
+    return err(
+      failure(
+        'NOT_CONFIGURED',
+        'The environment configuration for this deployment is not valid.',
+      ),
+    );
+  }
 
   if (!env.DATABASE_URL) {
     return err(

@@ -96,8 +96,13 @@ export default async function HomePage({
           <p>{result.error.message}</p>
           {result.error.code === 'NOT_CONFIGURED' ? (
             <p>
-              No database is configured for this environment. Set{' '}
-              <code className="font-mono text-xs">DATABASE_URL</code> and reload.
+              This deployment is missing configuration.{' '}
+              <a href="/api/health" className="text-ink underline underline-offset-4">
+                /api/health
+              </a>{' '}
+              names the variables at fault. Guessing at{' '}
+              <code className="font-mono text-xs">DATABASE_URL</code> here would be wrong
+              as often as right: any invalid variable produces this state.
             </p>
           ) : null}
         </Notice>

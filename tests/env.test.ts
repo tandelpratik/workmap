@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EnvironmentError, parseEnv } from '@/config/env';
+import { inspectEnv, EnvironmentError, parseEnv } from '@/config/env';
 
 const validUrl = 'postgresql://user:pw@host.example:5432/db';
 
@@ -92,5 +92,55 @@ describe('synthetic source boot gate (ADR-0009)', () => {
     // "yes" or "1" must not be silently read as truthy, and more importantly a
     // typo must not be silently read as false in a preview environment.
     expect(() => parseEnv({ ALLOW_SYNTHETIC_SOURCES: 'yes' })).toThrow(EnvironmentError);
+  });
+});
+
+describe('inspecting an environment without insisting it be valid', () => {
+  const valid = {
+    APP_ENV: 'production',
+    DATABASE_URL: 'postgresql://u:p@host.neon.tech/db?sslmode=require',
+  };
+
+  it('returns the parsed environment when it is valid', () => {
+    const inspection = inspectEnv(valid);
+    expect(inspection.ok).toBe(true);
+    expect(inspection.ok && inspection.env.APP_ENV).toBe('production');
+  });
+
+  it('names the offending variables without returning their values', () => {
+    const inspection = inspectEnv({ ...valid, ADZUNA_COUNTRY: 'aus' });
+    expect(inspection.ok).toBe(false);
+    if (inspection.ok) return;
+
+    expect(inspection.fields).toEqual(['ADZUNA_COUNTRY']);
+    // The value is the thing that must never leak: several of these variables
+    // are credentials, and this response is returned by an unauthenticated
+    // endpoint.
+    expect(inspection.issues.join(' ')).not.toContain('aus');
+  });
+
+  it('treats an ordinary misconfiguration as degrading, not fatal', () => {
+    // The server should start and report it, because refusing to boot takes
+    // the health endpoint down with everything else.
+    const inspection = inspectEnv({ APP_ENV: 'production' });
+    expect(inspection.ok).toBe(false);
+    expect(inspection.ok === false && inspection.fields).toContain('DATABASE_URL');
+    expect(inspection.ok === false && inspection.fatal).toBe(false);
+  });
+
+  it('treats synthetic sources in production as fatal', () => {
+    // The one case with no degraded mode: a running server that publishes
+    // invented job advertisements is the outcome being prevented (ADR-0009).
+    const inspection = inspectEnv({ ...valid, ALLOW_SYNTHETIC_SOURCES: 'true' });
+    expect(inspection.ok).toBe(false);
+    expect(inspection.ok === false && inspection.fatal).toBe(true);
+  });
+
+  it('reports every problem at once, not just the first', () => {
+    const inspection = inspectEnv({ APP_ENV: 'nonsense', ADZUNA_APP_ID: '' });
+    expect(inspection.ok).toBe(false);
+    if (inspection.ok) return;
+    expect(inspection.fields).toContain('APP_ENV');
+    expect(inspection.fields).toContain('ADZUNA_APP_ID');
   });
 });
