@@ -23,7 +23,9 @@
     "db:seed": "tsx db/seed.ts",
     "db:reset": "prisma migrate reset",
     "geo:build": "tsx scripts/build-geometry.ts",
-    "geo:import": "tsx scripts/import-geography.ts"
+    "geo:import": "tsx scripts/import-geography.ts",
+    "jsa:inspect": "tsx scripts/inspect-workbook.ts",
+    "jsa:import": "tsx scripts/import-jsa-ivi.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -32,6 +34,7 @@
     "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "read-excel-file": "^9.3.10",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -52,6 +55,7 @@
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "write-excel-file": "^4.1.1"
   }
 }

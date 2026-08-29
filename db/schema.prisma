@@ -565,6 +565,18 @@ model LabourMarketSeries {
   occupationId String?     @map("occupation_id")
   occupation   Occupation? @relation(fields: [occupationId], references: [id], onDelete: Restrict)
 
+  /// The dimension identifiers exactly as the source stated them.
+  ///
+  /// These are kept whether or not the reference resolved. An occupation the
+  /// classification has not loaded yet, or a region we do not recognise, is
+  /// recorded as unresolved with the source's own code and label intact, so it
+  /// can be resolved later without re-importing. Guessing a mapping, or
+  /// dropping the row, would both lose information the source gave us.
+  sourceOccupationCode String? @map("source_occupation_code")
+  sourceOccupationName String? @map("source_occupation_name")
+  sourceGeographyCode  String? @map("source_geography_code")
+  sourceGeographyName  String? @map("source_geography_name")
+
   granularity PeriodGranularity
 
   /// Stable key derived from the dimensions above, so repeated imports resolve
@@ -701,6 +713,13 @@ model IngestionRun {
 
   /// "cron" or "manual". Operational provenance for the run itself.
   triggeredBy String? @map("triggered_by")
+
+  /// Which input this run consumed, for a file-based import: the file name as
+  /// published, and a checksum of its bytes. Together these version the import,
+  /// so a re-publication of the same reference period is detectable rather than
+  /// silently overwriting the earlier figures.
+  inputRef      String? @map("input_ref")
+  inputChecksum String? @map("input_checksum")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
