@@ -50,6 +50,22 @@ const baseSchema = z.object({
    * (ADR-0005). Required once those routes exist.
    */
   OPERATIONS_SECRET: z.string().min(32).optional(),
+
+  /**
+   * Adzuna API credentials.
+   *
+   * Server-side only. These are never referenced from a client component and
+   * never prefixed NEXT_PUBLIC_, because that prefix inlines a value into the
+   * browser bundle and would publish the key.
+   *
+   * Optional, so the application runs without them: search then reports that
+   * no provider is configured rather than failing to boot.
+   */
+  ADZUNA_APP_ID: z.string().min(1).optional(),
+  ADZUNA_APP_KEY: z.string().min(1).optional(),
+
+  /** ISO country the Adzuna adapter queries. Their API is per-country. */
+  ADZUNA_COUNTRY: z.string().length(2).default('au'),
 });
 
 export type Env = z.infer<typeof baseSchema>;
@@ -136,4 +152,27 @@ export function resetEnvCache(): void {
 export function isSyntheticAllowed(): boolean {
   const env = getEnv();
   return env.APP_ENV !== 'production' && env.ALLOW_SYNTHETIC_SOURCES;
+}
+
+export interface AdzunaCredentials {
+  readonly appId: string;
+  readonly appKey: string;
+  readonly country: string;
+}
+
+/**
+ * Adzuna credentials, or null when the provider is not configured.
+ *
+ * Returning null rather than throwing is deliberate: an unconfigured provider
+ * is an expected state that the UI renders as "not available", not a crash
+ * (ADR-0008, ADR-0009).
+ */
+export function getAdzunaCredentials(): AdzunaCredentials | null {
+  const env = getEnv();
+  if (!env.ADZUNA_APP_ID || !env.ADZUNA_APP_KEY) return null;
+  return {
+    appId: env.ADZUNA_APP_ID,
+    appKey: env.ADZUNA_APP_KEY,
+    country: env.ADZUNA_COUNTRY.toLowerCase(),
+  };
 }

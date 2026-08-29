@@ -415,6 +415,11 @@ model Job {
   description       String?           @db.Text
   descriptionFormat DescriptionFormat? @map("description_format")
 
+  /// Whether the stored description is a fragment rather than the whole
+  /// advert. Some providers return only a snippet, and presenting one as a
+  /// complete listing misrepresents an employer's advertisement.
+  descriptionIsExcerpt Boolean @default(false) @map("description_is_excerpt")
+
   companyId String?  @map("company_id")
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -426,6 +431,12 @@ model Job {
   /// code.
   occupationId String?     @map("occupation_id")
   occupation   Occupation? @relation(fields: [occupationId], references: [id], onDelete: SetNull)
+
+  /// The provider's own category, kept verbatim. It is not an ANZSCO code and
+  /// is never treated as one; occupation mapping arrives at milestone 11 and
+  /// never invents a code from a provider label.
+  sourceCategoryTag   String? @map("source_category_tag")
+  sourceCategoryLabel String? @map("source_category_label")
 
   employmentType EmploymentType? @map("employment_type")
   remoteType     RemoteType?     @map("remote_type")
@@ -476,6 +487,7 @@ model Job {
   @@index([companyId])
   @@index([postedAt])
   @@index([duplicateGroupId])
+  @@index([sourceCategoryTag])
   @@map("job")
 }
 

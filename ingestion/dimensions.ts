@@ -57,6 +57,29 @@ const stateAliases: Readonly<Record<string, string>> = {
   australia: 'australia',
 };
 
+/**
+ * The conventional abbreviation for a state or territory.
+ *
+ * The inverse of stateAliases, and used for a job location's state code, which
+ * readers expect as "NSW" rather than as the ASGS numeric code. The ASGS link
+ * is held separately, on the location's geography reference.
+ */
+const stateCodesByName: Readonly<Record<string, string>> = {
+  'new south wales': 'NSW',
+  victoria: 'VIC',
+  queensland: 'QLD',
+  'south australia': 'SA',
+  'western australia': 'WA',
+  tasmania: 'TAS',
+  'northern territory': 'NT',
+  'australian capital territory': 'ACT',
+};
+
+export function australianStateCode(name: string): string | null {
+  const normalised = normaliseName(name);
+  return stateCodesByName[stateAliases[normalised] ?? normalised] ?? null;
+}
+
 export function normaliseCode(code: string): string {
   return code.trim().toUpperCase().replace(/\s+/g, '');
 }

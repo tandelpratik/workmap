@@ -1,118 +1,210 @@
 import { brand } from '@/config/brand';
+import { getAdzunaCredentials } from '@/config/env';
+import { lastRetrievedAt, searchJobs } from '@/db/repositories/job';
+import { AdzunaAttribution } from '@/components/adzuna-attribution';
+import { JobList } from '@/components/job-list';
+import { JobSearchForm } from '@/components/job-search-form';
 
 /**
- * Development placeholder.
+ * Job search.
  *
- * The product has no data yet, so this page states what is being built and
- * where each source stands. It shows no figures, because there are none to
- * show and inventing them is forbidden.
+ * Rendered on the server from the URL, so a search is shareable and works
+ * without client JavaScript.
  *
- * Replaced by the real homepage at milestone 09, when the map exists.
+ * Every state a reader can land in is handled explicitly, because "no results"
+ * and "no provider configured" are different facts and collapsing them into one
+ * empty page would misrepresent the product (ADR-0008).
  */
 
-interface SourcePosition {
-  readonly label: string;
-  readonly source: string;
-  readonly state: 'available' | 'pending' | 'blocked';
-  readonly note: string;
+export const dynamic = 'force-dynamic';
+
+const PAGE_SIZE = 20;
+
+function first(value: string | string[] | undefined): string | undefined {
+  const single = Array.isArray(value) ? value[0] : value;
+  const trimmed = single?.trim();
+  return trimmed === '' ? undefined : trimmed;
 }
 
-const positions: readonly SourcePosition[] = [
-  {
-    label: 'Market intelligence',
-    source: 'Jobs and Skills Australia, Internet Vacancy Index',
-    state: 'pending',
-    note: 'Designated the active source. Licence terms not yet verified.',
-  },
-  {
-    label: 'Geography',
-    source: 'ABS Australian Statistical Geography Standard',
-    state: 'pending',
-    note: 'State and SA4 boundaries. Licence terms not yet verified.',
-  },
-  {
-    label: 'Job advertisements',
-    source: 'No authorized provider',
-    state: 'blocked',
-    note: 'Onboarding is unavailable. No listings are shown until access is granted.',
-  },
-];
-
-const stateLabel: Record<SourcePosition['state'], string> = {
-  available: 'Active',
-  pending: 'Pending verification',
-  blocked: 'Unavailable',
-};
-
-const stateClass: Record<SourcePosition['state'], string> = {
-  available: 'text-state-available',
-  pending: 'text-state-pending',
-  blocked: 'text-state-blocked',
-};
-
-export default function HomePage() {
+function Notice({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <main id="main" className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
+    <section className="border-rule-strong mt-10 border-t pt-6">
+      <h2 className="text-ink font-serif text-2xl font-semibold">{title}</h2>
+      <div className="text-ink-muted max-w-measure mt-3 space-y-3 text-sm leading-relaxed">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function pageHref(params: {
+  q?: string | undefined;
+  where?: string | undefined;
+  page: number;
+}): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set('q', params.q);
+  if (params.where) search.set('where', params.where);
+  if (params.page > 1) search.set('page', String(params.page));
+  const query = search.toString();
+  return query === '' ? '/' : `/?${query}`;
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const text = first(params['q']);
+  const location = first(params['where']);
+  const requestedPage = Number(first(params['page']) ?? '1');
+  const page = Number.isFinite(requestedPage)
+    ? Math.max(1, Math.trunc(requestedPage))
+    : 1;
+
+  const result = await searchJobs({
+    ...(text ? { text } : {}),
+    ...(location ? { location } : {}),
+    page,
+    pageSize: PAGE_SIZE,
+  });
+
+  const freshness = await lastRetrievedAt('adzuna');
+  const credentialsConfigured = getAdzunaCredentials() !== null;
+  const hasQuery = text !== undefined || location !== undefined;
+
+  return (
+    <main id="main" className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
       <header>
         <p className="text-ink-faint font-mono text-xs tracking-widest uppercase">
-          In development
+          {brand.shortName}
         </p>
-        <h1 className="text-ink mt-6 font-serif text-5xl leading-tight font-semibold sm:text-6xl">
-          {brand.productName}
+        <h1 className="text-ink mt-4 font-serif text-4xl leading-tight font-semibold sm:text-5xl">
+          Job advertisements in Australia
         </h1>
-        <p className="text-ink-muted mt-3 font-serif text-2xl italic">{brand.tagline}</p>
+        <p className="text-ink-muted max-w-measure mt-3 text-base leading-relaxed">
+          Search advertised roles, with the employer, location and salary exactly as the
+          source published them.
+        </p>
       </header>
 
-      <hr className="border-rule mt-10 border-0 border-t" />
+      <JobSearchForm text={text} location={location} />
 
-      <section className="max-w-measure mt-10">
-        <h2 className="sr-only">About</h2>
-        <p className="text-ink text-base leading-relaxed">
-          An atlas of Australian labour market demand. Where work is concentrated, which
-          occupations are sought, which skills are asked for, and how that changes over
-          time.
-        </p>
-        <p className="text-ink-muted mt-4 text-base leading-relaxed">
-          Every figure will name its source, its reference period and its geographic
-          level. Nothing is estimated into existence, and measurements of advertised
-          demand are never presented as counts of all vacancies.
-        </p>
-      </section>
+      {!result.ok ? (
+        <Notice title="Search is unavailable">
+          <p>{result.error.message}</p>
+          {result.error.code === 'NOT_CONFIGURED' ? (
+            <p>
+              No database is configured for this environment. Set{' '}
+              <code className="font-mono text-xs">DATABASE_URL</code> and reload.
+            </p>
+          ) : null}
+        </Notice>
+      ) : result.value.total === 0 && !hasQuery ? (
+        <Notice title="No listings have been ingested yet">
+          {credentialsConfigured ? (
+            <p>
+              Adzuna credentials are configured. Run{' '}
+              <code className="font-mono text-xs">npm run adzuna:ingest</code> to fetch
+              the first page of advertisements.
+            </p>
+          ) : (
+            <p>
+              No job provider is configured. Set{' '}
+              <code className="font-mono text-xs">ADZUNA_APP_ID</code> and{' '}
+              <code className="font-mono text-xs">ADZUNA_APP_KEY</code> in{' '}
+              <code className="font-mono text-xs">.env</code>, then run{' '}
+              <code className="font-mono text-xs">npm run adzuna:ingest</code>.
+            </p>
+          )}
+          <p>
+            Nothing is shown until real listings are loaded. This page never displays
+            placeholder or example advertisements.
+          </p>
+        </Notice>
+      ) : result.value.total === 0 ? (
+        <Notice title="No listings match this search">
+          <p>
+            Nothing in the index matches
+            {text === undefined ? '' : ` “${text}”`}
+            {text !== undefined && location !== undefined ? ' in' : ''}
+            {location === undefined ? '' : ` ${location}`}. Try a broader term, or clear
+            the location.
+          </p>
+          <p>
+            The index holds advertisements collected from Adzuna, which is a sample of
+            what is advertised online rather than every vacancy in Australia.
+          </p>
+        </Notice>
+      ) : (
+        <>
+          <div className="mt-8 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <p className="text-ink-muted text-sm">
+              <span className="tabular text-ink font-medium">
+                {result.value.total.toLocaleString('en-AU')}
+              </span>{' '}
+              {result.value.total === 1 ? 'listing' : 'listings'}
+              {hasQuery ? ' matching this search' : ' in the index'}
+            </p>
+            {freshness.ok && freshness.value !== null ? (
+              <p className="text-ink-faint font-mono text-xs tracking-wide uppercase">
+                Updated{' '}
+                {new Intl.DateTimeFormat('en-AU', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  timeZone: 'Australia/Sydney',
+                }).format(freshness.value)}
+              </p>
+            ) : null}
+          </div>
 
-      <section className="mt-14">
-        <h2 className="text-ink-faint font-mono text-xs tracking-widest uppercase">
-          Current position
-        </h2>
+          <JobList jobs={result.value.jobs} />
 
-        <dl className="border-rule mt-6 border-t">
-          {positions.map((position) => (
-            <div
-              key={position.label}
-              className="border-rule grid grid-cols-1 gap-1 border-b py-5 sm:grid-cols-[11rem_1fr] sm:gap-6"
-            >
-              <dt className="text-ink text-sm font-medium">{position.label}</dt>
-              <dd>
-                <p className="text-ink text-sm">
-                  {position.source}
-                  <span className="text-ink-faint"> &middot; </span>
-                  <span className={`text-sm font-medium ${stateClass[position.state]}`}>
-                    {stateLabel[position.state]}
-                  </span>
-                </p>
-                <p className="text-ink-muted mt-1 text-sm leading-relaxed">
-                  {position.note}
-                </p>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+          <nav
+            className="mt-8 flex items-center justify-between text-sm"
+            aria-label="Pagination"
+          >
+            {page > 1 ? (
+              <a
+                href={pageHref({ q: text, where: location, page: page - 1 })}
+                className="text-ink hover:text-accent underline underline-offset-4"
+              >
+                Previous
+              </a>
+            ) : (
+              <span className="text-ink-faint">Previous</span>
+            )}
+            <span className="text-ink-muted tabular">
+              Page {page} of{' '}
+              {Math.max(1, Math.ceil(result.value.total / result.value.pageSize))}
+            </span>
+            {page * result.value.pageSize < result.value.total ? (
+              <a
+                href={pageHref({ q: text, where: location, page: page + 1 })}
+                className="text-ink hover:text-accent underline underline-offset-4"
+              >
+                Next
+              </a>
+            ) : (
+              <span className="text-ink-faint">Next</span>
+            )}
+          </nav>
+        </>
+      )}
 
-      <footer className="max-w-measure mt-14">
-        <p className="text-ink-faint text-sm leading-relaxed">
-          The Internet Vacancy Index measures job advertisements published online on a
-          defined set of job boards. It is an indicator of advertised demand, not a count
-          of all Australian vacancies.
+      <footer className="border-rule mt-14 border-t pt-6">
+        {/*
+          Required by the Adzuna terms on every page displaying their adverts.
+          A licence condition, so it is not optional and not decorative.
+        */}
+        <AdzunaAttribution />
+        <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">
+          Listings are advertisements collected from Adzuna and are a sample of what is
+          advertised online, not a count of all vacancies in Australia. Salaries marked as
+          an Adzuna Jobsworth estimate were predicted by Adzuna, not quoted by the
+          employer.
         </p>
       </footer>
     </main>

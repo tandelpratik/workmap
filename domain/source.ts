@@ -69,6 +69,19 @@ export interface SourceDescriptor {
   /** Absent means no documented limit, which is not the same as unlimited. */
   readonly rateLimit?: RateLimit;
 
+  /**
+   * Whether the licence permits publishing statistics derived from this
+   * source: counts, averages, trends, anything aggregated.
+   *
+   * Separate from compliance status because it is a different question. Adzuna
+   * is the case that proves it: its terms permit publishing individual ad
+   * listings and, in the same breath, forbid using the data "in aggregation
+   * (including but not limited to vacancy counts, average salaries etc) to
+   * deliver any ongoing work" without written consent. A source can therefore
+   * be fully verified and still be unusable for the heatmap.
+   */
+  readonly permitsDerivedAggregates: boolean;
+
   /** Why a source is blocked or restricted, for operators. */
   readonly notes?: string;
 }
@@ -97,6 +110,17 @@ export function isUsable(
     return !options.isProduction;
   }
   return options.isProduction ? isProductionEligible(descriptor) : true;
+}
+
+/**
+ * Whether aggregate figures may be computed from this source and published.
+ *
+ * Both gates apply: a source must be usable in production at all, and its
+ * licence must permit aggregation. No call site decides this for itself, for
+ * the same reason no call site evaluates production eligibility (ADR-0009).
+ */
+export function canPublishDerivedAggregates(descriptor: SourceDescriptor): boolean {
+  return isProductionEligible(descriptor) && descriptor.permitsDerivedAggregates;
 }
 
 /** Explains, in one line, why a source cannot be used. Null when it can. */

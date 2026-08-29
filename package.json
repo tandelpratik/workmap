@@ -25,7 +25,9 @@
     "geo:build": "tsx scripts/build-geometry.ts",
     "geo:import": "tsx scripts/import-geography.ts",
     "jsa:inspect": "tsx scripts/inspect-workbook.ts",
-    "jsa:import": "tsx scripts/import-jsa-ivi.ts"
+    "jsa:import": "tsx scripts/import-jsa-ivi.ts",
+    "adzuna:ingest": "tsx scripts/ingest-adzuna.ts",
+    "adzuna:purge": "tsx scripts/purge-adzuna.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

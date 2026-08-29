@@ -17,10 +17,10 @@ working tree carried uncommitted groundwork: the `source_*` dimension columns,
 The importer is finished. It has not imported anything, because the files are
 unreachable from here.
 
-| Path                                       | Result                                            |
-| ------------------------------------------ | ------------------------------------------------- |
-| `jobsandskills.gov.au`                     | Connection and TLS succeed, no HTTP response. Same application-layer block recorded at 04a |
-| `data.gov.au`, the official open-data mirror | Reachable, but `robots.txt` is `Disallow: /` for all agents |
+| Path                                         | Result                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `jobsandskills.gov.au`                       | Connection and TLS succeed, no HTTP response. Same application-layer block recorded at 04a |
+| `data.gov.au`, the official open-data mirror | Reachable, but `robots.txt` is `Disallow: /` for all agents                                |
 
 The second is the notable one. The Australian Government's own open-data portal
 disallows automated access site-wide, so a scripted download from it is not
@@ -90,12 +90,12 @@ loudly, per ADR-0005, because a rate that high means the release changed shape.
 
 ## Verification
 
-| Check                                        | Result                                 |
-| -------------------------------------------- | -------------------------------------- |
-| `vitest run`                                 | 154 tests, all pass (58 new)           |
-| `eslint`, `tsc --noEmit`, `prettier --check` | Pass                                   |
+| Check                                        | Result                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `vitest run`                                 | 154 tests, all pass (58 new)                                          |
+| `eslint`, `tsc --noEmit`, `prettier --check` | Pass                                                                  |
 | Migration applied                            | `20260829163311_labour_market_source_dimensions_and_input_versioning` |
-| Import against a real IVI release            | **Not run.** No file obtainable        |
+| Import against a real IVI release            | **Not run.** No file obtainable                                       |
 
 The import test runs the real importer against a generated `.xlsx` fixture,
 inside a transaction that is rolled back. That exercises the real schema, its

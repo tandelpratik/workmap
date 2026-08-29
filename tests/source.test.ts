@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canPublishDerivedAggregates,
   complianceStatuses,
   ineligibilityReason,
   isProductionEligible,
@@ -19,6 +20,7 @@ function descriptor(overrides: Partial<SourceDescriptor> = {}): SourceDescriptor
     activation: 'ACTIVE',
     complianceStatus: 'VERIFIED',
     attributionRequired: false,
+    permitsDerivedAggregates: true,
     ...overrides,
   };
 }
@@ -97,7 +99,7 @@ describe('source registry', () => {
     // happen as a side effect of an unrelated edit. Adding a key here requires
     // a matching entry in docs/compliance/SOURCE_REGISTER.md with evidence.
     const eligible = sourceDescriptors.filter(isProductionEligible).map((d) => d.key);
-    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs']);
+    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs', 'adzuna']);
   });
 
   it('gives every verified source that requires attribution its exact wording', () => {
@@ -119,10 +121,26 @@ describe('source registry', () => {
     expect(isUsable(synthetic!, { isProduction: true })).toBe(false);
   });
 
-  it('records Adzuna as blocked rather than merely unverified', () => {
-    // The distinction matters: its terms are not known to be a problem, access
-    // simply is not available.
-    expect(findSourceDescriptor('adzuna')?.activation).toBe('BLOCKED');
+  it('records Adzuna as verified for listings and barred from aggregation', () => {
+    // Access was obtained and the API terms were read on 2026-08-29. The two
+    // axes now say different things, which is the point of having two: it is
+    // fully usable for publishing advertisements, and its licence reserves
+    // aggregate figures for a written agreement.
+    const adzuna = findSourceDescriptor('adzuna');
+    expect(adzuna?.activation).toBe('ACTIVE');
+    expect(adzuna?.complianceStatus).toBe('VERIFIED');
+    expect(adzuna?.permitsDerivedAggregates).toBe(false);
+    // Their mandated wording, not a paraphrase of it.
+    expect(adzuna?.attributionText).toBe('Jobs by Adzuna');
+  });
+
+  it('permits aggregation only where a licence actually allows it', () => {
+    // Another exact list. A source becoming a permitted basis for published
+    // statistics is a compliance decision, never an incidental edit.
+    const aggregable = sourceDescriptors
+      .filter(canPublishDerivedAggregates)
+      .map((d) => d.key);
+    expect(aggregable).toEqual(['jsa-ivi', 'abs-asgs']);
   });
 
   it('returns undefined for an unknown key', () => {

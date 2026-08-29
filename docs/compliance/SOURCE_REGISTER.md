@@ -13,8 +13,13 @@ verify that source first.
 
 A source is usable in production only when both axes permit it (ADR-0009).
 Compliance answers "are we permitted?". Activation answers "is it turned on?".
-Adzuna is the reason these are separate: nothing is known to be wrong with its
-terms, and access is unavailable regardless.
+Adzuna was the reason these are separate: for months nothing was known to be
+wrong with its terms and access was unavailable regardless. Access has since
+been granted, and it now illustrates a third distinction: a source can be fully
+verified and still be barred from part of the product. Its terms permit
+publishing advertisements and reserve aggregate figures for a written licence,
+so `permitsDerivedAggregates` is a separate field on the descriptor and a
+separate gate in `canPublishDerivedAggregates`.
 
 ### Compliance status
 
@@ -39,13 +44,13 @@ this register.
 
 ## Current state
 
-| Source      | Kind                | Activation         | Compliance     | Production eligible |
-| ----------- | ------------------- | ------------------ | -------------- | ------------------- |
-| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0  |
-| `abs-asgs`  | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0  |
-| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                  |
-| `adzuna`    | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No                  |
-| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**           |
+| Source      | Kind                | Activation         | Compliance     | Production eligible                   |
+| ----------- | ------------------- | ------------------ | -------------- | ------------------------------------- |
+| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `abs-asgs`  | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
+| `adzuna`    | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
+| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                             |
 
 ## What every source must answer
 
@@ -354,20 +359,107 @@ milestone 05.
 
 - **Key:** `adzuna`
 - **Kind:** Individual job listings
-- **Activation:** `BLOCKED`
-- **Compliance:** `UNVERIFIED`
-- **Blocker:** The available onboarding path requires organization and website
-  details that do not exist yet. Organization details must not be invented and
-  onboarding must not be bypassed.
-- **Needed by:** Milestone 12 (adapter boundary), 13 (ingestion). Both proceed
-  without live credentials; see ADR-0009.
-- **Open questions:** commercial use on a free tier; permitted description
-  storage and display length; caching duration; attribution wording; whether
-  applications must be directed to the source listing; request quotas.
-- **Activation procedure:** `.claude/docs/SOURCE_ACTIVATION_RUNBOOK.md`.
-- **Note:** Credentials must never reach the browser (ADR-0006). Requests are
-  server-side only. No fake credentials or placeholder organization details are
-  ever committed.
+- **Activation:** `ACTIVE`. API credentials obtained by the product owner.
+- **Compliance:** `VERIFIED`, with a restriction that is as important as the
+  verification itself.
+- **Verified on:** 2026-08-29, from
+  [their API terms of service](https://developer.adzuna.com/docs/terms_of_service),
+  read directly.
+- **Needed by:** Milestone 12 (adapter), 13 (ingestion), 16 and 17 (search).
+
+**Permissible use is a closed list.** The terms name three uses:
+
+> The Adzuna API may be used for: Publishing Adzuna ad listings; Publishing
+> Jobsworth salary estimates; Personal research
+
+Publishing listings is the first of those, so the job search product sits
+squarely inside the grant.
+
+**The restriction.** The clause immediately after that list:
+
+> Any other use of the Adzuna API by a commercial, government or academic
+> organisation including any affiliates or individuals, is permitted subject to
+> a 14 day trial period... **It may not be used in its original format or in
+> aggregation (including but not limited to vacancy counts, average salaries
+> etc) to deliver any ongoing work or research**, apart from the purpose stated
+> prior, without written consent. After the trial period ends, a licence
+> agreement may be required.
+
+So Adzuna data may be **displayed as individual advertisements** and may **not**
+be turned into published statistics. No vacancy counts, no average salaries, no
+regional or category breakdowns, no trends. The market intelligence layer, and
+the heatmap in particular, stays on JSA IVI, which is CC BY 4.0 and permits
+exactly that.
+
+This is enforced rather than documented: `permitsDerivedAggregates: false` on
+the descriptor, `canPublishDerivedAggregates` as the single gate, an exact-list
+test that fails if the flag changes, and no aggregate query in
+`db/repositories/job.ts`.
+
+**Where the line falls.** A result count on a search page is part of paginating
+a search and is shown as such. A count of advertisements per region or per
+occupation, presented as information about the labour market, is the
+aggregation the clause reserves. The first is inside the grant; the second is
+not.
+
+**Answers to the twelve questions**
+
+| Question              | Answer                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| Commercial use        | Permitted for publishing ad listings. Aggregation requires written consent and possibly a licence |
+| Display rights        | Permitted, subject to the mandatory label below                                                   |
+| Redistribution        | As displayed advertisements linking back to Adzuna. Not as a data set                             |
+| Derived data          | **Not permitted** without written consent                                                         |
+| Caching and retention | No duration stated. Data is stored to serve search and refreshed on a schedule                    |
+| Deletion obligations  | **Yes.** On termination, all Adzuna data must be removed from the site immediately                |
+| Attribution           | Mandatory and prescriptive; exact requirements below                                              |
+| Branding constraints  | Their logo must be used, from their press page. Confidential information must not be disclosed    |
+| Application links     | `redirect_url` is used unmodified, including its tracking parameters                              |
+| Rate limits           | 25/minute, 250/day, 1000/week, 2500/month on the default allowance                                |
+| Acceptable use        | No contacting their third-party content providers. No multiple accounts. No extraction for resale |
+| Terms reviewed        | 2026-08-29                                                                                        |
+
+**Mandatory attribution, quoted in full because the wording is prescriptive:**
+
+> An API user shall label each displayed advert with the phrase "Jobs by Adzuna"
+> at least 116 X 23 pixels in size, wherein the word "Jobs" shall be hyperlinked
+> to http://www.adzuna.co.uk or the relevant local domain and the word "Adzuna"
+> shall be the Adzuna Logo Image and shall also be hyperlinked to
+> http://www.adzuna.co.uk or the relevant local domain.
+
+And for estimated salaries:
+
+> An API user shall label every Jobsworth salary estimate that they publish with
+> an icon at least 20 x 20 pixels in size and the word "Adzuna Jobsworth". Both
+> elements will link to http://www.adzuna.co.uk/jobs/salary-predictor.html. An
+> API user will add the following mouseover text to these links: "Salary
+> estimate powered by Adzuna Jobsworth"
+
+Implemented in `components/adzuna-attribution.tsx`. This is a licence condition,
+so it outranks the design system's restraint where the two disagree.
+
+**Outstanding: the logo asset.** `public/adzuna-logo.png` is not in the
+repository. Adzuna's own site returns HTTP 403 to automated requests and their
+bot protection was not circumvented, so the file must be downloaded by hand from
+https://www.adzuna.co.uk/press.html. Until it is, the component renders the
+required wording and links and logs an error on every render. **Publishing the
+site to the public without the logo would not satisfy the terms.** The same
+applies to the 20x20 Jobsworth icon.
+
+**Termination obligation.**
+
+> Upon termination of this agreement, for any reason and by either party, an API
+> user shall immediately remove all insertion codes and data acquired from
+> Adzuna from all pages of its web sites.
+
+`npm run adzuna:purge -- --confirm` deletes every Adzuna row. It deletes rather
+than expires, which is the one place in the system where that is correct: an
+obligation to remove data is not satisfied by hiding it.
+
+**Note:** Credentials are server-side only and never reach the browser
+(ADR-0006). They are never prefixed `NEXT_PUBLIC_`, and the client strips them
+from any URL before logging, because Adzuna passes credentials in the query
+string.
 
 ### Synthetic job source
 
@@ -405,10 +497,11 @@ Independent of any terms, and not subject to trade-off:
 
 ## Change log
 
-| Date       | Change                                                                                                                                                                                                                                   |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                                                                                              |
-| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                            |
-| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                           |
-| 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`. |
-| 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                |
+| Date       | Change                                                                                                                                                                                                                                             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                                                                                                        |
+| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                                      |
+| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                                     |
+| 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`.           |
+| 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                          |
+| 2026-08-29 | Adzuna access granted and its API terms verified. `ACTIVE` / `VERIFIED` for publishing listings. Aggregation barred without written consent, enforced by `permitsDerivedAggregates`. Mandatory attribution recorded. Logo asset still outstanding. |

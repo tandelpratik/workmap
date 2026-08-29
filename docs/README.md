@@ -11,12 +11,12 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Engineering documentation
 
-| Document                                                       | Purpose                                                             |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)   | Consolidated technical view: modules, boundaries, data flow         |
-| [adr/README.md](adr/README.md)                                 | Architecture decision records and their status                      |
-| [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md) | Per-source compliance status. **All sources currently unverified.** |
-| [milestones/](milestones/)                                     | One record per completed milestone                                  |
+| Document                                                       | Purpose                                                     |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)   | Consolidated technical view: modules, boundaries, data flow |
+| [adr/README.md](adr/README.md)                                 | Architecture decision records and their status              |
+| [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md) | Per-source compliance status, and what each licence permits |
+| [milestones/](milestones/)                                     | One record per completed milestone                          |
 
 ## Reading order for a new contributor
 
@@ -28,14 +28,21 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Milestone 04 complete. Scaffold, canonical schema and Australian geography
-(ASGS Edition 4: 2 country, 10 state and 108 SA4 areas) are loaded and
-verified. No product features and no labour market data yet. Setup instructions
-are in the [root README](../README.md).
+Job search is live. Adzuna is verified and active, and the home page is a
+working search over ingested advertisements. Milestone 05 built the JSA IVI
+importer, which has no file to import yet.
 
-**Source position:** JSA is the active source and carries the launch product.
-JSA IVI and ABS ASGS are both verified as CC BY 4.0 and production eligible.
-Adzuna is blocked at onboarding and no job listings ship until it or another
-authorized provider is activated. A development-only synthetic source exists for
-building the job pipeline and can never run in production. See
-[ADR-0009](adr/0009-source-activation-and-synthetic-containment.md).
+Milestones 06 to 11, the market intelligence layer, are deferred: the product
+owner chose to build a demonstrable job product first.
+
+**Source position:** Adzuna carries job listings and is verified for exactly
+that. Its terms bar publishing aggregate figures without written consent, so
+counts, averages and the heatmap stay on JSA IVI, which is CC BY 4.0. ABS ASGS
+supplies geography. A development-only synthetic source exists for the pipeline
+and can never run in production. See
+[ADR-0009](adr/0009-source-activation-and-synthetic-containment.md) and the
+[source register](compliance/SOURCE_REGISTER.md).
+
+**Launch blocker:** `public/adzuna-logo.png` must be added by hand before the
+site is public. Adzuna's terms require their logo in the attribution and their
+site blocks automated download.
