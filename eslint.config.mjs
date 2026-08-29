@@ -112,4 +112,13 @@ export default tseslint.config(
     files: ['tests/**/*.ts', '**/*.test.ts'],
     rules: { 'no-console': 'off' },
   },
+
+  {
+    // Build scripts run outside the application, before a logger exists, and
+    // their stdout is the build log itself. The operational scripts in
+    // scripts/*.ts are deliberately not included: they opt in per line, which
+    // keeps the friction where ad hoc logging would actually be a mistake.
+    files: ['scripts/**/*.mjs'],
+    rules: { 'no-console': 'off' },
+  },
 );

@@ -77,12 +77,24 @@ npx vercel link
 npx vercel --prod
 ```
 
-Vercel runs the `vercel-build` script in preference to `build`, so migrations
-are applied as part of the deploy and never at runtime:
+Vercel runs the `vercel-build` script in preference to `build`, which is
+`scripts/vercel-build.mjs`. Migrations are applied at deploy and never at
+runtime (ADR-0006), but **only on a production deployment**.
 
-```
-prisma migrate deploy && next build
-```
+That condition is not fussiness. Production and preview currently share one
+database, so migrating from a preview build would apply a feature branch's
+schema change to live data, triggered by a build nobody treats as a release. A
+preview therefore builds against whatever schema production is on, which is also
+the more honest test: a preview whose code needs an unapplied migration should
+fail loudly rather than quietly reshape production to suit itself.
+
+Two consequences worth knowing:
+
+- **A preview build needs no database variables at all.** It skips migrations
+  and `next build` does not touch the database. `DATABASE_URL` is still needed
+  at _runtime_, or the deployed preview reports that search is unavailable.
+- **A production build fails fast without `DIRECT_DATABASE_URL`**, naming the
+  variable and why it must be the direct string rather than the pooled one.
 
 `vercel.json` pins functions to `syd1` so they sit beside the Neon database in
 `ap-southeast-2`. Confirm the region is available on the current plan at first
@@ -159,16 +171,17 @@ trusting this document; Neon has changed it before.
 
 ## Failure modes worth expecting
 
-| Symptom                                     | Cause                                                                         |
-| ------------------------------------------- | ----------------------------------------------------------------------------- |
-| Site loads, search says "not configured"    | `DATABASE_URL` missing. The health endpoint will say so                       |
-| Search works, no listings                   | Nothing ingested yet, or the ingest cron has never run                        |
-| Ingest returns 403                          | `OPERATIONS_SECRET` differs between the caller and the deployment             |
-| Ingest returns 503 `NOT_CONFIGURED`         | `OPERATIONS_SECRET` is not set on the deployment at all                       |
-| Ingest returns `FORBIDDEN` about the source | The `adzuna` row is not `ACTIVE`/`VERIFIED`. Run the seed                     |
-| Ingest fails with `FORBIDDEN` from Adzuna   | Credentials rejected. The client does not retry these, by design              |
-| Build fails on `prisma migrate deploy`      | `DIRECT_DATABASE_URL` missing, or pointing at the pooled host                 |
-| Process refuses to start                    | `ALLOW_SYNTHETIC_SOURCES=true` with `APP_ENV=production`. Working as intended |
+| Symptom                                             | Cause                                                                                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Site loads, search says "not configured"            | `DATABASE_URL` missing. The health endpoint will say so                                                                               |
+| Search works, no listings                           | Nothing ingested yet, or the ingest cron has never run                                                                                |
+| Ingest returns 403                                  | `OPERATIONS_SECRET` differs between the caller and the deployment                                                                     |
+| Ingest returns 503 `NOT_CONFIGURED`                 | `OPERATIONS_SECRET` is not set on the deployment at all                                                                               |
+| Ingest returns `FORBIDDEN` about the source         | The `adzuna` row is not `ACTIVE`/`VERIFIED`. Run the seed                                                                             |
+| Ingest fails with `FORBIDDEN` from Adzuna           | Credentials rejected. The client does not retry these, by design                                                                      |
+| Production build fails naming `DIRECT_DATABASE_URL` | Not set for the Production environment, or set to the pooled host                                                                     |
+| Preview deploys but search says "not configured"    | `DATABASE_URL` not set for the Preview environment. Preview builds skip migrations, so the build passing proves nothing about runtime |
+| Process refuses to start                            | `ALLOW_SYNTHETIC_SOURCES=true` with `APP_ENV=production`. Working as intended                                                         |
 
 ## What is not yet in place
 
