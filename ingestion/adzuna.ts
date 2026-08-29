@@ -103,123 +103,144 @@ async function loadGeographyLookup(
   );
 }
 
-async function resolveCompany(
+/**
+ * Ensures every company named on the page is in the cache, in three queries.
+ *
+ * The naive shape is one upsert per listing. That is 250 sequential round trips
+ * for a full page, and sequential round trips are the whole cost of this job:
+ * the first run through the deployed endpoint timed out at sixty seconds doing
+ * exactly that. Reading what exists, creating only what does not, and reading
+ * back the new ids is three queries whatever the page size.
+ */
+async function cacheCompanies(
   database: Database,
   caches: Caches,
-  job: NormalizedJob,
-): Promise<string | null> {
-  if (!job.company) return null;
+  jobs: readonly NormalizedJob[],
+): Promise<void> {
+  const wanted = new Map<string, string>();
+  for (const job of jobs) {
+    if (!job.company) continue;
+    const key = normalizeCompanyName(job.company.name);
+    if (key !== '' && !caches.companies.has(key)) wanted.set(key, job.company.name);
+  }
+  if (wanted.size === 0) return;
 
-  const key = normalizeCompanyName(job.company.name);
-  if (key === '') return null;
+  const existing = await database.company.findMany({
+    where: { normalizedName: { in: [...wanted.keys()] } },
+    select: { id: true, normalizedName: true },
+  });
+  for (const row of existing) {
+    caches.companies.set(row.normalizedName, row.id);
+    wanted.delete(row.normalizedName);
+  }
+  if (wanted.size === 0) return;
 
-  const cached = caches.companies.get(key);
-  if (cached !== undefined) return cached;
-
-  const row = await database.company.upsert({
-    where: { normalizedName: key },
-    create: { name: job.company.name, normalizedName: key },
-    update: {},
-    select: { id: true },
+  // skipDuplicates guards the race with a concurrent run: the unique index is
+  // the real defence, and losing the race must not fail the import.
+  await database.company.createMany({
+    data: [...wanted].map(([normalizedName, name]) => ({ name, normalizedName })),
+    skipDuplicates: true,
   });
 
-  caches.companies.set(key, row.id);
-  return row.id;
+  const created = await database.company.findMany({
+    where: { normalizedName: { in: [...wanted.keys()] } },
+    select: { id: true, normalizedName: true },
+  });
+  for (const row of created) caches.companies.set(row.normalizedName, row.id);
 }
 
 /**
- * Finds or creates the location row, and links it to an official area when the
- * provider's own hierarchy names one.
+ * The same for locations, plus resolution to an official area.
  *
- * Adzuna states a hierarchy broadest first, so for Australia the second entry
- * is the state. Only that level is resolved: their finer entries are their own
- * regions, not ASGS areas, and matching them by name would be a guess. An
- * unresolved location keeps its raw text and stays unresolved rather than being
- * attached to a plausible parent.
+ * Adzuna states its hierarchy broadest first, so the country is index 0 and the
+ * state index 1. Each is resolved at the level the provider placed it rather
+ * than by searching every level, which is what made every Canberra
+ * advertisement ambiguous: the ASGS registry holds two areas named "Australian
+ * Capital Territory", the state and the SA4 inside it. Their finer entries are
+ * Adzuna regions, not ASGS areas, and are never matched by name.
  */
-async function resolveLocation(
+async function cacheLocations(
   database: Database,
   caches: Caches,
-  job: NormalizedJob,
-): Promise<string | null> {
-  if (!job.location) return null;
-
-  const key = normalizeLocationKey(job.location.rawText);
-  if (key === '') return null;
-
-  const cached = caches.locations.get(key);
-  if (cached !== undefined) return cached;
-
-  // Adzuna states its hierarchy broadest first: ["Australia", "Victoria", ...].
-  // The country is index 0 and the state index 1, so each is resolved at the
-  // level the provider placed it, rather than by searching every level and
-  // giving up when a name exists at two of them.
-  const countryName = job.location.area[0] ?? null;
-  const stateName = job.location.area[1] ?? null;
-
-  let resolved: DimensionResolution | null = null;
-  if (stateName !== null) {
-    resolved = resolveGeographyAtLevel(caches.geography, stateName, 'STATE');
-  } else if (countryName !== null) {
-    // A nationwide advertisement names only the country. That is a real
-    // location, not a missing one, so it links to the country rather than
-    // being dropped.
-    resolved = resolveGeographyAtLevel(caches.geography, countryName, 'COUNTRY');
+  jobs: readonly NormalizedJob[],
+): Promise<void> {
+  interface Pending {
+    readonly rawText: string;
+    readonly stateCode: string | null;
+    readonly geographyId: string | null;
+    readonly latitude: number | null;
+    readonly longitude: number | null;
   }
 
-  const data = {
-    stateCode: stateName === null ? null : australianStateCode(stateName),
-    geographyId: resolved?.status === 'RESOLVED' ? resolved.id : null,
-    latitude: job.location.latitude,
-    longitude: job.location.longitude,
-  };
+  const wanted = new Map<string, Pending>();
 
-  const row = await database.location.upsert({
-    where: { normalizedKey: key },
-    create: { rawText: job.location.rawText, normalizedKey: key, ...data },
-    update: data,
-    select: { id: true },
+  for (const job of jobs) {
+    if (!job.location) continue;
+    const key = normalizeLocationKey(job.location.rawText);
+    if (key === '' || caches.locations.has(key) || wanted.has(key)) continue;
+
+    const countryName = job.location.area[0] ?? null;
+    const stateName = job.location.area[1] ?? null;
+
+    let resolved: DimensionResolution | null = null;
+    if (stateName !== null) {
+      resolved = resolveGeographyAtLevel(caches.geography, stateName, 'STATE');
+    } else if (countryName !== null) {
+      // A nationwide advertisement names only the country. That is a real
+      // location, not a missing one, so it links to the country rather than
+      // being dropped.
+      resolved = resolveGeographyAtLevel(caches.geography, countryName, 'COUNTRY');
+    }
+
+    wanted.set(key, {
+      rawText: job.location.rawText,
+      stateCode: stateName === null ? null : australianStateCode(stateName),
+      geographyId: resolved?.status === 'RESOLVED' ? resolved.id : null,
+      latitude: job.location.latitude,
+      longitude: job.location.longitude,
+    });
+  }
+  if (wanted.size === 0) return;
+
+  const existing = await database.location.findMany({
+    where: { normalizedKey: { in: [...wanted.keys()] } },
+    select: { id: true, normalizedKey: true },
+  });
+  for (const row of existing) {
+    caches.locations.set(row.normalizedKey, row.id);
+    wanted.delete(row.normalizedKey);
+  }
+  if (wanted.size === 0) return;
+
+  await database.location.createMany({
+    data: [...wanted].map(([normalizedKey, pending]) => ({ normalizedKey, ...pending })),
+    skipDuplicates: true,
   });
 
-  caches.locations.set(key, row.id);
-  return row.id;
+  const created = await database.location.findMany({
+    where: { normalizedKey: { in: [...wanted.keys()] } },
+    select: { id: true, normalizedKey: true },
+  });
+  for (const row of created) caches.locations.set(row.normalizedKey, row.id);
 }
 
-type WriteOutcome = 'created' | 'updated' | 'unchanged';
+interface PageCounts {
+  readonly created: number;
+  readonly updated: number;
+  readonly unchanged: number;
+}
 
-async function writeJob(
-  database: Database,
-  caches: Caches,
-  job: NormalizedJob,
-): Promise<WriteOutcome> {
-  const contentHash = contentHashOf(job);
-  const now = new Date();
+function rowFor(job: NormalizedJob, caches: Caches, contentHash: string, now: Date) {
+  const companyKey = job.company ? normalizeCompanyName(job.company.name) : null;
+  const locationKey = job.location ? normalizeLocationKey(job.location.rawText) : null;
 
-  const existing = await database.job.findUnique({
-    where: { sourceKey_sourceId: { sourceKey: job.sourceKey, sourceId: job.sourceId } },
-    select: { id: true, contentHash: true },
-  });
-
-  if (existing && existing.contentHash === contentHash) {
-    // Unchanged. Touching only the freshness columns keeps a daily re-run cheap,
-    // which matters on both the API budget and the database row budget.
-    await database.job.update({
-      where: { id: existing.id },
-      data: { lastSeenAt: now, lastVerifiedAt: now, status: 'ACTIVE', expiredAt: null },
-    });
-    return 'unchanged';
-  }
-
-  const companyId = await resolveCompany(database, caches, job);
-  const locationId = await resolveLocation(database, caches, job);
-
-  const data = {
+  return {
     title: job.title,
     description: job.description,
     descriptionFormat: job.descriptionFormat,
     descriptionIsExcerpt: job.descriptionIsExcerpt,
-    companyId,
-    locationId,
+    companyId: companyKey === null ? null : (caches.companies.get(companyKey) ?? null),
+    locationId: locationKey === null ? null : (caches.locations.get(locationKey) ?? null),
     sourceCategoryTag: job.category?.tag ?? null,
     sourceCategoryLabel: job.category?.label ?? null,
     employmentType: job.employmentType,
@@ -243,16 +264,87 @@ async function writeJob(
     status: 'ACTIVE' as const,
     expiredAt: null,
   };
+}
 
-  if (existing) {
-    await database.job.update({ where: { id: existing.id }, data });
-    return 'updated';
+/**
+ * Writes a page of listings, in a handful of queries rather than one per row.
+ *
+ * The content hash decides which of three paths each listing takes. The
+ * unchanged ones, which are most of them on any re-run, collapse into a single
+ * updateMany touching only the freshness columns.
+ */
+async function writePage(
+  database: Database,
+  caches: Caches,
+  jobs: readonly NormalizedJob[],
+): Promise<PageCounts> {
+  if (jobs.length === 0) return { created: 0, updated: 0, unchanged: 0 };
+
+  const now = new Date();
+  const hashes = new Map(jobs.map((job) => [job.sourceId, contentHashOf(job)]));
+
+  const existing = await database.job.findMany({
+    where: {
+      sourceKey: ADZUNA_SOURCE_KEY,
+      sourceId: { in: jobs.map((job) => job.sourceId) },
+    },
+    select: { id: true, sourceId: true, contentHash: true },
+  });
+  const stored = new Map(existing.map((row) => [row.sourceId, row]));
+
+  const unchangedIds: string[] = [];
+  const changed: NormalizedJob[] = [];
+  const fresh: NormalizedJob[] = [];
+
+  for (const job of jobs) {
+    const match = stored.get(job.sourceId);
+    if (match === undefined) fresh.push(job);
+    else if (match.contentHash === hashes.get(job.sourceId)) unchangedIds.push(match.id);
+    else changed.push(job);
   }
 
-  await database.job.create({
-    data: { sourceKey: job.sourceKey, sourceId: job.sourceId, ...data },
-  });
-  return 'created';
+  if (unchangedIds.length > 0) {
+    await database.job.updateMany({
+      where: { id: { in: unchangedIds } },
+      data: { lastSeenAt: now, lastVerifiedAt: now, status: 'ACTIVE', expiredAt: null },
+    });
+  }
+
+  // Only rows actually being written need their references resolved, so an
+  // unchanged page costs nothing here either.
+  const writing = [...changed, ...fresh];
+  if (writing.length > 0) {
+    await cacheCompanies(database, caches, writing);
+    await cacheLocations(database, caches, writing);
+  }
+
+  if (fresh.length > 0) {
+    await database.job.createMany({
+      data: fresh.map((job) => ({
+        sourceKey: job.sourceKey,
+        sourceId: job.sourceId,
+        ...rowFor(job, caches, hashes.get(job.sourceId) ?? '', now),
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Revisions are individual by necessity: each row takes different values.
+  // They are also rare, which is what makes that acceptable.
+  for (const job of changed) {
+    const match = stored.get(job.sourceId);
+    if (match === undefined) continue;
+    await database.job.update({
+      where: { id: match.id },
+      data: rowFor(job, caches, hashes.get(job.sourceId) ?? '', now),
+    });
+  }
+
+  return {
+    created: fresh.length,
+    updated: changed.length,
+    unchanged: unchangedIds.length,
+  };
 }
 
 /**
@@ -458,12 +550,10 @@ export async function ingestAdzuna(
           quarantined += 1;
         }
 
-        for (const job of page_.jobs) {
-          const outcome = await writeJob(database, caches, job);
-          if (outcome === 'created') created += 1;
-          else if (outcome === 'updated') updated += 1;
-          else unchanged += 1;
-        }
+        const counts = await writePage(database, caches, page_.jobs);
+        created += counts.created;
+        updated += counts.updated;
+        unchanged += counts.unchanged;
 
         // A short page means the query is exhausted.
         if (page_.jobs.length + page_.rejected.length < resultsPerPage) break;
