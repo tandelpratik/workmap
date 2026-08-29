@@ -35,6 +35,7 @@ interface RegistryEntry {
   parentCode: string | null;
   hasGeometry: boolean;
   areaSqKm: number | null;
+  changeSincePreviousEdition: string | null;
 }
 
 const registry: RegistryEntry[] = JSON.parse(
@@ -49,6 +50,7 @@ function area(overrides: Partial<RegistryEntry> = {}): RegistryEntry {
     parentCode: '1',
     hasGeometry: true,
     areaSqKm: 1,
+    changeSincePreviousEdition: 'No change',
     ...overrides,
   };
 }
@@ -175,6 +177,63 @@ describe('committed registry artefact', () => {
       expect(entry.code.length).toBeGreaterThan(0);
       expect(entry.name.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('compatibility with the previous ASGS edition', () => {
+  // JSA publishes the IVI against an ASGS edition we cannot read from here.
+  // It does not matter, provided no code or boundary moved between editions:
+  // a series keyed by SA4 code then joins to this registry unchanged. The ABS
+  // states what moved, and these tests hold that claim to account.
+  const manifest = JSON.parse(
+    readFileSync(join(root, 'data', 'geography', `manifest-${EDITION}.json`), 'utf8'),
+  ) as {
+    editionCompatibility: {
+      previousEdition: string;
+      changesByLevel: Record<string, Record<string, number>>;
+    };
+  };
+
+  it('records what the source says changed since the previous edition', () => {
+    expect(manifest.editionCompatibility.previousEdition).toMatch(/ASGS2021/);
+    expect(Object.keys(manifest.editionCompatibility.changesByLevel).sort()).toEqual([
+      'COUNTRY',
+      'SA4',
+      'STATE',
+    ]);
+  });
+
+  it('has no code or boundary change at any level, so older data joins safely', () => {
+    // Anything beyond a name change means an area was added, removed, split,
+    // merged or redrawn. Joining an older series by code would then attach a
+    // figure to the wrong place, which is mislabelling geography.
+    const benign = new Set(['No change', 'Name change']);
+    const offending: string[] = [];
+
+    for (const [level, labels] of Object.entries(
+      manifest.editionCompatibility.changesByLevel,
+    )) {
+      for (const label of Object.keys(labels)) {
+        if (!benign.has(label)) offending.push(`${level}: ${label}`);
+      }
+    }
+
+    expect(
+      offending,
+      'A code or boundary changed between editions. Joining data published ' +
+        'against the older edition is no longer safe and needs an explicit ' +
+        'mapping. See docs/compliance/SOURCE_REGISTER.md',
+    ).toEqual([]);
+  });
+
+  it('confines name changes to areas that cannot be mapped', () => {
+    // The four differences are punctuation on offshore and no-usual-address
+    // areas. They carry no geometry, so nothing is drawn differently, and we
+    // join by code rather than by name in any case.
+    const renamed = registry.filter(
+      (entry) => entry.changeSincePreviousEdition === 'Name change',
+    );
+    for (const entry of renamed) expect(entry.hasGeometry).toBe(false);
   });
 });
 

@@ -147,9 +147,45 @@ reader can judge currency.
 defined set of boards. It is **never** described as total Australian vacancies
 (ADR-0002).
 
-**Still open, and not a licence question:** which ASGS edition the IVI SA4
-series is reported against. That lives in the IVI methodology, not here, and it
-determines whether milestone 05 joins to Edition 4 or must also load Edition 3.
+### ASGS edition: resolved 2026-08-28, and it does not matter
+
+The open question was which ASGS edition the IVI SA4 series is reported against,
+because joining an Edition 3 series to Edition 4 boundaries would mislabel
+geography. The IVI methodology page is unreadable from here, so the question was
+settled from the ABS side instead, which is conclusive and did not require the
+blocked host.
+
+**Nothing moved between Edition 3 and Edition 4 at the levels this product
+uses.** Two independent checks agree:
+
+1. The ABS publishes a change flag on every area in the Edition 4 release:
+
+   | Level   | No change | Name change | Anything else |
+   | ------- | --------- | ----------- | ------------- |
+   | COUNTRY | 2         | 0           | 0             |
+   | STATE   | 10        | 0           | 0             |
+   | SA4     | 104       | 4           | 0             |
+
+2. Downloading the Edition 3 SA4 boundaries and comparing directly: 108 areas in
+   both, **0 codes added, 0 removed**, 4 names differing.
+
+The four name changes are punctuation, "Vic." to "Vic" and "Tas." to "Tas", on
+Migratory/Offshore/Shipping and No usual address areas. All four have no
+geometry, so nothing is drawn differently.
+
+**Consequence:** an IVI series keyed by SA4 code joins to the Edition 4 registry
+correctly whichever edition JSA published it against. No second edition needs
+loading, and no mapping table is required.
+
+**Two rules this imposes:**
+
+- **Join by code, never by name.** Four names differ between editions, so a
+  name-based join would silently fail on exactly the areas that are hardest to
+  notice.
+- **Re-check at the next edition.** This holds for Edition 3 to Edition 4 and
+  says nothing about Edition 5. The manifest records the change counts and a
+  test fails if any future edition reports anything beyond a name change, which
+  forces the question to be asked again rather than assumed.
 
 **Evidence:** `jobsandskills.gov.au/copyright-and-disclaimer`, contents supplied
 by the product owner on 2026-08-28.

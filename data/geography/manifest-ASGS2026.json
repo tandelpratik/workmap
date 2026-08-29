@@ -4,7 +4,7 @@
   "datum": "GDA2020",
   "sourceKey": "abs-asgs",
   "licence": "CC BY 4.0",
-  "generatedAt": "2026-08-28T10:48:50.179Z",
+  "generatedAt": "2026-08-29T05:59:00.466Z",
   "simplification": {
     "overview": {
       "retain": "0.7%",
@@ -36,6 +36,21 @@
     "path": "data/geography/registry-ASGS2026.json",
     "records": 120,
     "withoutGeometry": 21
+  },
+  "editionCompatibility": {
+    "previousEdition": "ASGS2021 (Edition 3, July 2021 to June 2026)",
+    "changesByLevel": {
+      "COUNTRY": {
+        "No change": 2
+      },
+      "STATE": {
+        "No change": 10
+      },
+      "SA4": {
+        "No change": 104,
+        "Name change": 4
+      }
+    }
   },
   "artefacts": {
     "geography/sa4-overview-ASGS2026.topo.json": 142120,

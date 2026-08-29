@@ -110,6 +110,15 @@ export interface RegistryEntry {
   readonly hasGeometry: boolean;
   /** As published by the ABS. Null when the area has no extent. */
   readonly areaSqKm: number | null;
+  /**
+   * What the ABS says changed for this area since the previous edition, for
+   * example "No change" or "Name change".
+   *
+   * This is what makes it safe to join data published against an older edition.
+   * If every area reports no code or boundary change, an older series keys to
+   * the current registry without mislabelling geography.
+   */
+  readonly changeSincePreviousEdition: string | null;
 }
 
 interface GeoJsonFeature {
@@ -182,6 +191,10 @@ function buildRegistry(
     const areaSqKm =
       typeof areaRaw === 'number' && Number.isFinite(areaRaw) ? areaRaw : null;
 
+    const changeRaw = properties['CHG_LBL26'];
+    const changeSincePreviousEdition =
+      typeof changeRaw === 'string' && changeRaw.trim() !== '' ? changeRaw.trim() : null;
+
     return {
       code,
       name,
@@ -189,8 +202,31 @@ function buildRegistry(
       parentCode,
       hasGeometry: feature.geometry !== null && feature.geometry !== undefined,
       areaSqKm,
+      changeSincePreviousEdition,
     };
   });
+}
+
+/**
+ * Counts what changed per level since the previous edition.
+ *
+ * Recorded in the manifest so the decision to join older data to this edition
+ * rests on the source's own statement rather than on a claim in a document.
+ */
+export function summariseEditionChanges(
+  entries: readonly RegistryEntry[],
+): Record<string, Record<string, number>> {
+  const summary: Record<string, Record<string, number>> = {};
+  for (const entry of entries) {
+    const label = entry.changeSincePreviousEdition ?? 'Not stated';
+    let bucket = summary[entry.level];
+    if (!bucket) {
+      bucket = {};
+      summary[entry.level] = bucket;
+    }
+    bucket[label] = (bucket[label] ?? 0) + 1;
+  }
+  return summary;
 }
 
 /**
@@ -420,6 +456,15 @@ export async function build(): Promise<void> {
       path: registryPath.replace(/\\/g, '/'),
       records: registry.length,
       withoutGeometry: registry.filter((e) => !e.hasGeometry).length,
+    },
+    /**
+     * What the ABS reports as changed since the previous edition. Determines
+     * whether a series published against an older edition can be joined to this
+     * one by code without mislabelling geography.
+     */
+    editionCompatibility: {
+      previousEdition: 'ASGS2021 (Edition 3, July 2021 to June 2026)',
+      changesByLevel: summariseEditionChanges(registry),
     },
     artefacts,
   };

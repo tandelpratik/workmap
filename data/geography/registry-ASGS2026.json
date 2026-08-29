@@ -5,7 +5,8 @@
     "level": "COUNTRY",
     "parentCode": null,
     "hasGeometry": true,
-    "areaSqKm": 7688095.2271
+    "areaSqKm": 7688095.2271,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "ZZZ",
@@ -13,7 +14,8 @@
     "level": "COUNTRY",
     "parentCode": null,
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "1",
@@ -21,7 +23,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 800797.7073
+    "areaSqKm": 800797.7073,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "2",
@@ -29,7 +32,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 227496.2547
+    "areaSqKm": 227496.2547,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "3",
@@ -37,7 +41,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 1730173.1675
+    "areaSqKm": 1730173.1675,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "4",
@@ -45,7 +50,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 984229.3082
+    "areaSqKm": 984229.3082,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "5",
@@ -53,7 +59,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 2526632.7624
+    "areaSqKm": 2526632.7624,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "6",
@@ -61,7 +68,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 68017.5646
+    "areaSqKm": 68017.5646,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "7",
@@ -69,7 +77,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 1348134.5876
+    "areaSqKm": 1348134.5876,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "8",
@@ -77,7 +86,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 2358.1328
+    "areaSqKm": 2358.1328,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "9",
@@ -85,7 +95,8 @@
     "level": "STATE",
     "parentCode": "AUS",
     "hasGeometry": true,
-    "areaSqKm": 255.742
+    "areaSqKm": 255.742,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "Z",
@@ -93,7 +104,8 @@
     "level": "STATE",
     "parentCode": "ZZZ",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "101",
@@ -101,7 +113,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 51896.2445
+    "areaSqKm": 51896.2445,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "102",
@@ -109,7 +122,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 1681.009
+    "areaSqKm": 1681.009,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "103",
@@ -117,7 +131,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 70297.0605
+    "areaSqKm": 70297.0605,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "104",
@@ -125,7 +140,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 13229.7573
+    "areaSqKm": 13229.7573,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "105",
@@ -133,7 +149,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 339355.6495
+    "areaSqKm": 339355.6495,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "106",
@@ -141,7 +158,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 21491.2923
+    "areaSqKm": 21491.2923,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "107",
@@ -149,7 +167,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 1539.2408
+    "areaSqKm": 1539.2408,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "108",
@@ -157,7 +176,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 18851.4993
+    "areaSqKm": 18851.4993,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "109",
@@ -165,7 +185,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 97796.4912
+    "areaSqKm": 97796.4912,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "110",
@@ -173,7 +194,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 99139.9014
+    "areaSqKm": 99139.9014,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "111",
@@ -181,7 +203,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 870.5824
+    "areaSqKm": 870.5824,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "112",
@@ -189,7 +212,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 10271.3204
+    "areaSqKm": 10271.3204,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "113",
@@ -197,7 +221,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 56984.9808
+    "areaSqKm": 56984.9808,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "114",
@@ -205,7 +230,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 6704.9619
+    "areaSqKm": 6704.9619,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "115",
@@ -213,7 +239,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 3251.4981
+    "areaSqKm": 3251.4981,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "116",
@@ -221,7 +248,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 240.8836
+    "areaSqKm": 240.8836,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "117",
@@ -229,7 +257,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 66.117
+    "areaSqKm": 66.117,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "118",
@@ -237,7 +266,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 57.7341
+    "areaSqKm": 57.7341,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "119",
@@ -245,7 +275,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 163.9273
+    "areaSqKm": 163.9273,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "120",
@@ -253,7 +284,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 64.5756
+    "areaSqKm": 64.5756,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "121",
@@ -261,7 +293,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 275.0992
+    "areaSqKm": 275.0992,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "122",
@@ -269,7 +302,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 254.2073
+    "areaSqKm": 254.2073,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "123",
@@ -277,7 +311,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 1277.2421
+    "areaSqKm": 1277.2421,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "124",
@@ -285,7 +320,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 3968.1295
+    "areaSqKm": 3968.1295,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "125",
@@ -293,7 +329,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 162.8356
+    "areaSqKm": 162.8356,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "126",
@@ -301,7 +338,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 69.3368
+    "areaSqKm": 69.3368,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "127",
@@ -309,7 +347,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 540.2775
+    "areaSqKm": 540.2775,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "128",
@@ -317,7 +356,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": true,
-    "areaSqKm": 295.8523
+    "areaSqKm": 295.8523,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "197",
@@ -325,7 +365,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "199",
@@ -333,7 +374,8 @@
     "level": "SA4",
     "parentCode": "1",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "201",
@@ -341,7 +383,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 10287.4759
+    "areaSqKm": 10287.4759,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "202",
@@ -349,7 +392,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 11841.906
+    "areaSqKm": 11841.906,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "203",
@@ -357,7 +401,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 4428.7034
+    "areaSqKm": 4428.7034,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "204",
@@ -365,7 +410,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 34006.4773
+    "areaSqKm": 34006.4773,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "205",
@@ -373,7 +419,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 41553.1091
+    "areaSqKm": 41553.1091,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "206",
@@ -381,7 +428,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 142.4579
+    "areaSqKm": 142.4579,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "207",
@@ -389,7 +437,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 146.7435
+    "areaSqKm": 146.7435,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "208",
@@ -397,7 +446,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 161.4966
+    "areaSqKm": 161.4966,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "209",
@@ -405,7 +455,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 1851.2651
+    "areaSqKm": 1851.2651,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "210",
@@ -413,7 +464,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 1619.689
+    "areaSqKm": 1619.689,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "211",
@@ -421,7 +473,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 1878.5575
+    "areaSqKm": 1878.5575,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "212",
@@ -429,7 +482,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 1922.2793
+    "areaSqKm": 1922.2793,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "213",
@@ -437,7 +491,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 1416.3528
+    "areaSqKm": 1416.3528,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "214",
@@ -445,7 +500,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 853.7661
+    "areaSqKm": 853.7661,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "215",
@@ -453,7 +509,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 78072.9853
+    "areaSqKm": 78072.9853,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "216",
@@ -461,7 +518,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 10933.866
+    "areaSqKm": 10933.866,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "217",
@@ -469,7 +527,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": true,
-    "areaSqKm": 26379.1239
+    "areaSqKm": 26379.1239,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "297",
@@ -477,7 +536,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
   },
   {
     "code": "299",
@@ -485,7 +545,8 @@
     "level": "SA4",
     "parentCode": "2",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
   },
   {
     "code": "301",
@@ -493,7 +554,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 653.133
+    "areaSqKm": 653.133,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "302",
@@ -501,7 +563,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 186.9482
+    "areaSqKm": 186.9482,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "303",
@@ -509,7 +572,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 265.3445
+    "areaSqKm": 265.3445,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "304",
@@ -517,7 +581,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 269.6406
+    "areaSqKm": 269.6406,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "305",
@@ -525,7 +590,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 81.7395
+    "areaSqKm": 81.7395,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "306",
@@ -533,7 +599,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 21321.4669
+    "areaSqKm": 21321.4669,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "307",
@@ -541,7 +608,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 166346.8121
+    "areaSqKm": 166346.8121,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "308",
@@ -549,7 +617,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 117587.8561
+    "areaSqKm": 117587.8561,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "309",
@@ -557,7 +626,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 1857.7777
+    "areaSqKm": 1857.7777,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "310",
@@ -565,7 +635,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 6681.1788
+    "areaSqKm": 6681.1788,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "311",
@@ -573,7 +644,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 2586.1636
+    "areaSqKm": 2586.1636,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "312",
@@ -581,7 +653,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 90140.189
+    "areaSqKm": 90140.189,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "313",
@@ -589,7 +662,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 4344.4564
+    "areaSqKm": 4344.4564,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "314",
@@ -597,7 +671,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 773.4051
+    "areaSqKm": 773.4051,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "315",
@@ -605,7 +680,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 1183193.5781
+    "areaSqKm": 1183193.5781,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "316",
@@ -613,7 +689,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 3085.9119
+    "areaSqKm": 3085.9119,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "317",
@@ -621,7 +698,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 2258.7948
+    "areaSqKm": 2258.7948,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "318",
@@ -629,7 +707,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 80036.0983
+    "areaSqKm": 80036.0983,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "319",
@@ -637,7 +716,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": true,
-    "areaSqKm": 48502.6729
+    "areaSqKm": 48502.6729,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "397",
@@ -645,7 +725,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "399",
@@ -653,7 +734,8 @@
     "level": "SA4",
     "parentCode": "3",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "401",
@@ -661,7 +743,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 1497.2719
+    "areaSqKm": 1497.2719,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "402",
@@ -669,7 +752,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 939.9952
+    "areaSqKm": 939.9952,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "403",
@@ -677,7 +761,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 663.0817
+    "areaSqKm": 663.0817,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "404",
@@ -685,7 +770,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 159.5387
+    "areaSqKm": 159.5387,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "405",
@@ -693,7 +779,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 37716.3852
+    "areaSqKm": 37716.3852,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "406",
@@ -701,7 +788,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 877770.5504
+    "areaSqKm": 877770.5504,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "407",
@@ -709,7 +797,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": true,
-    "areaSqKm": 65482.4851
+    "areaSqKm": 65482.4851,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "497",
@@ -717,7 +806,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "499",
@@ -725,7 +815,8 @@
     "level": "SA4",
     "parentCode": "4",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "501",
@@ -733,7 +824,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 24802.4119
+    "areaSqKm": 24802.4119,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "502",
@@ -741,7 +833,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 1032.8632
+    "areaSqKm": 1032.8632,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "503",
@@ -749,7 +842,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 92.254
+    "areaSqKm": 92.254,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "504",
@@ -757,7 +851,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 1762.4315
+    "areaSqKm": 1762.4315,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "505",
@@ -765,7 +860,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 884.014
+    "areaSqKm": 884.014,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "506",
@@ -773,7 +869,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 2023.9924
+    "areaSqKm": 2023.9924,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "507",
@@ -781,7 +878,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 621.018
+    "areaSqKm": 621.018,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "509",
@@ -789,7 +887,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 197345.534
+    "areaSqKm": 197345.534,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "510",
@@ -797,7 +896,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 926023.1724
+    "areaSqKm": 926023.1724,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "511",
@@ -805,7 +905,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": true,
-    "areaSqKm": 1372045.071
+    "areaSqKm": 1372045.071,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "597",
@@ -813,7 +914,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "599",
@@ -821,7 +923,8 @@
     "level": "SA4",
     "parentCode": "5",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "601",
@@ -829,7 +932,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": true,
-    "areaSqKm": 1695.3865
+    "areaSqKm": 1695.3865,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "602",
@@ -837,7 +941,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": true,
-    "areaSqKm": 19975.3361
+    "areaSqKm": 19975.3361,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "603",
@@ -845,7 +950,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": true,
-    "areaSqKm": 23822.0524
+    "areaSqKm": 23822.0524,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "604",
@@ -853,7 +959,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": true,
-    "areaSqKm": 22524.7896
+    "areaSqKm": 22524.7896,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "697",
@@ -861,7 +968,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
   },
   {
     "code": "699",
@@ -869,7 +977,8 @@
     "level": "SA4",
     "parentCode": "6",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
   },
   {
     "code": "701",
@@ -877,7 +986,8 @@
     "level": "SA4",
     "parentCode": "7",
     "hasGeometry": true,
-    "areaSqKm": 3167.7033
+    "areaSqKm": 3167.7033,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "702",
@@ -885,7 +995,8 @@
     "level": "SA4",
     "parentCode": "7",
     "hasGeometry": true,
-    "areaSqKm": 1344966.8843
+    "areaSqKm": 1344966.8843,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "797",
@@ -893,7 +1004,8 @@
     "level": "SA4",
     "parentCode": "7",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "799",
@@ -901,7 +1013,8 @@
     "level": "SA4",
     "parentCode": "7",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "801",
@@ -909,7 +1022,8 @@
     "level": "SA4",
     "parentCode": "8",
     "hasGeometry": true,
-    "areaSqKm": 2358.1328
+    "areaSqKm": 2358.1328,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "897",
@@ -917,7 +1031,8 @@
     "level": "SA4",
     "parentCode": "8",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "899",
@@ -925,7 +1040,8 @@
     "level": "SA4",
     "parentCode": "8",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "901",
@@ -933,7 +1049,8 @@
     "level": "SA4",
     "parentCode": "9",
     "hasGeometry": true,
-    "areaSqKm": 255.742
+    "areaSqKm": 255.742,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "997",
@@ -941,7 +1058,8 @@
     "level": "SA4",
     "parentCode": "9",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "999",
@@ -949,7 +1067,8 @@
     "level": "SA4",
     "parentCode": "9",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   },
   {
     "code": "ZZZ",
@@ -957,6 +1076,7 @@
     "level": "SA4",
     "parentCode": "Z",
     "hasGeometry": false,
-    "areaSqKm": null
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
   }
 ]
