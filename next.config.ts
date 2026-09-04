@@ -28,7 +28,14 @@ const nextConfig: NextConfig = {
    * working perfectly in development.
    */
   outputFileTracingIncludes: {
-    '/map': ['./public/geography/*.topo.json'],
+    // Both tiers. The detail files live in a subdirectory, and a pattern that
+    // matched only the top level would leave the drilldown working in
+    // development and failing in production, which is the exact failure this
+    // setting exists to prevent.
+    '/map': [
+      './public/geography/*.topo.json',
+      './public/geography/sa4-detail-*/*.topo.json',
+    ],
   },
 
   typescript: {

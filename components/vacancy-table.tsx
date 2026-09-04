@@ -23,11 +23,13 @@ export function VacancyTable({
   regions,
   caption,
   selectedCode,
+  stateCode,
 }: {
   id: string;
   regions: readonly RegionFigure[];
   caption: string;
   selectedCode: string | null;
+  stateCode: string | null;
 }) {
   const ranked = [...regions].sort((a, b) => {
     const left = a.observation.value;
@@ -75,7 +77,7 @@ export function VacancyTable({
                   same shape as the map's: one link, two directions.
                 */}
                 <a
-                  href={regionHref(isSelected ? null : region.code)}
+                  href={regionHref(isSelected ? null : region.code, stateCode)}
                   aria-current={isSelected ? 'true' : undefined}
                   className={
                     isSelected

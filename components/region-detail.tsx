@@ -41,6 +41,8 @@ export function RegionDetail({
   rank,
   of,
   previousPeriod,
+  stateCode,
+  drilldown,
 }: {
   region: RegionFigure;
   /** Position among regions that carry a figure, 1 being the most. */
@@ -48,6 +50,10 @@ export function RegionDetail({
   of: number;
   /** The period the comparison is against, where one is held. */
   previousPeriod: Date | null;
+  /** The state being viewed, or null on the national map. */
+  stateCode: string | null;
+  /** Where the drilldown leads, absent when already there or unknown. */
+  drilldown: { code: string; name: string } | null;
 }) {
   const change = changeBetween(region.observation, region.previous);
   const value = region.observation.value;
@@ -69,7 +75,7 @@ export function RegionDetail({
           the same way selecting did, back button included.
         */}
         <a
-          href={regionHref(null)}
+          href={regionHref(null, stateCode)}
           className="text-ink-muted hover:text-ink text-sm underline underline-offset-4"
         >
           Clear
@@ -136,6 +142,22 @@ export function RegionDetail({
           <span className="font-mono text-xs">{region.code}</span>
         </Row>
       </dl>
+
+      {drilldown === null ? null : (
+        <p className="mt-4 text-sm">
+          {/*
+            The way in. Selecting tells the reader about one region; this is
+            the question that usually follows, which is what the rest of its
+            state looks like.
+          */}
+          <a
+            href={regionHref(region.code, drilldown.code)}
+            className="text-ink hover:text-accent underline underline-offset-4"
+          >
+            See all of {drilldown.name}
+          </a>
+        </p>
+      )}
     </section>
   );
 }
@@ -161,5 +183,71 @@ export function RegionNotFound({ code }: { code: string }) {
         .
       </p>
     </section>
+  );
+}
+
+/**
+ * When the selected region is not in the state being shown.
+ *
+ * Drilling into Victoria with Greater Sydney selected is not an error and not
+ * nothing: the region exists, it is simply elsewhere. Saying so and offering
+ * the way to it beats dropping the selection without comment.
+ */
+export function RegionElsewhere({
+  name,
+  where,
+  href,
+}: {
+  name: string;
+  where: string;
+  href: string;
+}) {
+  return (
+    <p className="border-rule text-ink-muted mt-8 border-t pt-5 text-sm leading-relaxed">
+      {name} is in {where}, so it is not shown on this map.{' '}
+      <a href={href} className="text-ink underline underline-offset-4">
+        Show {name}
+      </a>
+      .
+    </p>
+  );
+}
+
+/**
+ * The trail back out of a drilldown.
+ *
+ * An ordered list because that is what it is, and a nav landmark because a
+ * reader navigating by landmark should find it. The current place is text
+ * rather than a link to itself.
+ */
+export function Breadcrumb({
+  state,
+  regionCode,
+}: {
+  state: { code: string; name: string } | null;
+  /** Kept when stepping out, so widening the view does not lose the selection. */
+  regionCode: string | null;
+}) {
+  if (state === null) return null;
+
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4">
+      <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">
+        <li>
+          <a
+            href={regionHref(regionCode, null)}
+            className="text-ink hover:text-accent underline underline-offset-4"
+          >
+            Australia
+          </a>
+        </li>
+        <li aria-hidden="true" className="text-ink-faint">
+          /
+        </li>
+        <li aria-current="page" className="text-ink font-medium">
+          {state.name}
+        </li>
+      </ol>
+    </nav>
   );
 }

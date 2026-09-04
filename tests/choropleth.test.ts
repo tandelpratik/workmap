@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { binFor, quantileBins } from '@/geography/choropleth';
+import {
+  binFor,
+  buildStateChoroplethGeometry,
+  quantileBins,
+} from '@/geography/choropleth';
 import { fillForStep, regionTitle } from '@/components/vacancy-map';
+import { regionHref } from '@/components/region-figure';
 
 /**
  * Choropleth classification.
@@ -103,5 +108,72 @@ describe('region title', () => {
     expect(regionTitle('Outback Queensland', null)).toBe(
       'Outback Queensland: no figure published',
     );
+  });
+});
+
+describe('region links', () => {
+  it('keeps the state when selecting inside a drilldown', () => {
+    expect(regionHref('101', '1')).toBe('/map?state=1&region=101');
+  });
+
+  it('clears the region without leaving the state', () => {
+    // Clearing a selection must not also throw the reader back to the
+    // national map: those are two separate actions and the breadcrumb is the
+    // other one.
+    expect(regionHref(null, '1')).toBe('/map?state=1');
+  });
+
+  it('is the bare map when neither is set', () => {
+    expect(regionHref(null)).toBe('/map');
+    expect(regionHref(null, null)).toBe('/map');
+  });
+
+  it('escapes a code rather than trusting it', () => {
+    expect(regionHref('a b&c')).toBe('/map?region=a+b%26c');
+  });
+});
+
+describe('state geometry', () => {
+  /**
+   * Reads the built artefacts, because the thing worth testing is the
+   * agreement between the build and the reader. A fixture topology would
+   * assert that this function parses a file we wrote for it, which is not the
+   * failure that matters: the failure that matters is a geometry rebuild that
+   * silently stops emitting what the state view needs.
+   */
+  it('draws a capital as one shape, not as the SA4s it contains', async () => {
+    const geometry = await buildStateChoroplethGeometry({
+      edition: 'ASGS2026',
+      stateCode: '1',
+      regionCodes: new Set(['1GSYD', '101']),
+    });
+
+    // Greater Sydney is one region with one figure, so it is one shape.
+    expect(geometry.areasByCode.get('1GSYD')?.d).toMatch(/^M/);
+    expect(geometry.areasByCode.get('101')?.d).toMatch(/^M/);
+
+    // 115 is Sydney - Baulkham Hills and Hawkesbury, inside Greater Sydney.
+    // IVI publishes no figure for it, so drawing it would either invent a gap
+    // in the middle of the city or repeat the city's figure across its parts.
+    expect(geometry.areasByCode.has('115')).toBe(false);
+
+    // 102 is an NSW SA4 that was not asked for. Only what the caller says the
+    // data reports on is drawn.
+    expect(geometry.areasByCode.has('102')).toBe(false);
+    expect(geometry.areasByCode.size).toBe(2);
+
+    // The frame is the state, so the base outline is the state itself.
+    expect(geometry.base).toHaveLength(1);
+    expect(geometry.base[0]?.code).toBe('1');
+  });
+
+  it('refuses a state code it has no outline for', async () => {
+    await expect(
+      buildStateChoroplethGeometry({
+        edition: 'ASGS2026',
+        stateCode: '99',
+        regionCodes: new Set(),
+      }),
+    ).rejects.toThrow(/No state outline/);
   });
 });

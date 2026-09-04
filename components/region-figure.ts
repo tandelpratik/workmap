@@ -13,6 +13,8 @@ export interface RegionFigure {
   readonly code: string;
   readonly name: string;
   readonly level: GeographyLevel;
+  /** The state this area sits in, which is what the drilldown navigates by. */
+  readonly stateCode: string | null;
   /** Carries the value and, when absent, why. Never coerced to zero. */
   readonly observation: Observation;
   /** The month before, where one is held. Null means no comparison exists. */
@@ -56,6 +58,13 @@ export function absenceLabel(state: string): string {
  * persists" requirement a consequence of the design rather than something to
  * maintain.
  */
-export function regionHref(code: string | null): string {
-  return code === null ? '/map' : `/map?region=${encodeURIComponent(code)}`;
+export function regionHref(code: string | null, stateCode?: string | null): string {
+  const query = new URLSearchParams();
+  // The state comes first so the address reads outside in, and so that the two
+  // links a reader sees most, a region within a state and the state itself,
+  // differ by one parameter rather than by their whole shape.
+  if (stateCode !== null && stateCode !== undefined) query.set('state', stateCode);
+  if (code !== null) query.set('region', code);
+  const search = query.toString();
+  return search === '' ? '/map' : `/map?${search}`;
 }

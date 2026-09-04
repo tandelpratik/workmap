@@ -39,9 +39,9 @@ export interface ProjectedArea {
 export interface ChoroplethGeometry {
   readonly width: number;
   readonly height: number;
-  /** State outlines, drawn under the data so the country is always legible. */
+  /** Outlines drawn under the data so the frame is always legible. */
   readonly base: readonly ProjectedArea[];
-  /** One entry per requested level, keyed by ASGS code. */
+  /** One shape per region, keyed by the code the data reports it under. */
   readonly areasByCode: ReadonlyMap<string, ProjectedArea>;
 }
 
@@ -122,6 +122,87 @@ export async function buildChoroplethGeometry(options: {
     for (const item of featuresOf(await readTopology(file, options.edition))) {
       const area = toArea(item);
       if (area !== null) areasByCode.set(area.code, area);
+    }
+  }
+
+  return { width, height, base, areasByCode };
+}
+
+/**
+ * One state, drawn from the detail tier.
+ *
+ * The drilldown ADR-0003 planned for. Boundaries here are an order of
+ * magnitude finer than in the national view, which is affordable because one
+ * state's file is transferred rather than the whole country's.
+ *
+ * Capitals are why this is not the national map cropped. JSA IVI reports a
+ * capital as one figure and the rest of a state SA4 by SA4, so a state view
+ * must draw Greater Sydney as one region and the regions around it
+ * individually. Taking the capital from the national tier and its neighbours
+ * from this one would leave a seam along every shared border, so the build
+ * dissolves the capitals from these same SA4s at this same simplification and
+ * they are read from that file.
+ *
+ * Which codes carry data is the caller's business, not this module's, so it
+ * passes them in and geography stays free of any knowledge of the database.
+ */
+export async function buildStateChoroplethGeometry(options: {
+  readonly edition: string;
+  readonly stateCode: string;
+  /** The codes the data reports on, at whatever level it reports them. */
+  readonly regionCodes: ReadonlySet<string>;
+  readonly width?: number;
+  readonly height?: number;
+}): Promise<ChoroplethGeometry> {
+  const width = options.width ?? 960;
+  const height = options.height ?? 800;
+
+  const states = featuresOf(await readTopology('state-overview', options.edition));
+  const outline = states.filter((item) => codeOf(item) === options.stateCode);
+  if (outline.length === 0) {
+    throw new Error(`No state outline for code "${options.stateCode}".`);
+  }
+
+  const detailDir = join(ARTEFACT_DIR, `sa4-detail-${options.edition}`);
+  const readDetail = async (prefix: string): Promise<Topology> =>
+    JSON.parse(
+      await readFile(join(detailDir, `${prefix}-${options.stateCode}.topo.json`), 'utf8'),
+    ) as Topology;
+
+  // Fitted to the state, so the drilldown fills the frame. The national view
+  // fits the country. Both fit an outline rather than the data, so a change in
+  // coverage can never rescale the map.
+  const projection = geoConicEqualArea()
+    .parallels([-18, -36])
+    .rotate([-134, 0])
+    .fitSize([width, height], {
+      type: 'FeatureCollection',
+      features: outline,
+    } as FeatureCollection<Geometry>);
+  const path = geoPath(projection);
+
+  const toArea = (item: Feature<Geometry>): ProjectedArea | null => {
+    const code = codeOf(item);
+    if (code === null) return null;
+    const d = path(item);
+    if (d === null || d === '') return null;
+    return { code, d };
+  };
+
+  const base = outline
+    .map(toArea)
+    .filter((area): area is ProjectedArea => area !== null)
+    .map((area) => ({ ...area, code: options.stateCode }));
+
+  // Only codes the data reports on are drawn. An SA4 inside a capital is not
+  // missing data, it is reported as part of the capital, and shading it as a
+  // gap would invent a hole in the middle of the city.
+  const areasByCode = new Map<string, ProjectedArea>();
+  for (const prefix of ['gccsa', 'sa4']) {
+    for (const item of featuresOf(await readDetail(prefix))) {
+      const area = toArea(item);
+      if (area === null || !options.regionCodes.has(area.code)) continue;
+      areasByCode.set(area.code, area);
     }
   }
 

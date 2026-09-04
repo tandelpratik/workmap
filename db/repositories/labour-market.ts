@@ -220,6 +220,8 @@ export interface RegionTotal {
   readonly code: string;
   readonly name: string;
   readonly level: GeographyLevel;
+  /** The state or territory this area sits in, for the drilldown. */
+  readonly stateCode: string | null;
   /** The figure, or the reason there is no figure. Never coerced to zero. */
   readonly observation: Observation;
   /** The period before it, where one is held. Null is "no comparison". */
@@ -295,7 +297,14 @@ export async function listRegionTotals(options: {
 
   const areas = await database.value.geography.findMany({
     where: { asgsEdition: options.edition, level: { in: [...options.levels] } },
-    select: { id: true, code: true, name: true, level: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      level: true,
+      // GCCSA and SA4 both hang off STATE, so this is the state for either.
+      parent: { select: { code: true } },
+    },
     orderBy: { name: 'asc' },
   });
 
@@ -393,6 +402,7 @@ export async function listRegionTotals(options: {
       code: area.code,
       name: area.name,
       level: area.level as GeographyLevel,
+      stateCode: area.parent?.code ?? null,
     };
     const observation = observationByGeography.get(area.id);
     if (observation === undefined) withoutData.push(identity);

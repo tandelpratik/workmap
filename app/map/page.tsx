@@ -1,9 +1,20 @@
 import type { Metadata } from 'next';
 import { findSourceDescriptor } from '@/config/sources';
 import { listRegionTotals } from '@/db/repositories/labour-market';
-import { buildChoroplethGeometry, quantileBins } from '@/geography/choropleth';
+import { listByLevel } from '@/db/repositories/geography';
+import {
+  buildChoroplethGeometry,
+  buildStateChoroplethGeometry,
+  quantileBins,
+} from '@/geography/choropleth';
 import { VacancyLegend, VacancyMap } from '@/components/vacancy-map';
-import { RegionDetail, RegionNotFound } from '@/components/region-detail';
+import {
+  Breadcrumb,
+  RegionDetail,
+  RegionElsewhere,
+  RegionNotFound,
+} from '@/components/region-detail';
+import { regionHref } from '@/components/region-figure';
 import { SiteHeader } from '@/components/site-header';
 import { VacancyTable } from '@/components/vacancy-table';
 
@@ -72,7 +83,9 @@ export default async function MapPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const requestedCode = selectedCodeFrom((await searchParams)['region']);
+  const params = await searchParams;
+  const requestedCode = selectedCodeFrom(params['region']);
+  const requestedState = selectedCodeFrom(params['state']);
   const totals = await listRegionTotals({
     sourceKey: SOURCE_KEY,
     dataset: DATASET,
@@ -102,19 +115,44 @@ export default async function MapPage({
     );
   }
 
-  const { period, previousPeriod, regions, withoutData } = totals.value;
+  const { period, previousPeriod, regions: national, withoutData } = totals.value;
 
-  // A code that parses but names no region in this release is answered rather
-  // than ignored. Silently dropping it would leave a reader who followed a
-  // stale link looking at a map that behaved as though they had not clicked.
-  const selectedRegion =
+  // The states are read for their names, not their shapes. A breadcrumb saying
+  // "1" would be an ASGS code shown to a reader who never asked for one.
+  const stateList = await listByLevel(EDITION, 'STATE');
+  const states = stateList.ok ? stateList.value : [];
+  const state =
+    requestedState === null
+      ? null
+      : (states.find((area) => area.code === requestedState) ?? null);
+  const unknownState = requestedState !== null && state === null;
+
+  // Drilling in narrows what is drawn to one state. Nothing about the figures
+  // changes: the same rows, filtered, so a region cannot mean one thing
+  // nationally and another here.
+  const regions =
+    state === null
+      ? national
+      : national.filter((region) => region.stateCode === state.code);
+
+  // The selection is resolved against the whole country and then checked
+  // against what is on screen, so "selected but not in this state" stays a
+  // distinct case from "no such region".
+  const requestedRegion =
     requestedCode === null
       ? null
-      : (regions.find((region) => region.code === requestedCode) ?? null);
+      : (national.find((region) => region.code === requestedCode) ?? null);
+  const selectedRegion =
+    requestedRegion !== null && regions.includes(requestedRegion)
+      ? requestedRegion
+      : null;
   const selectedCode = selectedRegion?.code ?? null;
+  const elsewhere =
+    requestedRegion !== null && selectedRegion === null ? requestedRegion : null;
 
   // Rank is computed from the same ordering the table uses, so the panel and
-  // the table cannot disagree about which region is third.
+  // the table cannot disagree about which region is third. It ranks within
+  // what is shown, which is what the panel says.
   const withFigures = [...regions]
     .filter((region) => region.observation.value !== null)
     .sort((a, b) => (b.observation.value ?? 0) - (a.observation.value ?? 0));
@@ -122,14 +160,29 @@ export default async function MapPage({
     selectedRegion === null
       ? -1
       : withFigures.findIndex((region) => region.code === selectedRegion.code);
-  const values = regions
+
+  // Where "see all of New South Wales" leads, and absent once the reader is
+  // already there.
+  const drilldownState =
+    selectedRegion === null || state !== null
+      ? null
+      : (states.find((area) => area.code === selectedRegion.stateCode) ?? null);
+  // Bands are computed nationally even in a state view, so one colour means
+  // one thing everywhere. Rebanding per state would make a region darken
+  // simply because the reader zoomed in, which is a picture of the view rather
+  // than of the labour market.
+  const values = national
     .map((region) => region.observation.value)
     .filter((value): value is number => value !== null);
   const bins = quantileBins(values, 5);
-  const geometry = await buildChoroplethGeometry({
-    edition: EDITION,
-    levels: ['GCCSA', 'SA4'],
-  });
+  const geometry =
+    state === null
+      ? await buildChoroplethGeometry({ edition: EDITION, levels: ['GCCSA', 'SA4'] })
+      : await buildStateChoroplethGeometry({
+          edition: EDITION,
+          stateCode: state.code,
+          regionCodes: new Set(regions.map((region) => region.code)),
+        });
 
   const hasFigures = regions.length > 0 && period !== null;
 
@@ -139,19 +192,38 @@ export default async function MapPage({
 
       <main id="main" className="mx-auto max-w-5xl px-6 py-16">
         <header>
+          <Breadcrumb
+            state={state === null ? null : { code: state.code, name: state.name }}
+            regionCode={selectedCode}
+          />
           <p className="text-ink-faint text-xs font-medium tracking-widest uppercase">
             Where
           </p>
           <h1 className="text-ink mt-2 font-serif text-4xl font-semibold text-balance">
-            Where the advertisements are
+            {state === null
+              ? 'Where the advertisements are'
+              : `Advertisements in ${state.name}`}
           </h1>
           <Prose>
             <p>
-              Online job advertisements across Australia
+              Online job advertisements across {state === null ? 'Australia' : state.name}
               {period === null ? '' : `, ${monthFormat.format(period)}`}. Capital cities
               are shown as whole cities and the rest of the country by region, which is
               how the index is published.
+              {state === null
+                ? ''
+                : ' Boundaries here are finer than on the national map, and the shading' +
+                  ' means the same thing: the bands are the national ones, so a region' +
+                  ' does not change colour when you zoom into it.'}
             </p>
+            {unknownState ? (
+              <p>
+                <strong className="text-ink font-medium">
+                  That state or territory was not recognised,
+                </strong>{' '}
+                so the whole country is shown instead.
+              </p>
+            ) : null}
             <p>
               <strong className="text-ink font-medium">
                 This is not a count of jobs.
@@ -166,12 +238,26 @@ export default async function MapPage({
 
         {hasFigures ? (
           <section className="mt-12">
+            {/*
+              Every region on the map is a link, which is what makes it
+              operable by keyboard, and also what puts fifty tab stops between
+              the page and the table. This is the standard escape hatch: hidden
+              until focused, so it costs a sighted mouse user nothing.
+            */}
+            <a
+              href={`#${TABLE_ID}`}
+              className="focus:bg-paper-raised focus:text-ink focus:border-rule-strong sr-only focus:not-sr-only focus:mb-4 focus:inline-block focus:border focus:px-3 focus:py-2 focus:text-sm"
+            >
+              Skip the map, go to the table of figures
+            </a>
+
             <VacancyMap
               geometry={geometry}
               regions={regions}
               bins={bins}
               tableId={TABLE_ID}
               selectedCode={selectedCode}
+              stateCode={state?.code ?? null}
             />
             <VacancyLegend
               bins={bins}
@@ -184,9 +270,25 @@ export default async function MapPage({
                 rank={rankIndex === -1 ? null : rankIndex + 1}
                 of={withFigures.length}
                 previousPeriod={previousPeriod}
+                stateCode={state?.code ?? null}
+                drilldown={
+                  drilldownState === null
+                    ? null
+                    : { code: drilldownState.code, name: drilldownState.name }
+                }
               />
             )}
-            {requestedCode !== null && selectedRegion === null ? (
+            {elsewhere === null ? null : (
+              <RegionElsewhere
+                name={elsewhere.name}
+                href={regionHref(elsewhere.code, elsewhere.stateCode)}
+                where={
+                  states.find((area) => area.code === elsewhere.stateCode)?.name ??
+                  'another state'
+                }
+              />
+            )}
+            {requestedCode !== null && requestedRegion === null ? (
               <RegionNotFound code={requestedCode} />
             ) : null}
             <Prose>
@@ -202,6 +304,7 @@ export default async function MapPage({
               id={TABLE_ID}
               regions={regions}
               selectedCode={selectedCode}
+              stateCode={state?.code ?? null}
               caption={`Online job advertisements by region${
                 period === null ? '' : `, ${monthFormat.format(period)}`
               }. Ordered by number of advertisements.`}

@@ -56,6 +56,7 @@ export function VacancyMap({
   bins,
   tableId,
   selectedCode,
+  stateCode,
 }: {
   geometry: ChoroplethGeometry;
   regions: readonly RegionFigure[];
@@ -64,6 +65,8 @@ export function VacancyMap({
   tableId: string;
   /** The selected region's code, or null when nothing is selected. */
   selectedCode: string | null;
+  /** The state being viewed, carried through every link so it survives. */
+  stateCode: string | null;
 }) {
   const drawn = regions
     .map((region) => {
@@ -104,7 +107,10 @@ export function VacancyMap({
           {drawn.map(({ region, area, value, bin }) => (
             <a
               key={region.code}
-              href={regionHref(region.code === selectedCode ? null : region.code)}
+              href={regionHref(
+                region.code === selectedCode ? null : region.code,
+                stateCode,
+              )}
               className="map-region"
               aria-label={regionTitle(region.name, value)}
               aria-current={region.code === selectedCode ? 'true' : undefined}

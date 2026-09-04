@@ -369,11 +369,41 @@ async function buildTiers(
     )
     .join(' ');
 
+  //
+  // GCC_CODE26 is carried here and not in the overview tier. The state view
+  // draws a capital city from its constituent SA4s, because the capital and
+  // the regions around it must come from the same simplification tier or their
+  // shared border does not meet. Knowing which SA4s make up Greater Sydney is
+  // what makes that possible, and it is a fact the ABS publishes on the SA4
+  // boundaries themselves rather than one this project may infer.
   await mapshaper.runCommands(
-    `-i "${sa4Archive}" -filter-fields SA4_CODE26,SA4_NAME26,STE_CODE26 ` +
+    `-i "${sa4Archive}" -filter-fields SA4_CODE26,SA4_NAME26,STE_CODE26,GCC_CODE26,GCC_NAME26 ` +
       `-simplify ${TIERS.detail.retain} keep-shapes -clean ` +
       `-split STE_CODE26 ${outputs}`,
   );
+  // The capitals, at the same tier and dissolved from the same SA4s.
+  //
+  // A capital is one figure in the data and many SA4s in the boundary file, so
+  // it is merged here rather than drawn as its parts. Drawing the parts would
+  // show internal borders the figure does not have, and outlining a selected
+  // capital would trace every one of them. Dissolving after the same
+  // simplification means its edge is made of the very arcs its neighbours use,
+  // so the two meet exactly.
+  const capitalOutputs = stateCodes
+    .map(
+      (code) =>
+        `-o target=${code} format=topojson id-field=GCC_CODE26 ` +
+        `"${join(detailDir, `gccsa-${code}.topo.json`)}"`,
+    )
+    .join(' ');
+
+  await mapshaper.runCommands(
+    `-i "${sa4Archive}" -filter-fields SA4_CODE26,SA4_NAME26,STE_CODE26,GCC_CODE26,GCC_NAME26 ` +
+      `-simplify ${TIERS.detail.retain} keep-shapes -clean ` +
+      `-dissolve GCC_CODE26 copy-fields=STE_CODE26,GCC_NAME26 ` +
+      `-split STE_CODE26 ${capitalOutputs}`,
+  );
+
   for (const file of await readdir(detailDir)) written.push(join(detailDir, file));
 
   // Simplification must not lose an area. Losing one would put a hole in the
