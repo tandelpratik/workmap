@@ -162,6 +162,11 @@ export async function searchJobs(
 
   const where = {
     status: 'ACTIVE' as const,
+    // One row per vacancy. A listing grouped as a duplicate keeps its record
+    // and its provenance and stops competing with the row that represents it
+    // (milestone 15). Everything ungrouped is canonical by default, so this
+    // filter is inert until a duplicate is actually found.
+    isCanonical: true,
     // Fixtures never reach a response unless this process is explicitly a
     // development one (ADR-0009).
     ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
