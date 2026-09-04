@@ -559,3 +559,179 @@ export async function listOccupations(options: {
       .sort((a, b) => a.code.localeCompare(b.code)),
   );
 }
+
+export interface OccupationTotal {
+  readonly code: string;
+  /** The source's name, or null where it does not give the code one. */
+  readonly name: string | null;
+  /**
+   * Advertisements across every region the source published, summed here.
+   *
+   * Our arithmetic, not the publisher's figure. IVI publishes this release by
+   * region only, and the regions it uses cover Australia exactly once, so the
+   * sum is well defined. It is still ours, so every surface that shows it says
+   * so rather than presenting it as a national figure JSA released.
+   *
+   * Null when no region carried a figure, which is not the same as zero.
+   */
+  readonly total: number | null;
+  /** The same sum for the period before, where one is held. */
+  readonly previousTotal: number | null;
+  /** How many regions contributed, so a partial month cannot pass as a full one. */
+  readonly regionsReporting: number;
+}
+
+export interface OccupationTotalsResult {
+  readonly period: Date | null;
+  readonly previousPeriod: Date | null;
+  /** How many regions the dataset reports on at these levels. */
+  readonly regionsInScope: number;
+  readonly occupations: readonly OccupationTotal[];
+}
+
+/**
+ * Every occupation's regional sum, for the most recent period held.
+ *
+ * One pass rather than a query per occupation: 57 occupations across 50
+ * regions is 2,850 series, which is small enough to sum in memory and far
+ * cheaper than 57 round trips to a database in another region.
+ *
+ * Summing across regions is not the same act as summing across occupations,
+ * which this module refuses elsewhere. Occupation groups nest and overlap, so
+ * adding them invents a total the publisher never claimed. Regions partition
+ * the country exactly once, so adding those is arithmetic on a partition. It
+ * is still ours to label, and it is labelled.
+ */
+export async function listOccupationTotals(options: {
+  readonly sourceKey: string;
+  readonly dataset: string;
+  readonly edition: string;
+  readonly levels: readonly GeographyLevel[];
+}): Promise<Result<OccupationTotalsResult, Failure>> {
+  const descriptor = findSourceDescriptor(options.sourceKey);
+  if (descriptor === undefined) {
+    return err(
+      failure('NOT_FOUND', `No source registered with key "${options.sourceKey}".`),
+    );
+  }
+
+  // The same gate as the map, for the same reason: this is an aggregate.
+  if (!canPublishDerivedAggregates(descriptor)) {
+    return err(
+      failure(
+        'FORBIDDEN',
+        `Source "${options.sourceKey}" may not be used for published aggregate figures. ` +
+          (ineligibilityReason(descriptor) ??
+            'Its licence reserves aggregate use, so no total may be drawn from it.'),
+      ),
+    );
+  }
+
+  const database = getDatabase();
+  if (!database.ok) return database;
+
+  const areas = await database.value.geography.findMany({
+    where: { asgsEdition: options.edition, level: { in: [...options.levels] } },
+    select: { id: true },
+  });
+  const areaIds = new Set(areas.map((area) => area.id));
+
+  const series = await database.value.labourMarketSeries.findMany({
+    where: {
+      sourceKey: options.sourceKey,
+      dataset: options.dataset,
+      geographyId: { in: [...areaIds] },
+    },
+    select: {
+      id: true,
+      geographyId: true,
+      sourceOccupationCode: true,
+      sourceOccupationName: true,
+    },
+  });
+
+  if (series.length === 0) {
+    return ok({ period: null, previousPeriod: null, regionsInScope: 0, occupations: [] });
+  }
+
+  const seriesIds = series.map((row) => row.id);
+  const periods = await database.value.labourMarketMetric.groupBy({
+    by: ['periodStart'],
+    where: { seriesId: { in: seriesIds } },
+    orderBy: { periodStart: 'desc' },
+    take: 2,
+  });
+
+  const period = periods[0]?.periodStart ?? null;
+  const previousPeriod = periods[1]?.periodStart ?? null;
+  if (period === null) {
+    return ok({ period: null, previousPeriod: null, regionsInScope: 0, occupations: [] });
+  }
+
+  const wanted = previousPeriod === null ? [period] : [period, previousPeriod];
+  const metrics = await database.value.labourMarketMetric.findMany({
+    where: { seriesId: { in: seriesIds }, periodStart: { in: wanted } },
+    select: { seriesId: true, periodStart: true, value: true },
+  });
+
+  const seriesById = new Map(series.map((row) => [row.id, row]));
+
+  interface Bucket {
+    name: string | null;
+    names: Set<string>;
+    total: number | null;
+    previousTotal: number | null;
+    regions: Set<string>;
+  }
+  const buckets = new Map<string, Bucket>();
+
+  for (const metric of metrics) {
+    const row = seriesById.get(metric.seriesId);
+    if (row === undefined) continue;
+    const code = row.sourceOccupationCode;
+    if (code === null || code === '') continue;
+
+    const bucket = buckets.get(code) ?? {
+      name: null,
+      names: new Set<string>(),
+      total: null,
+      previousTotal: null,
+      regions: new Set<string>(),
+    };
+    if (row.sourceOccupationName !== null && row.sourceOccupationName !== '') {
+      bucket.names.add(row.sourceOccupationName);
+    }
+
+    // A null value is a gap, and a gap is not a zero. It contributes nothing
+    // to the sum and does not count as a region reporting.
+    if (metric.value !== null) {
+      const value = Number(metric.value.toString());
+      if (metric.periodStart.getTime() === period.getTime()) {
+        bucket.total = (bucket.total ?? 0) + value;
+        if (row.geographyId !== null) bucket.regions.add(row.geographyId);
+      } else {
+        bucket.previousTotal = (bucket.previousTotal ?? 0) + value;
+      }
+    }
+    buckets.set(code, bucket);
+  }
+
+  const occupations = [...buckets.entries()]
+    .map(([code, bucket]) => ({
+      code,
+      name: bucket.names.size === 1 ? [...bucket.names][0]! : null,
+      total: bucket.total,
+      previousTotal: bucket.previousTotal,
+      regionsReporting: bucket.regions.size,
+    }))
+    .sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
+
+  return ok({
+    period,
+    previousPeriod,
+    regionsInScope: new Set(
+      series.map((row) => row.geographyId).filter((id): id is string => id !== null),
+    ).size,
+    occupations,
+  });
+}

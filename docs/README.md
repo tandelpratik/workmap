@@ -48,11 +48,18 @@ from all occupations down to ICT professionals or farm workers. State, region
 and occupation compose, so `/map?state=1&region=1GSYD&occupation=26` is a fully
 specified question and a shareable link.
 
+**Occupations** ranks those groups and gives each one a page: its figure, its
+change on the month before, its rank, where it is most advertised, and the full
+regional breakdown. Headline figures there are sums of the regions the
+publisher reports on, added by us and labelled as such, because JSA publishes
+this release by region rather than nationally.
+
 Labour market history is retained at two reference periods
 ([ADR-0010](adr/0010-labour-market-retention-window.md)). Milestones 06 and 07,
 history and trend, therefore begin by widening that window and re-importing.
-A period control waits on the same thing. Milestone 11, resolving occupation
-codes to a classification and building the matrix, is untouched.
+A period control waits on the same thing. Milestone 11 is half done: the profiles are built, and
+resolving occupation codes to a classification is blocked on an open licence
+question (ANZSCO against OSCA) recorded in the source register.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so

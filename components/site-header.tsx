@@ -20,11 +20,15 @@ import { brand } from '@/config/brand';
  * exists, and inventing one here is not this component's business (ADR-0007).
  */
 
-export type Section = 'jobs' | 'map';
+export type Section = 'jobs' | 'map' | 'occupations';
 
+// Where, what, and the listings themselves. The order is the reading order:
+// the map is the product's front door and the occupations are what it is a
+// map of.
 const sections: readonly { id: Section; href: string; label: string }[] = [
   { id: 'jobs', href: '/', label: 'Jobs' },
   { id: 'map', href: '/map', label: 'Map' },
+  { id: 'occupations', href: '/occupations', label: 'Occupations' },
 ];
 
 export function SiteHeader({ current }: { current: Section }) {

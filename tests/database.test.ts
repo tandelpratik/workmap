@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDatabase } from '@/db/client';
 import { sourceDescriptors } from '@/config/sources';
-import { listOccupations, listRegionTotals } from '@/db/repositories/labour-market';
+import {
+  listOccupations,
+  listOccupationTotals,
+  listRegionTotals,
+} from '@/db/repositories/labour-market';
 import { isProductionEligible } from '@/domain/source';
 
 /**
@@ -514,6 +518,88 @@ withDatabase('occupations come from the source, with its own names', () => {
         `"${region.name}" reports more ${named.code} than all occupations`,
       ).toBeLessThanOrEqual(whole);
     }
+  });
+});
+
+/**
+ * The occupation totals behind the What pages.
+ *
+ * These are our arithmetic over the publisher's figures, which is exactly why
+ * they are tested: a sum nobody checks is a number the product asserts on its
+ * own authority.
+ */
+withDatabase('occupation totals are the sum of the published regions', () => {
+  it('adds up to the same figure the regional query returns', async () => {
+    const across = await listOccupationTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+    });
+
+    expect(across.ok).toBe(true);
+    if (!across.ok || across.value.occupations.length === 0) return;
+
+    const total = across.value.occupations.find((entry) => entry.code === '0');
+    expect(total).toBeDefined();
+
+    const regional = await listRegionTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+      occupationCode: '0',
+    });
+    expect(regional.ok).toBe(true);
+    if (!regional.ok) return;
+
+    const summed = regional.value.regions.reduce(
+      (running, region) => running + (region.observation.value ?? 0),
+      0,
+    );
+
+    // Two code paths, one answer. They read the same rows differently, so a
+    // drift between them means one of them is wrong.
+    expect(total?.total).toBe(summed);
+    expect(total?.regionsReporting).toBe(
+      regional.value.regions.filter((region) => region.observation.value !== null).length,
+    );
+  });
+
+  it('never reports a group larger than all occupations', async () => {
+    // The groups nest inside the whole. One exceeding it would mean the sum is
+    // reading the wrong rows, which no amount of plausible-looking output on
+    // the page would reveal.
+    const across = await listOccupationTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+    });
+    if (!across.ok || across.value.occupations.length === 0) return;
+
+    const whole = across.value.occupations.find((entry) => entry.code === '0')?.total;
+    if (whole === null || whole === undefined) return;
+
+    for (const entry of across.value.occupations) {
+      if (entry.code === '0' || entry.total === null) continue;
+      expect(entry.total, `"${entry.code}" exceeds all occupations`).toBeLessThanOrEqual(
+        whole,
+      );
+    }
+  });
+
+  it('refuses a source barred from aggregation, as the map does', async () => {
+    const result = await listOccupationTotals({
+      sourceKey: 'adzuna',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['SA4'],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('FORBIDDEN');
   });
 });
 
