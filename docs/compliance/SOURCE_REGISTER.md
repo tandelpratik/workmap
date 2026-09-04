@@ -54,7 +54,7 @@ this register.
 | `abs-asgs`      | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
 | `anzsco`        | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
 | `adzuna`        | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
-| `smartjobs-qld` | Job listings        | `PENDING`          | `VERIFIED`     | Not yet: adapter built, not ingested  |
+| `smartjobs-qld` | Job listings        | `PENDING`          | `VERIFIED`     | Not yet: built, never crawled         |
 | `jobs-wa`       | Job listings        | `BLOCKED`          | `PROHIBITED`   | **Never**, without written permission |
 | `workday`       | Job listings        | `BLOCKED`          | `RESTRICTED`   | Only per employer, on written consent |
 | `pageup`        | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: access blocked, terms unread      |
@@ -480,9 +480,11 @@ string.
 
 - **Key:** `smartjobs-qld`
 - **Kind:** Individual job listings
-- **Activation:** `PENDING`. Permitted, and the adapter is built and tested
-  against captured pages, but nothing ingests it yet: no ingestion module and no
-  route into the database exist.
+- **Activation:** `PENDING`. Permitted, and both the adapter and the ingestion
+  path are built and tested against captured pages. Nothing has crawled the live
+  portal, and the gate refuses every run while this says `PENDING`. Activating it
+  is a decision to begin crawling a public service, so it is left to the product
+  owner (milestone 13a).
 - **Compliance:** `VERIFIED`
 - **Verified on:** 2026-08-31, from the search page's own footer licence link
   and [qld.gov.au/legal/copyright](https://www.qld.gov.au/legal/copyright), read

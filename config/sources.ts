@@ -126,8 +126,9 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     key: 'smartjobs-qld',
     displayName: 'Smart Jobs and Careers',
     kind: 'JOB_LISTING',
-    // Permitted, and the adapter is built, but nothing ingests it yet: there
-    // is no ingestion module and no route into the database.
+    // Permitted, and the adapter and ingestion path are both built and
+    // tested, but the live portal has never been crawled. Activating this is a
+    // decision to start, so it stays PENDING until it is taken.
     activation: 'PENDING',
     complianceStatus: 'VERIFIED',
     attributionRequired: true,

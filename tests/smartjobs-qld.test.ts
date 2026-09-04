@@ -14,6 +14,8 @@ import {
 } from '@/integrations/smartjobs-qld/mapper';
 import { findRegion, unrecognisedRegions } from '@/integrations/smartjobs-qld/regions';
 import { SmartJobsClient } from '@/integrations/smartjobs-qld/client';
+import { ingestSmartJobsQld } from '@/ingestion/smartjobs-qld';
+import { getDatabase } from '@/db/client';
 import type {
   SmartJobsJobDetail,
   SmartJobsSearchRow,
@@ -321,4 +323,211 @@ describe('splitLocalities', () => {
   it('drops empty segments from trailing separators', () => {
     expect(splitLocalities('Cairns region,,')).toEqual(['Cairns region']);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Ingestion
+// ---------------------------------------------------------------------------
+
+class Rollback extends Error {}
+
+/**
+ * A stub portal, built from the captured fixtures.
+ *
+ * The adapter is covered above, so what these tests exercise is the ingestion
+ * path: the gates, the write, the idempotency and, most importantly, how many
+ * requests a run is willing to make of somebody else's public service.
+ */
+function stubSource(options: { pages?: number } = {}) {
+  const page = parseSearchResults(searchHtml);
+  const detail = parseJobDetail(detailHtml);
+  const pages = options.pages ?? 1;
+
+  let searches = 0;
+  let details = 0;
+
+  return {
+    get requestsMade() {
+      return searches + details;
+    },
+    get searchCount() {
+      return searches;
+    },
+    get detailCount() {
+      return details;
+    },
+    searchFirstPage: () => {
+      searches += 1;
+      return Promise.resolve({
+        ...page,
+        nextPageForm: pages > 1 ? { in_page: '2' } : null,
+      });
+    },
+    searchNextPage: () => {
+      searches += 1;
+      return Promise.resolve({ ...page, nextPageForm: null });
+    },
+    fetchJobDetail: (url: string) => {
+      details += 1;
+      // A distinct reference per URL, because that is what the portal does.
+      // Returning one detail for every row would make every listing the same
+      // vacancy, and the idempotency assertions below would be measuring the
+      // stub rather than the ingestion.
+      const counter = /jncounter=(d+)/i.exec(url)?.[1] ?? String(details);
+      return Promise.resolve({ ...detail, reference: `QLD/${counter}` });
+    },
+  };
+}
+
+try {
+  process.loadEnvFile('.env');
+} catch {
+  // No .env. Database sections skip.
+}
+
+const withDatabase = describe.skipIf(!process.env['DATABASE_URL']);
+
+withDatabase('Smart Jobs ingestion', () => {
+  it('refuses to ingest while the source is not activated', async () => {
+    // The source is VERIFIED and PENDING: permitted, not turned on. Activation
+    // is the product owner's decision and the gate enforces it rather than
+    // warning about it (ADR-0009). This calls the real function against the
+    // real registry on purpose, because a stubbed gate proves nothing.
+    const result = await ingestSmartJobsQld({
+      client: stubSource(),
+      triggeredBy: 'test',
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('FORBIDDEN');
+    expect(result.error.message).toContain('PENDING');
+  });
+
+  it('stores listings once, and makes no requests for ones it already has', async () => {
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    const client = stubSource();
+    let first: Awaited<ReturnType<typeof ingestSmartJobsQld>> | null = null;
+    let second: Awaited<ReturnType<typeof ingestSmartJobsQld>> | null = null;
+    let storedTitle: string | null = null;
+    let storedState: string | null = null;
+    let placed = false;
+    let detailsAfterFirst = 0;
+
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          // Activated inside the transaction, so the run can be exercised
+          // without turning the source on for the whole product. The rollback
+          // puts it back to PENDING.
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'ACTIVE' },
+          });
+
+          first = await ingestSmartJobsQld({
+            db: tx,
+            client,
+            maxRequests: 30,
+            triggeredBy: 'test',
+          });
+          detailsAfterFirst = client.detailCount;
+
+          second = await ingestSmartJobsQld({
+            db: tx,
+            client,
+            maxRequests: 30,
+            triggeredBy: 'test',
+          });
+
+          const stored = await tx.job.findFirst({
+            where: { sourceKey: SOURCE_KEY, sourceUrl: firstRow().detailUrl },
+            select: {
+              title: true,
+              location: { select: { stateCode: true, geographyId: true } },
+            },
+          });
+          storedTitle = stored?.title ?? null;
+          storedState = stored?.location?.stateCode ?? null;
+          placed = Boolean(stored?.location?.geographyId);
+
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    const firstRun = first as Awaited<ReturnType<typeof ingestSmartJobsQld>> | null;
+    if (firstRun === null || !firstRun.ok) {
+      throw new Error(
+        `first ingest failed: ${firstRun === null ? 'not run' : firstRun.error.message}`,
+      );
+    }
+
+    expect(firstRun.value.reportedTotal).toBe(2038);
+    expect(firstRun.value.seen).toBeGreaterThan(0);
+    expect(firstRun.value.created).toBeGreaterThan(0);
+    expect(storedTitle).toBe('Health Practitioner - Reliever (Allied Health)');
+
+    // Every listing is a Queensland Government vacancy, and the portal's
+    // closed region vocabulary places it on a real ASGS area.
+    expect(storedState).toBe('QLD');
+    expect(placed).toBe(true);
+
+    const secondRun = second as Awaited<ReturnType<typeof ingestSmartJobsQld>> | null;
+    if (secondRun === null || !secondRun.ok) throw new Error('second ingest failed');
+
+    // The point of the whole design. A re-run reads the search page and stops:
+    // it already holds these listings, so it asks the portal for nothing more.
+    expect(secondRun.value.detailsFetched).toBe(0);
+    expect(secondRun.value.skippedFresh).toBeGreaterThan(0);
+    expect(secondRun.value.created).toBe(0);
+    expect(client.detailCount).toBe(detailsAfterFirst);
+  }, 180_000);
+
+  it('stops at the request budget rather than finishing the crawl', async () => {
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    const client = stubSource();
+    let outcome: Awaited<ReturnType<typeof ingestSmartJobsQld>> | null = null;
+
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'ACTIVE' },
+          });
+
+          // One search page plus two details, and no more. A crawler that
+          // treats its budget as a target rather than a ceiling is how a
+          // polite client becomes an incident on someone else's server.
+          outcome = await ingestSmartJobsQld({
+            db: tx,
+            client,
+            maxRequests: 3,
+            triggeredBy: 'test',
+          });
+
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    const run = outcome as Awaited<ReturnType<typeof ingestSmartJobsQld>> | null;
+    if (run === null || !run.ok) throw new Error('budgeted ingest failed');
+
+    expect(run.value.requests).toBeLessThanOrEqual(3);
+    expect(run.value.detailsFetched).toBe(2);
+    // It saw a full page of rows and deliberately left most of them.
+    expect(run.value.seen).toBeGreaterThan(run.value.detailsFetched);
+  }, 180_000);
 });

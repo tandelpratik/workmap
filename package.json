@@ -29,7 +29,8 @@
     "jsa:import": "tsx scripts/import-jsa-ivi.ts",
     "jsa:prune": "tsx scripts/prune-jsa-history.ts",
     "adzuna:ingest": "tsx scripts/ingest-adzuna.ts",
-    "adzuna:purge": "tsx scripts/purge-adzuna.ts"
+    "adzuna:purge": "tsx scripts/purge-adzuna.ts",
+    "qld:ingest": "tsx scripts/ingest-smartjobs-qld.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
