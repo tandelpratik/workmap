@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findSourceDescriptor } from '@/config/sources';
 import {
-  listOccupations,
-  listOccupationTotals,
-  listRegionTotals,
-} from '@/db/repositories/labour-market';
+  cachedOccupations,
+  cachedOccupationTotals,
+  cachedRegionTotals,
+} from '@/app/cached-queries';
 import { occupationLabel } from '@/components/occupation-filter';
 import { SiteHeader } from '@/components/site-header';
 import { VacancyTable } from '@/components/vacancy-table';
@@ -52,7 +52,7 @@ function codeFrom(raw: string): string | null {
 async function findOccupation(raw: string) {
   const code = codeFrom(raw);
   if (code === null) return null;
-  const list = await listOccupations({ sourceKey: SOURCE_KEY, dataset: DATASET });
+  const list = await cachedOccupations({ sourceKey: SOURCE_KEY, dataset: DATASET });
   if (!list.ok) return null;
   return list.value.find((option) => option.code === code) ?? null;
 }
@@ -103,14 +103,14 @@ export default async function OccupationPage({
   // carry simply returns nothing, which is the answer this page wants anyway.
   const [occupation, totals, across] = await Promise.all([
     findOccupation(raw),
-    listRegionTotals({
+    cachedRegionTotals({
       sourceKey: SOURCE_KEY,
       dataset: DATASET,
       edition: EDITION,
       levels: ['GCCSA', 'SA4'],
       occupationCode: code ?? '',
     }),
-    listOccupationTotals({
+    cachedOccupationTotals({
       sourceKey: SOURCE_KEY,
       dataset: DATASET,
       edition: EDITION,

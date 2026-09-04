@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { findSourceDescriptor } from '@/config/sources';
-import { listOccupationTotals } from '@/db/repositories/labour-market';
+import { cachedOccupationTotals } from '@/app/cached-queries';
 import { occupationLabel } from '@/components/occupation-filter';
 import { SiteHeader } from '@/components/site-header';
 
@@ -46,7 +46,7 @@ function Prose({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OccupationsPage() {
-  const result = await listOccupationTotals({
+  const result = await cachedOccupationTotals({
     sourceKey: SOURCE_KEY,
     dataset: DATASET,
     edition: EDITION,

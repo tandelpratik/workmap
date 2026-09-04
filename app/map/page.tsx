@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { findSourceDescriptor } from '@/config/sources';
-import { listOccupations, listRegionTotals } from '@/db/repositories/labour-market';
-import { listByLevel } from '@/db/repositories/geography';
+import {
+  cachedOccupations,
+  cachedRegionTotals,
+  cachedStates,
+} from '@/app/cached-queries';
 import { OccupationFilter, occupationLabel } from '@/components/occupation-filter';
 import {
   buildChoroplethGeometry,
@@ -102,7 +105,7 @@ export default async function MapPage({
   // is the rare path and the right one to make slow.
   const speculativeOccupation = requestedOccupation ?? TOTAL_OCCUPATION_CODE;
   const [speculativeTotals, stateList, occupationList] = await Promise.all([
-    listRegionTotals({
+    cachedRegionTotals({
       sourceKey: SOURCE_KEY,
       dataset: DATASET,
       edition: EDITION,
@@ -111,8 +114,8 @@ export default async function MapPage({
       levels: ['GCCSA', 'SA4'],
       occupationCode: speculativeOccupation,
     }),
-    listByLevel(EDITION, 'STATE'),
-    listOccupations({ sourceKey: SOURCE_KEY, dataset: DATASET }),
+    cachedStates(EDITION, 'STATE'),
+    cachedOccupations({ sourceKey: SOURCE_KEY, dataset: DATASET }),
   ]);
 
   // The vocabulary is the source's, so what may be asked for is decided by
@@ -134,7 +137,7 @@ export default async function MapPage({
   const totals =
     occupationCode === speculativeOccupation
       ? speculativeTotals
-      : await listRegionTotals({
+      : await cachedRegionTotals({
           sourceKey: SOURCE_KEY,
           dataset: DATASET,
           edition: EDITION,
