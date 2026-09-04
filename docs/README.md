@@ -11,12 +11,13 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Engineering documentation
 
-| Document                                                       | Purpose                                                     |
-| -------------------------------------------------------------- | ----------------------------------------------------------- |
-| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)   | Consolidated technical view: modules, boundaries, data flow |
-| [adr/README.md](adr/README.md)                                 | Architecture decision records and their status              |
-| [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md) | Per-source compliance status, and what each licence permits |
-| [milestones/](milestones/)                                     | One record per completed milestone                          |
+| Document                                                                           | Purpose                                                                              |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)                       | Consolidated technical view: modules, boundaries, data flow                          |
+| [adr/README.md](adr/README.md)                                                     | Architecture decision records and their status                                       |
+| [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md)                     | Per-source compliance status, and what each licence permits                          |
+| [compliance/DIRECT_SOURCE_FEASIBILITY.md](compliance/DIRECT_SOURCE_FEASIBILITY.md) | Direct employer and government sources: measured access, and what their terms permit |
+| [milestones/](milestones/)                                                         | One record per completed milestone                                                   |
 
 ## Reading order for a new contributor
 

@@ -123,6 +123,149 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
       'from the site, which npm run adzuna:purge exists to do.',
   },
   {
+    key: 'smartjobs-qld',
+    displayName: 'Smart Jobs and Careers',
+    kind: 'JOB_LISTING',
+    // Permitted, and the adapter is built, but nothing ingests it yet: there
+    // is no ingestion module and no route into the database.
+    activation: 'PENDING',
+    complianceStatus: 'VERIFIED',
+    attributionRequired: true,
+    // CC BY requires attribution, a licence notice, a link and an indication
+    // that changes were made. Stored verbatim, as with the other CC BY sources.
+    // The version is 3.0 AU because that is what the pages themselves declare;
+    // see the note below.
+    attributionText:
+      'Based on Smart Jobs and Careers data. © The State of Queensland, ' +
+      'licensed under CC BY 3.0 AU. Listings have been reformatted for display.',
+    termsUrl: 'https://creativecommons.org/licenses/by/3.0/au/',
+    homepageUrl: 'https://smartjobs.qld.gov.au/',
+    // CC BY permits adaptation, which is what aggregation is.
+    permitsDerivedAggregates: true,
+    notes:
+      'Queensland Government job listings. Verified 2026-08-31, and the licence ' +
+      'version resolved the same day. The pages carry AGLS metadata declaring ' +
+      'DCTERMS.license as http://creativecommons.org/licenses/by/3.0/au/ with ' +
+      'DCTERMS.creator "The State of Queensland", and the footer links the same ' +
+      '3.0 AU deed. qld.gov.au/legal/copyright states CC BY 4.0 "unless otherwise ' +
+      'noted", and these pages do note otherwise, so 3.0 AU governs here. Both ' +
+      'permit commercial use, redistribution and adaptation with attribution, ' +
+      'which makes this the only live listing source found that permits both ' +
+      'republication and aggregation. The declared licence is asserted by a test ' +
+      'against a captured page, so a silent change is caught. Remaining caveat: ' +
+      '"unless otherwise noted" means an individual advertisement carrying third ' +
+      'party material may fall outside the grant. Runs on NGA.NET; the search is ' +
+      'a form POST paged by replaying server-supplied hidden fields, listing ' +
+      'pages carry no JSON-LD while detail pages do, and robots.txt returns 404 ' +
+      'so no crawl policy is published and the client paces itself.',
+  },
+  {
+    key: 'jobs-wa',
+    displayName: 'WA Government Jobs',
+    kind: 'JOB_LISTING',
+    activation: 'BLOCKED',
+    complianceStatus: 'PROHIBITED',
+    attributionRequired: true,
+    termsUrl: 'https://www.wa.gov.au/terms-of-use',
+    homepageUrl: 'https://search.jobs.wa.gov.au/',
+    permitsDerivedAggregates: false,
+    notes:
+      'Prohibited for this product. Read 2026-08-31: wa.gov.au/copyright redirects ' +
+      'to the terms of use, which permit copying only "for your own personal use, ' +
+      'for non-commercial educational purposes or for non-commercial use within ' +
+      'your organisation", forbid commercially exploiting the site, and state that ' +
+      '"no part may be reproduced or re-used for any commercial purposes whatsoever ' +
+      'without prior written permission of the State of Western Australia". This ' +
+      'product is commercial, so it is closed absent that permission. Recorded ' +
+      'because it ' +
+      'is otherwise the most attractive source found: 963 live jobs in a permitted ' +
+      'sitemap, and JSON-LD carrying real WA planning regions and addressRegion. ' +
+      'Technical quality is not the question; the licence is.',
+  },
+  {
+    key: 'workday',
+    displayName: 'Workday career sites',
+    kind: 'JOB_LISTING',
+    activation: 'BLOCKED',
+    // Restricted rather than prohibited: the platform is open and the barrier
+    // is each employer's own terms, which differ and can be negotiated.
+    complianceStatus: 'RESTRICTED',
+    attributionRequired: true,
+    homepageUrl: 'https://www.myworkdayjobs.com/',
+    permitsDerivedAggregates: false,
+    notes:
+      'Employer-hosted listings, one tenant per employer. Technically proven ' +
+      '2026-08-31: an unauthenticated JSON endpoint returned 528 live listings ' +
+      'across six Australian employers in about a minute, robots.txt allows the ' +
+      'career paths, and records carry a stable jobReqId plus real start and end ' +
+      'dates. The barrier is legal, not technical. The career sites carry no terms ' +
+      "of their own, so each employer's site terms govern, and all four that could " +
+      'be located prohibit republication without prior written consent: Lendlease ' +
+      'bars any "robot, spider, other automatic device" from extracting content, ' +
+      'Transurban bars reproduction and even linking, Telstra bars reproduction, ' +
+      'and UQ permits personal non-commercial use only. Rio Tinto additionally ' +
+      'sets Disallow on its careers path and must never be ingested. This source ' +
+      'may move to ACTIVE only per employer, and only on written permission. ' +
+      'CommBank and AGL terms could not be located and remain unread.',
+  },
+  {
+    key: 'pageup',
+    displayName: 'PageUp career sites',
+    kind: 'JOB_LISTING',
+    activation: 'BLOCKED',
+    complianceStatus: 'UNVERIFIED',
+    attributionRequired: true,
+    homepageUrl: 'https://www.pageuppeople.com/',
+    permitsDerivedAggregates: false,
+    notes:
+      'Blocked at the platform edge. Checked 2026-08-31: eight of eight Australian ' +
+      'tenants (JCU, CQU, Charles Sturt, Wollongong, Deakin, Federation, La Trobe, ' +
+      'Sydney Water) return an Imperva/Incapsula challenge marked NOINDEX, NOFOLLOW. ' +
+      'There is no public JSON or XML endpoint, contrary to the claim that started ' +
+      'this investigation. Terms were never reached, so compliance is unverified ' +
+      'rather than prohibited. PageUp operates feeds for contracted partners, so ' +
+      'the route here is a commercial agreement. This matters because the blocked ' +
+      'tenants are concentrated in exactly the regional universities and utilities ' +
+      'the product most wants. Never attempt to defeat the challenge.',
+  },
+  {
+    key: 'iworkfor-nsw',
+    displayName: 'I Work for NSW',
+    kind: 'JOB_LISTING',
+    activation: 'BLOCKED',
+    complianceStatus: 'UNVERIFIED',
+    attributionRequired: true,
+    homepageUrl: 'https://iworkfor.nsw.gov.au/',
+    permitsDerivedAggregates: false,
+    notes:
+      'Checked 2026-08-31. Serves no data without JavaScript: the homepage is a ' +
+      'client-rendered shell with no server-rendered listings and no JSON-LD, and ' +
+      'the copyright page returns 403, so the licence position is unestablished. ' +
+      'nsw.gov.au material is CC BY 4.0, but that statement covers nsw.gov.au and ' +
+      'not this host, and must not be assumed to extend here. Its robots.txt is ' +
+      'worth honouring if this is ever revisited: it carries ' +
+      'Content-Signal: search=yes,ai-train=no,use=reference, which permits building ' +
+      'a search index and forbids training on the content, and it names ClaudeBot, ' +
+      'GPTBot, CCBot and Google-Extended as disallowed. Note that the proposal that ' +
+      'prompted this study cited iworkfornsw.gov.au, which does not exist.',
+  },
+  {
+    key: 'careers-vic',
+    displayName: 'Careers.vic',
+    kind: 'JOB_LISTING',
+    activation: 'PENDING',
+    complianceStatus: 'UNVERIFIED',
+    attributionRequired: true,
+    homepageUrl: 'https://www.careers.vic.gov.au/',
+    permitsDerivedAggregates: false,
+    notes:
+      'Not yet mapped. Checked 2026-08-31: a Drupal site whose robots.txt disallows ' +
+      '/search/ and /search?, which is where listings are likely to be reached, and ' +
+      'no copyright or terms page could be found at the standard paths. Neither the ' +
+      'listing structure nor the licence is established, so this is an open question ' +
+      'rather than a negative finding.',
+  },
+  {
     key: 'synthetic',
     displayName: 'Development fixtures',
     kind: 'JOB_LISTING',

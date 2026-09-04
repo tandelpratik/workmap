@@ -143,6 +143,69 @@ describe('source registry', () => {
     expect(aggregable).toEqual(['jsa-ivi', 'abs-asgs']);
   });
 
+  it('records Queensland as CC BY, and permitted for aggregation once built', () => {
+    // The only live listing source found whose licence permits both
+    // republication and published statistics. Verified 2026-08-31 against the
+    // footer licence link and qld.gov.au/legal/copyright. Activation is PENDING
+    // because nothing ingests it yet, so the gates keep it out of production.
+    const qld = findSourceDescriptor('smartjobs-qld');
+    expect(qld?.complianceStatus).toBe('VERIFIED');
+    expect(qld?.permitsDerivedAggregates).toBe(true);
+    expect(qld?.activation).toBe('PENDING');
+    expect(isProductionEligible(qld!)).toBe(false);
+    expect(canPublishDerivedAggregates(qld!)).toBe(false);
+  });
+
+  it('records WA as prohibited, however good its data is', () => {
+    // Its terms permit non-commercial use only. This product is commercial.
+    // Pinned because WA is the most tempting source found by some distance:
+    // 963 listings in a permitted sitemap and the cleanest geography anywhere.
+    // A future edit must not quietly promote it on technical merit.
+    const wa = findSourceDescriptor('jobs-wa');
+    expect(wa?.complianceStatus).toBe('PROHIBITED');
+    expect(wa?.activation).toBe('BLOCKED');
+    expect(isProductionEligible(wa!)).toBe(false);
+    expect(isUsable(wa!, { isProduction: true })).toBe(false);
+
+    // Documents a gap rather than blessing it. Outside production isUsable
+    // admits anything that is not DEVELOPMENT_ONLY, so a PROHIBITED source is
+    // currently "usable" in development. Prohibited means do not integrate, in
+    // any environment, so this is arguably wrong. Left as-is because changing
+    // isUsable changes behaviour for every existing call site, which is a
+    // decision to take deliberately rather than as a side effect of adding a
+    // registry entry.
+    expect(isUsable(wa!, { isProduction: false })).toBe(true);
+  });
+
+  it('keeps Workday restricted until an employer grants permission', () => {
+    // The platform is open and every employer's terms read so far forbid
+    // republication, so this may only ever move per employer, on written
+    // consent. Restricted rather than prohibited records that difference.
+    const workday = findSourceDescriptor('workday');
+    expect(workday?.complianceStatus).toBe('RESTRICTED');
+    expect(workday?.activation).toBe('BLOCKED');
+    expect(workday?.permitsDerivedAggregates).toBe(false);
+    expect(isProductionEligible(workday!)).toBe(false);
+  });
+
+  it('leaves every unproven candidate out of production', () => {
+    // A blanket assertion over the candidates from the feasibility study, so
+    // that adding one cannot make it eligible by accident. Promotion requires
+    // an evidence entry in the register and a deliberate edit here.
+    for (const key of ['pageup', 'iworkfor-nsw', 'careers-vic', 'jobs-wa', 'workday']) {
+      const descriptor = findSourceDescriptor(key);
+      expect(descriptor, `"${key}" should exist in the registry`).toBeDefined();
+      expect(
+        isProductionEligible(descriptor!),
+        `"${key}" must not be production eligible`,
+      ).toBe(false);
+      expect(
+        canPublishDerivedAggregates(descriptor!),
+        `"${key}" must not be a basis for published statistics`,
+      ).toBe(false);
+    }
+  });
+
   it('returns undefined for an unknown key', () => {
     expect(findSourceDescriptor('does-not-exist')).toBeUndefined();
   });

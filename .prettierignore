@@ -14,3 +14,8 @@ package-lock.json
 # the build deliberately minified.
 public/geography/
 data/geography/
+
+# Captured third-party markup, kept byte-identical to what the server sent.
+# Reformatting it would make the parser tests assert against our own tidying
+# rather than against the real page.
+tests/fixtures/**/*.html

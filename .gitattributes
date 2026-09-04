@@ -18,3 +18,8 @@
 
 # Generated TopoJSON is large and machine-produced.
 *.topo.json -diff
+
+# Captured third-party responses, stored exactly as the server sent them.
+# Normalising their line endings would mean the parser tests assert against a
+# rewritten copy rather than the real page.
+tests/fixtures/**/*.html -text

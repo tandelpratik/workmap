@@ -4,10 +4,14 @@ The constitution requires every source to have a documented compliance status
 before production use. This register is that document.
 
 **Status of this register: incomplete.** It was created at milestone 01 so that
-no source can quietly reach production unverified. Two sources (`jsa-ivi` and `abs-asgs`) have now been verified against their
-published terms; the rest have not. Milestone 30
-completes the remainder, and any milestone that touches a specific source must
-verify that source first.
+no source can quietly reach production unverified. Four sources (`jsa-ivi`,
+`abs-asgs`, `adzuna` and `smartjobs-qld`) have now been verified against their
+published terms, and one (`jobs-wa`) has been verified as prohibited. The rest
+have not been verified. Milestone 30 completes the remainder, and any milestone
+that touches a specific source must verify that source first.
+
+A status of `PROHIBITED` or `RESTRICTED` is a completed verification, not a gap.
+It means the terms were read and they refuse us.
 
 ## Two axes
 
@@ -44,13 +48,24 @@ this register.
 
 ## Current state
 
-| Source      | Kind                | Activation         | Compliance     | Production eligible                   |
-| ----------- | ------------------- | ------------------ | -------------- | ------------------------------------- |
-| `jsa-ivi`   | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
-| `abs-asgs`  | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
-| `anzsco`    | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
-| `adzuna`    | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
-| `synthetic` | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                             |
+| Source          | Kind                | Activation         | Compliance     | Production eligible                   |
+| --------------- | ------------------- | ------------------ | -------------- | ------------------------------------- |
+| `jsa-ivi`       | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `abs-asgs`      | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `anzsco`        | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
+| `adzuna`        | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
+| `smartjobs-qld` | Job listings        | `PENDING`          | `VERIFIED`     | Not yet: adapter built, not ingested  |
+| `jobs-wa`       | Job listings        | `BLOCKED`          | `PROHIBITED`   | **Never**, without written permission |
+| `workday`       | Job listings        | `BLOCKED`          | `RESTRICTED`   | Only per employer, on written consent |
+| `pageup`        | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: access blocked, terms unread      |
+| `iworkfor-nsw`  | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: no data served, licence unknown   |
+| `careers-vic`   | Job listings        | `PENDING`          | `UNVERIFIED`   | No: not yet mapped                    |
+| `synthetic`     | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                             |
+
+The six job-listing candidates below `adzuna` were added on 2026-08-31 from
+[DIRECT_SOURCE_FEASIBILITY.md](DIRECT_SOURCE_FEASIBILITY.md), which records the
+measurements and the clauses behind each status. That document is the evidence;
+this one is the decision.
 
 ## What every source must answer
 
@@ -461,6 +476,228 @@ obligation to remove data is not satisfied by hiding it.
 from any URL before logging, because Adzuna passes credentials in the query
 string.
 
+### Smart Jobs and Careers (Queensland)
+
+- **Key:** `smartjobs-qld`
+- **Kind:** Individual job listings
+- **Activation:** `PENDING`. Permitted, and the adapter is built and tested
+  against captured pages, but nothing ingests it yet: no ingestion module and no
+  route into the database exist.
+- **Compliance:** `VERIFIED`
+- **Verified on:** 2026-08-31, from the search page's own footer licence link
+  and [qld.gov.au/legal/copyright](https://www.qld.gov.au/legal/copyright), read
+  directly.
+
+**The grant.** The Queensland Government copyright statement says:
+
+> Unless otherwise noted, all copyright material available on or through this
+> website is licensed under a Creative Commons Attribution 4.0 International
+> licence (CC BY 4.0). You are free to use copyright material available on or
+> through this website that is covered by a CC BY licence in line with the
+> licence terms.
+
+The Smart Jobs search page carries a Creative Commons Attribution licence link
+in its own footer alongside links to that statement, so the licence reaches the
+listings and not merely the parent site.
+
+**Why this one matters.** CC BY permits commercial use, redistribution and
+adaptation with attribution. It is the only live job-listing source found that
+permits both republication and published statistics, which makes it the natural
+compliant core of a listings product. `permitsDerivedAggregates` is therefore
+`true`, on the same reasoning as `jsa-ivi` and `abs-asgs`.
+
+**Licence version: resolved 2026-08-31 as CC BY 3.0 AU.** The pages carry AGLS
+metadata declaring the licence in machine-readable form:
+
+```html
+<meta
+  name="DCTERMS.license"
+  scheme="DCTERMS.URI"
+  content="http://creativecommons.org/licenses/by/3.0/au/"
+/>
+<meta
+  name="DCTERMS.creator"
+  scheme="AGLSTERMS.GOLD"
+  content="c=AU; o=The State of Queensland"
+/>
+```
+
+The footer links the same 3.0 AU deed. `qld.gov.au/legal/copyright` states CC BY
+4.0 "unless otherwise noted", and these pages do note otherwise, so 3.0 AU is
+what governs here. Both permit commercial use, redistribution and adaptation
+with attribution, so the conclusion is unchanged and the attribution wording is
+now pinned to the version actually declared.
+
+The adapter asserts this in a test against a captured page, so a silent change
+to the declared licence fails the build rather than passing unnoticed.
+
+**One open item remains.** "Unless otherwise noted" means an individual
+advertisement carrying third party material may fall outside the grant.
+Advertisement text should be treated more cautiously than the factual fields.
+
+**Technical note, measured 2026-08-31.** Runs on NGA.NET. **2,038 live jobs**
+at time of writing. The search is a form POST; paging works by replaying the
+server's own hidden fields (`in_pg` as the cursor, `in_nav=next_set`) rather
+than constructing an offset. Listing pages carry no JSON-LD; detail pages do,
+and that is where the stable reference (`QLD/164089`) and the real dates live.
+The JSON-LD `jobLocation` is published empty, so geography comes from the
+rendered "Workplace Location" field instead.
+
+**Geography is the reason to build this first.** The portal names a closed
+vocabulary of Queensland regions ("Cairns region", "Darling Downs - Maranoa",
+"North West Qld"), so placing a listing is a lookup rather than the free-text
+geocoding every other candidate source would require.
+
+`robots.txt` returns 404, so no crawl policy is published. The client therefore
+paces itself (1.5s between requests, sequential, with a per-run request
+ceiling): absence of a stated limit is not permission.
+
+### WA Government Jobs
+
+- **Key:** `jobs-wa`
+- **Kind:** Individual job listings
+- **Activation:** `BLOCKED`
+- **Compliance:** `PROHIBITED`
+- **Verified on:** 2026-08-31, from
+  [wa.gov.au/terms-of-use](https://www.wa.gov.au/terms-of-use), reached by
+  following `wa.gov.au/copyright`, read directly.
+
+**The prohibition.** Three clauses, all against us:
+
+> **no commercial use:** not resell or make the WA.gov.au website or Other
+> Government Services available to any third party, or otherwise commercially
+> exploit
+
+> You may copy, distribute, display, download or print the material on this
+> website for your own personal use, for non-commercial educational purposes or
+> for non-commercial use within your organisation, provided you attribute the
+> source of the information
+
+> no part may be reproduced or re-used for any commercial purposes whatsoever
+> without prior written permission of the State of Western Australia
+
+This product is commercial, so WA is closed absent that written permission.
+
+**Recorded because it is the most tempting source found.** Its `robots.txt`
+permits crawling at a 5 second delay and publishes a sitemap listing 963 live
+jobs, 371 of them outside Perth. Its JSON-LD is the best encountered anywhere:
+real WA planning regions in `addressLocality`, a populated `addressRegion`,
+proper multi-location arrays, and ISO `datePosted` and `validThrough`. It would
+solve the geography problem outright.
+
+None of that is the question. A permissive `robots.txt` is a crawl policy, not a
+licence, and this entry exists so that a future reader who rediscovers the good
+data does not mistake one for the other. A test pins the status for the same
+reason.
+
+**Route if wanted:** written permission from the State of Western Australia.
+
+### Workday career sites
+
+- **Key:** `workday`
+- **Kind:** Individual job listings, employer-hosted, one tenant per employer
+- **Activation:** `BLOCKED`
+- **Compliance:** `RESTRICTED`, and the distinction from `PROHIBITED` is
+  deliberate: the platform is open and the barrier is each employer's own
+  terms, which differ and can be negotiated.
+- **Verified on:** 2026-08-31, from four employers' terms of use, read directly.
+
+**Technically proven.** An unauthenticated JSON endpoint returned 528 live
+listings across six Australian employers in about a minute, with no throttling.
+`robots.txt` explicitly allows the career paths and publishes sitemaps. Records
+carry a stable `jobReqId`, satisfying ADR-0005, plus real `startDate` and
+`endDate`. The career sites carry no terms of use of their own.
+
+**Legally barred, employer by employer.** All four employer terms that could be
+located prohibit what the product needs:
+
+| Employer   | Clause as written                                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lendlease  | "use any **robot, spider, other automatic device** or manual process to monitor, copy or extract any web pages on the Website, or any of the Content, without our prior written permission"                                                                  |
+| Transurban | "no part of material on this website may be uploaded to a third party, **linked to, framed**, reproduced, adapted, performed in public, distributed or transmitted in any form by any process without our specific written consent"                          |
+| Telstra    | "You must not otherwise reproduce, transmit (including broadcast), communicate, adapt, distribute, sell, modify or publish or otherwise use any of the material on the Telstra websites... except as permitted by statute or with our prior written consent" |
+| UQ         | "For personal, non-commercial purposes, you may view or make copies of the material... Content may not be reproduced or transmitted without our prior written permission"                                                                                    |
+
+Lendlease bars the **act of extraction** regardless of what is done with the
+output. Transurban bars **linking**. UQ directs commercial requests to its
+Copyright Officer, so a written permission route exists.
+
+**Two arguments that soften this, neither settled, neither legal advice.**
+Facts are not copyright in Australia and there is no separate database right, so
+a title, employer, suburb, date and link differ from republished advertisement
+copy. And whether `telstra.com.au`'s terms bind
+`telstra.wd3.myworkdayjobs.com` is genuinely open, since it is a different host
+with no terms link of its own. Obtain legal advice before relying on either.
+
+**Standing prohibition.** Rio Tinto's Workday `robots.txt` sets
+`Disallow: /RioTinto_Careers/`. It must never be ingested.
+
+**Unread:** CommBank and AGL terms pages could not be located.
+
+**Route:** this source may move toward `ACTIVE` only per employer, and only on
+written permission. Employers generally want the traffic, so the ask is cheap.
+
+### PageUp career sites
+
+- **Key:** `pageup`
+- **Kind:** Individual job listings
+- **Activation:** `BLOCKED`
+- **Compliance:** `UNVERIFIED`, not `PROHIBITED`: access was blocked before any
+  terms could be read, so nothing is known about what they permit.
+- **Checked on:** 2026-08-31
+
+Eight of eight Australian tenants (JCU, CQU, Charles Sturt, Wollongong, Deakin,
+Federation, La Trobe, Sydney Water) return an Imperva/Incapsula challenge marked
+`NOINDEX, NOFOLLOW`. There is no public JSON or XML endpoint, contrary to the
+claim that prompted this investigation.
+
+This matters more than the other blocks, because the blocked tenants are
+concentrated in exactly the regional universities and utilities the product most
+wants. PageUp operates feeds for contracted partners, so the route is a
+commercial agreement rather than an engineering one.
+
+**Never attempt to defeat the challenge.** That is bypassing an access control,
+which the constitution forbids outright.
+
+### I Work for NSW
+
+- **Key:** `iworkfor-nsw`
+- **Kind:** Individual job listings
+- **Activation:** `BLOCKED`
+- **Compliance:** `UNVERIFIED`
+- **Checked on:** 2026-08-31
+
+Serves no data without JavaScript: the homepage is a client-rendered shell with
+no server-rendered listings and no JSON-LD. The copyright page returns 403, so
+the licence position could not be established. `nsw.gov.au` material is CC BY
+4.0, but that statement covers `nsw.gov.au` and not this host, and **must not be
+assumed to extend here**.
+
+**Its `robots.txt` is worth honouring if this is revisited.** It carries
+`Content-Signal: search=yes,ai-train=no,use=reference`, which permits building a
+search index and returning links and short excerpts, and forbids training on the
+content. It names `ClaudeBot`, `GPTBot`, `CCBot` and `Google-Extended` as
+disallowed. Any future classification or matching work must respect
+`ai-train=no`.
+
+**Correction to the record:** the proposal that prompted this study cited
+`iworkfornsw.gov.au`, which does not exist. The real host is
+`iworkfor.nsw.gov.au`.
+
+### Careers.vic
+
+- **Key:** `careers-vic`
+- **Kind:** Individual job listings
+- **Activation:** `PENDING`
+- **Compliance:** `UNVERIFIED`
+- **Checked on:** 2026-08-31
+
+Not yet mapped. A Drupal site whose `robots.txt` disallows `/search/` and
+`/search?`, which is where listings are likely reached, and no copyright or
+terms page could be found at the standard paths. Neither the listing structure
+nor the licence is established, so this is an open question rather than a
+negative finding.
+
 ### Synthetic job source
 
 - **Key:** `synthetic`
@@ -494,14 +731,19 @@ Independent of any terms, and not subject to trade-off:
 - No presenting an estimate as an official statistic.
 - No presenting synthetic records as real vacancies, in any context.
 - No claiming complete Australian coverage without evidence.
+- No ingesting Rio Tinto's career site. Its `robots.txt` sets
+  `Disallow: /RioTinto_Careers/` (recorded 2026-08-31).
+- No treating a permissive `robots.txt` as a licence. WA Government Jobs is the
+  worked example: crawling is permitted, commercial reuse is forbidden.
 
 ## Change log
 
-| Date       | Change                                                                                                                                                                                                                                             |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                                                                                                        |
-| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                                      |
-| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                                     |
-| 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`.           |
-| 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                          |
-| 2026-08-29 | Adzuna access granted and its API terms verified. `ACTIVE` / `VERIFIED` for publishing listings. Aggregation barred without written consent, enforced by `permitsDerivedAggregates`. Mandatory attribution recorded. Logo asset still outstanding. |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-08-28 | Register created at milestone 01. All sources `UNVERIFIED`.                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-08-28 | Activation axis added (ADR-0009). Adzuna recorded `BLOCKED` at onboarding. JSA and ABS recorded `ACTIVE`. Synthetic fixture registered as `DEVELOPMENT_ONLY`.                                                                                                                                                                                                                                                                                    |
+| 2026-08-28 | ABS ASGS verified as CC BY 4.0 against its published terms. First source to become production eligible. Attribution wording recorded, ASGS Edition 4 selected.                                                                                                                                                                                                                                                                                   |
+| 2026-08-28 | JSA IVI verification attempted and not completed. Primary source unreachable (application-layer block, not circumvented). data.gov.au records only `other-open` with no licence URL, which is insufficient. Status remains `UNVERIFIED`.                                                                                                                                                                                                         |
+| 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                                                                                                                                                                                                                        |
+| 2026-08-29 | Adzuna access granted and its API terms verified. `ACTIVE` / `VERIFIED` for publishing listings. Aggregation barred without written consent, enforced by `permitsDerivedAggregates`. Mandatory attribution recorded. Logo asset still outstanding.                                                                                                                                                                                               |
+| 2026-08-31 | Six direct job-listing candidates registered from the feasibility study. `smartjobs-qld` verified as CC BY and the first listing source permitted to aggregate. `jobs-wa` verified as `PROHIBITED`: non-commercial use only. `workday` `RESTRICTED`, barred by employer terms and openable only per employer on written consent. `pageup`, `iworkfor-nsw` and `careers-vic` recorded `UNVERIFIED`. Rio Tinto added to the standing prohibitions. |
