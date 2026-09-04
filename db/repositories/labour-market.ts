@@ -295,42 +295,7 @@ export async function listRegionTotals(options: {
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const areas = await database.value.geography.findMany({
-    where: { asgsEdition: options.edition, level: { in: [...options.levels] } },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      level: true,
-      // GCCSA and SA4 both hang off STATE, so this is the state for either.
-      parent: { select: { code: true } },
-    },
-    orderBy: { name: 'asc' },
-  });
-
-  const series = await database.value.labourMarketSeries.findMany({
-    where: {
-      sourceKey: options.sourceKey,
-      dataset: options.dataset,
-      sourceOccupationCode: options.occupationCode,
-      geographyId: { in: areas.map((area) => area.id) },
-    },
-    select: { id: true, geographyId: true },
-  });
-
-  if (series.length === 0) {
-    return ok({
-      period: null,
-      previousPeriod: null,
-      regions: [],
-      // Nothing is "missing a figure" when the dataset is not loaded at all.
-      // That is a different state, and the caller distinguishes it by the
-      // empty region list and null period rather than by a list of gaps.
-      withoutData: [],
-    });
-  }
-
-  const seriesIds = series.map((row) => row.id);
+  const levels = options.levels.map((level) => String(level));
 
   // One period for the whole map. Reading each region's own latest would let a
   // region that stopped reporting sit beside current ones as though it were
@@ -340,15 +305,22 @@ export async function listRegionTotals(options: {
   // nothing about direction. Two is all there is: history is retained at two
   // periods (config/retention.ts), so this is the whole table, not a window
   // onto a longer one.
-  const periods = await database.value.labourMarketMetric.groupBy({
-    by: ['periodStart'],
-    where: { seriesId: { in: seriesIds } },
-    orderBy: { periodStart: 'desc' },
-    take: 2,
-  });
+  const periods = await database.value.$queryRaw<{ period_start: Date }[]>`
+    select distinct m.period_start
+    from labour_market_metric m
+    join labour_market_series s on s.id = m.series_id
+    join geography g on g.id = s.geography_id
+    where s.source_key = ${options.sourceKey}
+      and s.dataset = ${options.dataset}
+      and s.source_occupation_code = ${options.occupationCode}
+      and g.asgs_edition = ${options.edition}
+      and g.level::text = any(${levels}::text[])
+    order by m.period_start desc
+    limit 2
+  `;
 
-  const period = periods[0]?.periodStart ?? null;
-  const previousPeriod = periods[1]?.periodStart ?? null;
+  const period = periods[0]?.period_start ?? null;
+  const previousPeriod = periods[1]?.period_start ?? null;
   if (period === null) {
     return ok({
       period: null,
@@ -361,59 +333,93 @@ export async function listRegionTotals(options: {
     });
   }
 
-  const wanted = previousPeriod === null ? [period] : [period, previousPeriod];
-  const metrics = await database.value.labourMarketMetric.findMany({
-    where: { seriesId: { in: seriesIds }, periodStart: { in: wanted } },
-    select: { seriesId: true, periodStart: true, value: true, valueState: true },
-  });
-
-  const geographyBySeries = new Map(series.map((row) => [row.id, row.geographyId]));
-  const observationByGeography = new Map<string, Observation>();
-  const previousByGeography = new Map<string, Observation>();
-  for (const metric of metrics) {
-    const geographyId = geographyBySeries.get(metric.seriesId);
-    if (geographyId === null || geographyId === undefined) continue;
-    const observation = makeObservation(
-      metric.periodStart,
-      metric.valueState as ValueState,
-      metric.value === null ? null : Number(metric.value.toString()),
-    );
-    const target =
-      metric.periodStart.getTime() === period.getTime()
-        ? observationByGeography
-        : previousByGeography;
-    target.set(geographyId, observation);
-  }
-
-  // An area is only in scope if the dataset reports on it at all. Everything
-  // else is outside this dataset's design, not absent from it.
-  const inScope = new Set(
-    series
-      .map((row) => row.geographyId)
-      .filter((id): id is string => id !== null && id !== undefined),
-  );
+  /**
+   * Both periods for every region, in one statement.
+   *
+   * Written as SQL rather than assembled from four Prisma calls because the
+   * join is the query: areas, their series and two months of metrics. Fetching
+   * each in turn cost four sequential round trips and carried rows across the
+   * wire that the database had already narrowed (ADR-0004).
+   *
+   * The left joins are what distinguishes the two absences. A region with no
+   * metric row for the period comes back with a null state, and that is a gap.
+   * A region with a row whose value is null was measured and reported as
+   * absent, and its state says why. Collapsing them would turn "not published"
+   * into "no data" (ADR-0002).
+   */
+  const rows = await database.value.$queryRaw<
+    {
+      geography_id: string;
+      code: string;
+      name: string;
+      level: string;
+      state_code: string | null;
+      latest_value: number | null;
+      latest_state: string | null;
+      previous_value: number | null;
+      previous_state: string | null;
+    }[]
+  >`
+    select g.id as geography_id,
+           g.code,
+           g.name,
+           g.level::text as level,
+           parent.code as state_code,
+           latest.value::float8 as latest_value,
+           latest.value_state::text as latest_state,
+           previous.value::float8 as previous_value,
+           previous.value_state::text as previous_state
+    from labour_market_series s
+    join geography g on g.id = s.geography_id
+    left join geography parent on parent.id = g.parent_id
+    left join labour_market_metric latest
+      on latest.series_id = s.id and latest.period_start = ${period}
+    left join labour_market_metric previous
+      on previous.series_id = s.id and previous.period_start = ${previousPeriod}
+    where s.source_key = ${options.sourceKey}
+      and s.dataset = ${options.dataset}
+      and s.source_occupation_code = ${options.occupationCode}
+      and g.asgs_edition = ${options.edition}
+      and g.level::text = any(${levels}::text[])
+    order by g.name asc
+  `;
 
   const regions: RegionTotal[] = [];
   const withoutData: Omit<RegionTotal, 'observation' | 'previous'>[] = [];
-  for (const area of areas) {
-    if (!inScope.has(area.id)) continue;
+
+  for (const row of rows) {
     const identity = {
-      geographyId: area.id,
-      code: area.code,
-      name: area.name,
-      level: area.level as GeographyLevel,
-      stateCode: area.parent?.code ?? null,
+      geographyId: row.geography_id,
+      code: row.code,
+      name: row.name,
+      level: row.level as GeographyLevel,
+      stateCode: row.state_code,
     };
-    const observation = observationByGeography.get(area.id);
-    if (observation === undefined) withoutData.push(identity);
-    else
-      regions.push({
-        ...identity,
-        observation,
-        // Absent rather than zero when the month before was not published or
-        // not held. The panel says so instead of drawing a change of nothing.
-        previous: previousByGeography.get(area.id) ?? null,
-      });
+
+    // No row at all for this period, as opposed to a row reporting an absence.
+    if (row.latest_state === null) {
+      withoutData.push(identity);
+      continue;
+    }
+
+    regions.push({
+      ...identity,
+      observation: makeObservation(
+        period,
+        row.latest_state as ValueState,
+        row.latest_value,
+      ),
+      // Absent rather than zero when the month before was not published or
+      // not held. The panel says so instead of drawing a change of nothing.
+      previous:
+        previousPeriod === null || row.previous_state === null
+          ? null
+          : makeObservation(
+              previousPeriod,
+              row.previous_state as ValueState,
+              row.previous_value,
+            ),
+    });
   }
 
   return ok({ period, previousPeriod, regions, withoutData });
@@ -530,22 +536,23 @@ export async function listOccupations(options: {
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const rows = await database.value.labourMarketSeries.findMany({
-    where: { sourceKey: options.sourceKey, dataset: options.dataset },
-    select: { sourceOccupationCode: true, sourceOccupationName: true },
-    distinct: ['sourceOccupationCode', 'sourceOccupationName'],
-    orderBy: { sourceOccupationCode: 'asc' },
-  });
+  // DISTINCT in the database. Prisma's distinct narrowed 2,850 rows after
+  // carrying them across the wire, to answer with 57 (ADR-0004).
+  const rows = await database.value.$queryRaw<{ code: string; name: string | null }[]>`
+    select distinct s.source_occupation_code as code, s.source_occupation_name as name
+    from labour_market_series s
+    where s.source_key = ${options.sourceKey}
+      and s.dataset = ${options.dataset}
+      and s.source_occupation_code is not null
+      and s.source_occupation_code <> ''
+    order by code asc
+  `;
 
   const namesByCode = new Map<string, Set<string>>();
   for (const row of rows) {
-    const code = row.sourceOccupationCode;
-    if (code === null || code === '') continue;
-    const names = namesByCode.get(code) ?? new Set<string>();
-    if (row.sourceOccupationName !== null && row.sourceOccupationName !== '') {
-      names.add(row.sourceOccupationName);
-    }
-    namesByCode.set(code, names);
+    const names = namesByCode.get(row.code) ?? new Set<string>();
+    if (row.name !== null && row.name !== '') names.add(row.name);
+    namesByCode.set(row.code, names);
   }
 
   return ok(
@@ -630,108 +637,98 @@ export async function listOccupationTotals(options: {
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const areas = await database.value.geography.findMany({
-    where: { asgsEdition: options.edition, level: { in: [...options.levels] } },
-    select: { id: true },
-  });
-  const areaIds = new Set(areas.map((area) => area.id));
+  const levels = options.levels.map((level) => String(level));
 
-  const series = await database.value.labourMarketSeries.findMany({
-    where: {
-      sourceKey: options.sourceKey,
-      dataset: options.dataset,
-      geographyId: { in: [...areaIds] },
-    },
-    select: {
-      id: true,
-      geographyId: true,
-      sourceOccupationCode: true,
-      sourceOccupationName: true,
-    },
-  });
+  const periods = await database.value.$queryRaw<{ period_start: Date }[]>`
+    select distinct m.period_start
+    from labour_market_metric m
+    join labour_market_series s on s.id = m.series_id
+    join geography g on g.id = s.geography_id
+    where s.source_key = ${options.sourceKey}
+      and s.dataset = ${options.dataset}
+      and g.asgs_edition = ${options.edition}
+      and g.level::text = any(${levels}::text[])
+    order by m.period_start desc
+    limit 2
+  `;
 
-  if (series.length === 0) {
-    return ok({ period: null, previousPeriod: null, regionsInScope: 0, occupations: [] });
-  }
-
-  const seriesIds = series.map((row) => row.id);
-  const periods = await database.value.labourMarketMetric.groupBy({
-    by: ['periodStart'],
-    where: { seriesId: { in: seriesIds } },
-    orderBy: { periodStart: 'desc' },
-    take: 2,
-  });
-
-  const period = periods[0]?.periodStart ?? null;
-  const previousPeriod = periods[1]?.periodStart ?? null;
+  const period = periods[0]?.period_start ?? null;
+  const previousPeriod = periods[1]?.period_start ?? null;
   if (period === null) {
     return ok({ period: null, previousPeriod: null, regionsInScope: 0, occupations: [] });
   }
 
-  const wanted = previousPeriod === null ? [period] : [period, previousPeriod];
-  const metrics = await database.value.labourMarketMetric.findMany({
-    where: { seriesId: { in: seriesIds }, periodStart: { in: wanted } },
-    select: { seriesId: true, periodStart: true, value: true },
-  });
-
-  const seriesById = new Map(series.map((row) => [row.id, row]));
-
-  interface Bucket {
-    name: string | null;
-    names: Set<string>;
-    total: number | null;
-    previousTotal: number | null;
-    regions: Set<string>;
-  }
-  const buckets = new Map<string, Bucket>();
-
-  for (const metric of metrics) {
-    const row = seriesById.get(metric.seriesId);
-    if (row === undefined) continue;
-    const code = row.sourceOccupationCode;
-    if (code === null || code === '') continue;
-
-    const bucket = buckets.get(code) ?? {
-      name: null,
-      names: new Set<string>(),
-      total: null,
-      previousTotal: null,
-      regions: new Set<string>(),
-    };
-    if (row.sourceOccupationName !== null && row.sourceOccupationName !== '') {
-      bucket.names.add(row.sourceOccupationName);
-    }
-
-    // A null value is a gap, and a gap is not a zero. It contributes nothing
-    // to the sum and does not count as a region reporting.
-    if (metric.value !== null) {
-      const value = Number(metric.value.toString());
-      if (metric.periodStart.getTime() === period.getTime()) {
-        bucket.total = (bucket.total ?? 0) + value;
-        if (row.geographyId !== null) bucket.regions.add(row.geographyId);
-      } else {
-        bucket.previousTotal = (bucket.previousTotal ?? 0) + value;
-      }
-    }
-    buckets.set(code, bucket);
-  }
-
-  const occupations = [...buckets.entries()]
-    .map(([code, bucket]) => ({
-      code,
-      name: bucket.names.size === 1 ? [...bucket.names][0]! : null,
-      total: bucket.total,
-      previousTotal: bucket.previousTotal,
-      regionsReporting: bucket.regions.size,
-    }))
-    .sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
+  /**
+   * The sums, computed in the database.
+   *
+   * This used to load 2,850 series and 5,700 metrics into the application to
+   * produce 57 numbers. Postgres does the arithmetic and returns the 57
+   * (ADR-0004): the same answer, one round trip, and a payload two orders of
+   * magnitude smaller on a free tier that pays for the transfer.
+   *
+   * `filter` rather than two queries, so both periods are read in one pass.
+   * When only one period is held the previous parameter is null, no row can
+   * match it, and SUM over nothing is null, which is the right answer: no
+   * comparison exists.
+   */
+  const rows = await database.value.$queryRaw<
+    {
+      code: string;
+      name: string | null;
+      total: number | null;
+      previous_total: number | null;
+      regions_reporting: number;
+      regions_in_scope: number;
+    }[]
+  >`
+    select s.source_occupation_code as code,
+           -- A code the source names inconsistently has no name, and saying so
+           -- beats picking one of them. JSA names its all-occupations row per
+           -- region, so code "0" carries fifty names and none.
+           case
+             when count(distinct s.source_occupation_name) = 1
+             then min(s.source_occupation_name)
+           end as name,
+           sum(m.value) filter (where m.period_start = ${period})::float8 as total,
+           sum(m.value) filter (where m.period_start = ${previousPeriod})::float8
+             as previous_total,
+           count(distinct s.geography_id) filter (
+             where m.period_start = ${period} and m.value is not null
+           )::int as regions_reporting,
+           (
+             select count(distinct s2.geography_id)::int
+             from labour_market_series s2
+             join geography g2 on g2.id = s2.geography_id
+             where s2.source_key = ${options.sourceKey}
+               and s2.dataset = ${options.dataset}
+               and g2.asgs_edition = ${options.edition}
+               and g2.level::text = any(${levels}::text[])
+           ) as regions_in_scope
+    from labour_market_series s
+    join geography g on g.id = s.geography_id
+    left join labour_market_metric m
+      on m.series_id = s.id
+      and m.period_start in (${period}, ${previousPeriod})
+    where s.source_key = ${options.sourceKey}
+      and s.dataset = ${options.dataset}
+      and s.source_occupation_code is not null
+      and s.source_occupation_code <> ''
+      and g.asgs_edition = ${options.edition}
+      and g.level::text = any(${levels}::text[])
+    group by s.source_occupation_code
+    order by total desc nulls last
+  `;
 
   return ok({
     period,
     previousPeriod,
-    regionsInScope: new Set(
-      series.map((row) => row.geographyId).filter((id): id is string => id !== null),
-    ).size,
-    occupations,
+    regionsInScope: rows[0]?.regions_in_scope ?? 0,
+    occupations: rows.map((row) => ({
+      code: row.code,
+      name: row.name,
+      total: row.total,
+      previousTotal: row.previous_total,
+      regionsReporting: row.regions_reporting,
+    })),
   });
 }

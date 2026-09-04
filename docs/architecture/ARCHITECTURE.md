@@ -81,6 +81,19 @@ reaches it through `app/` or `api/`.
 7. **Render.** Loading, empty, error and unavailable are all implemented; every
    visualisation has an accessible equivalent.
 
+## Where aggregation happens
+
+In the database. Sums, distincts and per-group totals are expressed as SQL and
+return the rows the page displays, rather than being assembled in the
+application from broader queries (ADR-0004). The occupation totals were built
+the other way once, and cost four sequential round trips and 8,550 rows to
+produce 57 numbers; the measurement is in
+[milestone 11a](../milestones/11a-query-performance.md).
+
+Independent reads on one page run together rather than in sequence. Every
+round trip is latency the reader waits through, and a page that needs three
+unrelated answers should wait once.
+
 ## Retention
 
 Labour market history is kept at the two most recent reference periods per

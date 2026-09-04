@@ -90,14 +90,35 @@ export default async function MapPage({
   const requestedState = selectedCodeFrom(params['state']);
   const requestedOccupation = selectedCodeFrom(params['occupation']);
 
+  // Three independent reads, so they overlap rather than queue. Each is a
+  // round trip to a database in another region, and the page cannot render
+  // until it has all three, so running them in turn spent three latencies
+  // where one does.
+  //
+  // The figures are fetched for the occupation the reader asked for before it
+  // has been checked against the vocabulary, because checking it is itself one
+  // of the three reads. The check still happens; it just no longer blocks the
+  // query. A code the release does not carry costs one extra read below, which
+  // is the rare path and the right one to make slow.
+  const speculativeOccupation = requestedOccupation ?? TOTAL_OCCUPATION_CODE;
+  const [speculativeTotals, stateList, occupationList] = await Promise.all([
+    listRegionTotals({
+      sourceKey: SOURCE_KEY,
+      dataset: DATASET,
+      edition: EDITION,
+      // Capitals at GCCSA, everywhere else at SA4. This is how IVI publishes,
+      // and the two levels together cover the country exactly once.
+      levels: ['GCCSA', 'SA4'],
+      occupationCode: speculativeOccupation,
+    }),
+    listByLevel(EDITION, 'STATE'),
+    listOccupations({ sourceKey: SOURCE_KEY, dataset: DATASET }),
+  ]);
+
   // The vocabulary is the source's, so what may be asked for is decided by
   // what it published rather than by a list written here. An occupation the
   // dataset does not carry falls back to the total, which is the same posture
   // the region and state parameters take.
-  const occupationList = await listOccupations({
-    sourceKey: SOURCE_KEY,
-    dataset: DATASET,
-  });
   const occupations = occupationList.ok ? occupationList.value : [];
   const occupation =
     occupations.find((option) => option.code === requestedOccupation) ??
@@ -109,15 +130,17 @@ export default async function MapPage({
   const isTotal = occupationCode === TOTAL_OCCUPATION_CODE;
   const occupationName =
     occupation === null ? 'All occupations' : occupationLabel(occupation);
-  const totals = await listRegionTotals({
-    sourceKey: SOURCE_KEY,
-    dataset: DATASET,
-    edition: EDITION,
-    // Capitals at GCCSA, everywhere else at SA4. This is how IVI publishes,
-    // and the two levels together cover the country exactly once.
-    levels: ['GCCSA', 'SA4'],
-    occupationCode: occupationCode,
-  });
+
+  const totals =
+    occupationCode === speculativeOccupation
+      ? speculativeTotals
+      : await listRegionTotals({
+          sourceKey: SOURCE_KEY,
+          dataset: DATASET,
+          edition: EDITION,
+          levels: ['GCCSA', 'SA4'],
+          occupationCode,
+        });
 
   const descriptor = findSourceDescriptor(SOURCE_KEY);
 
@@ -142,7 +165,6 @@ export default async function MapPage({
 
   // The states are read for their names, not their shapes. A breadcrumb saying
   // "1" would be an ASGS code shown to a reader who never asked for one.
-  const stateList = await listByLevel(EDITION, 'STATE');
   const states = stateList.ok ? stateList.value : [];
   const state =
     requestedState === null

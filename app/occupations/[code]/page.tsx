@@ -95,7 +95,28 @@ export default async function OccupationPage({
   params: Promise<{ code: string }>;
 }) {
   const raw = (await params).code;
-  const occupation = await findOccupation(raw);
+  const code = codeFrom(raw);
+
+  // The path is already bounded to short alphanumerics, so the figures can be
+  // asked for while the vocabulary is being read rather than after it. Three
+  // round trips to another region become one, and a code the release does not
+  // carry simply returns nothing, which is the answer this page wants anyway.
+  const [occupation, totals, across] = await Promise.all([
+    findOccupation(raw),
+    listRegionTotals({
+      sourceKey: SOURCE_KEY,
+      dataset: DATASET,
+      edition: EDITION,
+      levels: ['GCCSA', 'SA4'],
+      occupationCode: code ?? '',
+    }),
+    listOccupationTotals({
+      sourceKey: SOURCE_KEY,
+      dataset: DATASET,
+      edition: EDITION,
+      levels: ['GCCSA', 'SA4'],
+    }),
+  ]);
 
   // A code the release does not carry is a missing page, not an empty one.
   // Answering with 200 and a blank profile would tell a search engine, and a
@@ -103,21 +124,6 @@ export default async function OccupationPage({
   if (occupation === null) notFound();
 
   const label = occupationLabel(occupation);
-
-  const totals = await listRegionTotals({
-    sourceKey: SOURCE_KEY,
-    dataset: DATASET,
-    edition: EDITION,
-    levels: ['GCCSA', 'SA4'],
-    occupationCode: occupation.code,
-  });
-
-  const across = await listOccupationTotals({
-    sourceKey: SOURCE_KEY,
-    dataset: DATASET,
-    edition: EDITION,
-    levels: ['GCCSA', 'SA4'],
-  });
 
   const descriptor = findSourceDescriptor(SOURCE_KEY);
 
