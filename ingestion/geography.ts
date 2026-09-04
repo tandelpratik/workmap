@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { getDatabase } from '@/db/client';
 import { geographyLevels, parentLevelOf, validateHierarchy } from '@/domain/geography';
+import { invariant } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
 /**
@@ -53,8 +54,17 @@ export function registryPath(edition: string): string {
   return join('data', 'geography', `registry-${edition}.json`);
 }
 
-/** Import order: parents before children. */
-const LEVEL_ORDER = ['COUNTRY', 'STATE', 'SA4'] as const;
+/**
+ * Import order: parents before children.
+ *
+ * Taken from the domain's level list rather than written out again. A
+ * hand-maintained copy silently dropped every GCCSA record when that level
+ * was added: entries at a level missing from this list are never visited, and
+ * the counters showed `skipped: 0` while 35 areas vanished. The invariant
+ * below now makes that failure loud, and deriving the order stops it
+ * recurring.
+ */
+const LEVEL_ORDER = geographyLevels;
 
 export async function importGeography(edition: string): Promise<ImportOutcome> {
   const database = getDatabase();
@@ -209,6 +219,18 @@ export async function importGeography(edition: string): Promise<ImportOutcome> {
     skipped,
     quarantined,
   });
+
+  // Every entry read must be accounted for. Without this, a level missing from
+  // LEVEL_ORDER disappears without trace, which is how the GCCSA records were
+  // lost. Geography is the spine of the map: a silently absent area becomes a
+  // hole in the map, or a metric with nowhere to attach.
+  invariant(
+    written + skipped + quarantined === entries.length,
+    `Geography import read ${String(entries.length)} entries but accounted for ` +
+      `${String(written + skipped + quarantined)} ` +
+      `(written ${String(written)}, skipped ${String(skipped)}, quarantined ${String(quarantined)}). ` +
+      'Some level is not being visited.',
+  );
 
   return { runId: run.id, seen: entries.length, written, skipped, quarantined };
 }

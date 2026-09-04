@@ -34,6 +34,24 @@
   --color-accent: #9c3d22;
   --color-accent-muted: #b86a52;
 
+  /*
+   * Choropleth ramp: paper to accent, five steps.
+   *
+   * A single-hue sequential scale, because the quantity has one direction and
+   * a rainbow would imply categories that do not exist. Steps are spaced so
+   * adjacent bands stay distinguishable in greyscale, and the map never relies
+   * on them alone: every region is also listed with its figure.
+   *
+   * "No data" is deliberately outside the ramp. It is not a low value, and
+   * shading it as one would state a measurement that was never taken.
+   */
+  --color-scale-1: #f2ece2;
+  --color-scale-2: #e3cdba;
+  --color-scale-3: #d0a184;
+  --color-scale-4: #b86e4d;
+  --color-scale-5: #9c3d22;
+  --color-scale-none: #eceae4;
+
   /* Semantic states, distinguishable without relying on hue alone */
   --color-state-available: #2f5d3f;
   --color-state-pending: #8a6a1f;

@@ -198,6 +198,7 @@ describe('compatibility with the previous ASGS edition', () => {
     expect(manifest.editionCompatibility.previousEdition).toMatch(/ASGS2021/);
     expect(Object.keys(manifest.editionCompatibility.changesByLevel).sort()).toEqual([
       'COUNTRY',
+      'GCCSA',
       'SA4',
       'STATE',
     ]);
@@ -226,14 +227,34 @@ describe('compatibility with the previous ASGS edition', () => {
     ).toEqual([]);
   });
 
-  it('confines name changes to areas that cannot be mapped', () => {
-    // The four differences are punctuation on offshore and no-usual-address
-    // areas. They carry no geometry, so nothing is drawn differently, and we
-    // join by code rather than by name in any case.
-    const renamed = registry.filter(
-      (entry) => entry.changeSincePreviousEdition === 'Name change',
+  it('keeps renamed mappable areas to a reviewed list', () => {
+    // Most renames are punctuation on offshore and no-usual-address areas,
+    // which carry no geometry. Two mappable GCCSAs were also renamed between
+    // editions, so the original "renames only affect unmappable areas" rule no
+    // longer holds and asserting it would be false.
+    //
+    // A rename is harmless in itself, because areas are joined by code and
+    // displayed with their current name. What must not pass unnoticed is a
+    // rename nobody looked at: an area renamed because it was redefined would
+    // arrive looking identical to one renamed for punctuation. So the mappable
+    // renames are pinned to the set that has been reviewed, and a new one
+    // fails here until someone checks what actually changed.
+    const renamedMappable = registry
+      .filter(
+        (entry) =>
+          entry.changeSincePreviousEdition === 'Name change' && entry.hasGeometry,
+      )
+      .map((entry) => `${entry.level} ${entry.code}`)
+      .sort();
+
+    expect(renamedMappable).toEqual(['GCCSA 2RVIC', 'GCCSA 6RTAS']);
+
+    // Everything else renamed carries no geometry, so nothing is drawn
+    // differently.
+    const renamedUnmappable = registry.filter(
+      (entry) => entry.changeSincePreviousEdition === 'Name change' && !entry.hasGeometry,
     );
-    for (const entry of renamed) expect(entry.hasGeometry).toBe(false);
+    expect(renamedUnmappable.length).toBeGreaterThan(0);
   });
 });
 
@@ -346,7 +367,7 @@ withDatabase('geography repository', () => {
   });
 
   it('resolves children through the hierarchy', async () => {
-    const children = await listChildren(EDITION, '1');
+    const children = await listChildren(EDITION, '1', 'SA4');
     expect(children.ok).toBe(true);
     if (!children.ok) return;
 
@@ -355,6 +376,21 @@ withDatabase('geography repository', () => {
     );
     expect(children.value.length).toBe(expected.length);
     for (const child of children.value) expect(child.parentCode).toBe('1');
+  });
+
+  it('does not mix GCCSA and SA4 children of one state', async () => {
+    // Both partition a state and cover the same ground, so a caller that
+    // received them together and summed them would double count every
+    // capital-city vacancy. The level argument exists to make that impossible.
+    const sa4 = await listChildren(EDITION, '1', 'SA4');
+    const gccsa = await listChildren(EDITION, '1', 'GCCSA');
+    expect(sa4.ok && gccsa.ok).toBe(true);
+    if (!sa4.ok || !gccsa.ok) return;
+
+    expect(sa4.value.length).toBeGreaterThan(0);
+    expect(gccsa.value.length).toBeGreaterThan(0);
+    for (const area of sa4.value) expect(area.level).toBe('SA4');
+    for (const area of gccsa.value) expect(area.level).toBe('GCCSA');
   });
 
   it('preserves the unmappable areas through the import', async () => {

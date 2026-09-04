@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  /**
+   * The map reads its boundary topology from `public/geography` at request
+   * time with `fs`, which the bundler cannot see. Without this the files are
+   * absent from the serverless bundle and the map fails in production while
+   * working perfectly in development.
+   */
+  outputFileTracingIncludes: {
+    '/map': ['./public/geography/*.topo.json'],
+  },
+
   typescript: {
     // Type errors must fail the build. Never set this to true.
     ignoreBuildErrors: false,

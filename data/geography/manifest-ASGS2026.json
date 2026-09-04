@@ -4,7 +4,7 @@
   "datum": "GDA2020",
   "sourceKey": "abs-asgs",
   "licence": "CC BY 4.0",
-  "generatedAt": "2026-08-29T05:59:00.466Z",
+  "generatedAt": "2026-08-31T18:53:01.295Z",
   "simplification": {
     "overview": {
       "retain": "0.7%",
@@ -26,6 +26,11 @@
       "sha256": "057befed53bc7bd095e54d1594fe32925ed324443df767d66a889c52ba655c03",
       "bytes": 21331858
     },
+    "GCCSA": {
+      "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files/GCCSA_2026_AUST_SHP_GDA2020.zip",
+      "sha256": "66a9274792864841f56ce48934ea2150895752ff0079e2ef4d214804ace68392",
+      "bytes": 22315632
+    },
     "SA4": {
       "url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files/SA4_2026_AUST_SHP_GDA2020.zip",
       "sha256": "d2df15ee57dac089457fd6ff27e342d4f6286ab0dbc587fff20cf05664657323",
@@ -34,8 +39,8 @@
   },
   "registry": {
     "path": "data/geography/registry-ASGS2026.json",
-    "records": 120,
-    "withoutGeometry": 21
+    "records": 155,
+    "withoutGeometry": 40
   },
   "editionCompatibility": {
     "previousEdition": "ASGS2021 (Edition 3, July 2021 to June 2026)",
@@ -46,6 +51,10 @@
       "STATE": {
         "No change": 10
       },
+      "GCCSA": {
+        "No change": 29,
+        "Name change": 6
+      },
       "SA4": {
         "No change": 104,
         "Name change": 4
@@ -54,6 +63,7 @@
   },
   "artefacts": {
     "geography/sa4-overview-ASGS2026.topo.json": 142120,
+    "geography/gccsa-overview-ASGS2026.topo.json": 105849,
     "geography/state-overview-ASGS2026.topo.json": 101193,
     "sa4-detail-ASGS2026/sa4-1.topo.json": 390553,
     "sa4-detail-ASGS2026/sa4-2.topo.json": 207641,

@@ -29,12 +29,14 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Job search is live. Adzuna is verified and active, and the home page is a
-working search over ingested advertisements. Milestone 05 built the JSA IVI
-importer, which has no file to import yet.
+Two surfaces are live. **Jobs** is a working search over ingested Adzuna
+advertisements. **Map** draws online job advertisements by region from the July
+2026 JSA IVI release: 50 areas, the eight capitals at GCCSA and the rest of the
+country at SA4, with a table of the same figures beside it.
 
-Milestones 06 to 11, the market intelligence layer, are deferred: the product
-owner chose to build a demonstrable job product first.
+What remains of the market intelligence layer is history and trend (06, 07),
+the drilldown (10) and the occupation matrix (11). The map draws a single month
+and does not respond to selection yet.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so

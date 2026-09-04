@@ -11,9 +11,11 @@ constitution disagree, the constitution wins.
 
 ```text
   SOURCES            adapters translate, they do not decide
-  ├── JSA IVI   ACTIVE  ──▶ integrations/jsa
-  ├── Adzuna   BLOCKED  ──▶ integrations/adzuna      no live credentials
-  └── Synthetic  DEV    ──▶ integrations/synthetic   never in production
+  ├── JSA IVI    ACTIVE ──▶ integrations/jsa       statistics, CC BY 4.0
+  ├── ABS ASGS   ACTIVE ──▶ ingestion/geography    boundaries, CC BY 4.0
+  ├── Adzuna     ACTIVE ──▶ integrations/adzuna    listings only, no aggregates
+  ├── QLD       PENDING ──▶ integrations/smartjobs-qld   built, not ingested
+  └── Synthetic     DEV ──▶ integrations/synthetic never in production
                                   │
                                   ▼
                             ingestion/            validate ▸ map ▸ upsert
@@ -44,7 +46,7 @@ constitution disagree, the constitution wins.
 | `integrations/` | Provider clients, DTOs, mappers           | domain, types, lib           |
 | `ingestion/`    | Import orchestration, runs, quarantine    | domain, db, integrations     |
 | `analytics/`    | Aggregation and summary refresh           | domain, db                   |
-| `geography/`    | Geography registry, geometry manifest     | domain, db                   |
+| `geography/`    | Registry, geometry manifest, projection   | domain, db                   |
 | `search/`       | Query building, ranking                   | domain, db                   |
 | `skills/`       | Deterministic extraction, matching        | domain, db                   |
 | `salary/`       | Distribution, suppression thresholds      | domain, db                   |
@@ -103,24 +105,27 @@ permitted?) and an activation state (is it turned on?). Production use requires
 call site. See ADR-0009 and the
 [source register](../compliance/SOURCE_REGISTER.md).
 
-Adzuna onboarding is currently blocked, because the available path requires
-organization and website details that do not exist. These are never invented and
-onboarding is never bypassed. The consequence for the product is concrete:
+Adzuna was blocked at onboarding and is now `ACTIVE` and `VERIFIED`. Its terms
+divide the product rather than open it:
 
-- **At launch there are no individual job listings.** The derived lineage is
-  empty until an authorized provider is activated.
-- **The market intelligence product is unaffected.** JSA demand, geography,
-  occupation profiles, heatmaps and trends are the launch surface, and they
-  depend on no job provider.
-- **Job surfaces report unavailable, not empty.** Zero results would claim that
-  Australia has no matching vacancies, which is false. Unavailable states that
-  the product cannot answer yet, which is true.
-- **The pipeline is still built now**, against the real adapter contract, using
-  a development-only synthetic source that five independent mechanisms keep out
-  of production.
+- **Adzuna powers search and nothing else.** Its terms reserve aggregate use,
+  so counts, averages and anything drawn on a map are barred without written
+  consent. This is a third axis beyond compliance and activation: a source can
+  be verified, active, and still barred from part of the product.
+- **JSA IVI powers every published figure.** CC BY 4.0, aggregation permitted.
+  The map reads it and no other source.
+- **The bar is a gate, not a note.** `canPublishDerivedAggregates()` decides it
+  once, `listRegionTotals` refuses any source that fails it, and an exact-list
+  test fails if a later edit flips a flag.
+- **Queensland Smart Jobs is verified and permits both**, which is what makes
+  it worth wiring: it is the only live listing source found that permits
+  republication and aggregation together. The adapter exists; nothing ingests
+  it yet.
+- **The synthetic source stays out of production**, held there by five
+  independent mechanisms.
 
-Activating a provider later is a configuration and verification exercise, not a
-redesign. That is what ADR-0001 was for.
+Adding a provider is a configuration and verification exercise, not a redesign.
+That is what ADR-0001 was for.
 
 ## Naming
 
@@ -185,5 +190,7 @@ authorized access.
 
 ## Current status
 
-No application code exists yet. Milestone 02 implements the scaffold described
-here.
+Two surfaces are live: job search over Adzuna listings, and the regional vacancy
+map over JSA IVI. Both render on the server and ship neither a map library nor a
+search runtime to the browser. How the system reached this shape is recorded in
+[milestones/](../milestones/).

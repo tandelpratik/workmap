@@ -73,7 +73,12 @@ export interface IviReadOptions {
 // ---------------------------------------------------------------------------
 
 type DimensionRole =
-  'occupationCode' | 'occupationName' | 'geographyCode' | 'geographyName';
+  | 'occupationCode'
+  | 'occupationName'
+  | 'geographyCode'
+  | 'geographyName'
+  /** Which ASGS level the row's code belongs to, when the file says. */
+  | 'geographyLevel';
 
 /**
  * Header spellings that identify a dimension column.
@@ -111,19 +116,31 @@ const dimensionAliases: Record<DimensionRole, readonly string[]> = {
     'geography code',
     'area code',
   ],
+  /**
+   * Ordered most specific first. Order is precedence, not preference: a
+   * regional release carries both a `State` column and a `region_name`
+   * column, and the region is the subject of the row while the state is
+   * context. Reading the state as the area name labelled SA4 101 "NSW"
+   * instead of "Capital Region", which is why order is load-bearing here and
+   * why dimensionFrom selects by rank rather than by column position.
+   */
   geographyName: [
+    'region name',
+    'sa4 name',
+    'sa4',
+    'gccsa name',
+    'gccsa',
+    'ivi region',
+    'region',
+    'geography',
+    'location',
+    'area',
     'state',
     'state territory',
     'state and territory',
     'states and territories',
-    'region',
-    'ivi region',
-    'sa4',
-    'sa4 name',
-    'geography',
-    'location',
-    'area',
   ],
+  geographyLevel: ['region level', 'geography level', 'asgs level', 'level type'],
 };
 
 /** Lowercase, punctuation flattened to single spaces. */
@@ -134,10 +151,18 @@ function normaliseHeader(text: string): string {
     .trim();
 }
 
-function dimensionRoleOf(header: string): DimensionRole | null {
+/**
+ * The role a header plays, and how specific the match was.
+ *
+ * `rank` is the alias's position in its list, lowest being most specific. It
+ * exists so that a sheet carrying two columns for one role resolves to the
+ * more specific of them rather than to whichever appears first.
+ */
+function dimensionRoleOf(header: string): { role: DimensionRole; rank: number } | null {
   const normalised = normaliseHeader(header);
   for (const [role, aliases] of Object.entries(dimensionAliases)) {
-    if (aliases.includes(normalised)) return role as DimensionRole;
+    const rank = aliases.indexOf(normalised);
+    if (rank !== -1) return { role: role as DimensionRole, rank };
   }
   return null;
 }
@@ -375,6 +400,8 @@ interface PeriodColumn extends ParsedPeriod {
 interface DimensionColumn {
   readonly index: number;
   readonly role: DimensionRole;
+  /** Alias specificity; lowest wins when a role has several columns. */
+  readonly rank: number;
   readonly label: string;
 }
 
@@ -407,9 +434,9 @@ function classifyRow(row: readonly Cell[]): Layout {
     const label = cellText(cell);
     if (label === null) return;
 
-    const role = dimensionRoleOf(label);
-    if (role !== null) {
-      dimensions.push({ index, role, label });
+    const matched = dimensionRoleOf(label);
+    if (matched !== null) {
+      dimensions.push({ index, role: matched.role, rank: matched.rank, label });
       return;
     }
 
@@ -493,10 +520,17 @@ function dimensionFrom(
   codeRole: DimensionRole,
   nameRole: DimensionRole,
 ): SourceDimension {
+  // Most specific alias wins, not the leftmost column. A regional release has
+  // both `State` and `region_name` under geographyName, and the region is the
+  // subject of the row.
   const read = (role: DimensionRole): string | null => {
-    const column = columns.find((candidate) => candidate.role === role);
-    if (column === undefined) return null;
-    return cellText(row[column.index] ?? null);
+    let best: DimensionColumn | undefined;
+    for (const candidate of columns) {
+      if (candidate.role !== role) continue;
+      if (best === undefined || candidate.rank < best.rank) best = candidate;
+    }
+    if (best === undefined) return null;
+    return cellText(row[best.index] ?? null);
   };
 
   return { code: read(codeRole), name: read(nameRole) };

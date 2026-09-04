@@ -1,6 +1,9 @@
 import { getDatabase } from '../client';
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
+import { findSourceDescriptor } from '@/config/sources';
+import type { GeographyLevel } from '@/domain/geography';
+import { canPublishDerivedAggregates, ineligibilityReason } from '@/domain/source';
 import {
   makeObservation,
   type MetricBasis,
@@ -204,4 +207,177 @@ export async function listUnresolvedGeographies(
       }))
       .sort((a, b) => b.seriesCount - a.seriesCount),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Regional totals, for the map
+// ---------------------------------------------------------------------------
+
+/** One region's headline figure for a single reference period. */
+export interface RegionTotal {
+  readonly geographyId: string;
+  readonly code: string;
+  readonly name: string;
+  readonly level: GeographyLevel;
+  /** The figure, or the reason there is no figure. Never coerced to zero. */
+  readonly observation: Observation;
+}
+
+export interface RegionTotalsResult {
+  /** The period every figure belongs to. Null when nothing is loaded. */
+  readonly period: Date | null;
+  readonly regions: readonly RegionTotal[];
+  /**
+   * Regions this dataset reports on that carry no figure for this period.
+   *
+   * A real gap, and drawn as one. Deliberately **not** every area in the
+   * boundary registry: IVI covers Australia as eight capital cities plus the
+   * non-capital regions, so the SA4s inside Greater Sydney are not missing
+   * data, they are represented by Greater Sydney. Counting them as gaps would
+   * report a two-thirds hole in a dataset that actually covers the country.
+   */
+  readonly withoutData: readonly Omit<RegionTotal, 'observation'>[];
+}
+
+/**
+ * The headline figure per region for the most recent period held.
+ *
+ * The source's own all-occupations total is read, never summed from the
+ * occupation rows. Adding them would produce a number the publisher did not
+ * publish, and for an advertisement index the parts do not necessarily sum to
+ * the whole.
+ *
+ * Levels may be mixed, and IVI needs them mixed: it publishes the eight
+ * capitals at GCCSA and the rest of the country at SA4, which is 50 areas
+ * covering Australia exactly once. What makes that safe is that only areas the
+ * dataset reports on are returned, so a level a dataset says nothing about
+ * contributes nothing. The caller still owes the check: asking for two levels
+ * of a dataset that reports on both, such as an SA4 series that also has the
+ * GCCSA containing it, would draw the capitals twice.
+ */
+export async function listRegionTotals(options: {
+  readonly sourceKey: string;
+  readonly dataset: string;
+  readonly edition: string;
+  readonly levels: readonly GeographyLevel[];
+  /** The source's code for "all occupations". JSA IVI uses "0". */
+  readonly totalOccupationCode: string;
+}): Promise<Result<RegionTotalsResult, Failure>> {
+  const descriptor = findSourceDescriptor(options.sourceKey);
+  if (descriptor === undefined) {
+    return err(
+      failure('NOT_FOUND', `No source registered with key "${options.sourceKey}".`),
+    );
+  }
+
+  // The single gate (ADR-0009). A map is an aggregate presentation, so a
+  // source whose licence reserves aggregate figures must never reach it, no
+  // matter which caller asks. Adzuna is the case this exists for: it is fully
+  // verified for publishing advertisements and barred from exactly this.
+  if (!canPublishDerivedAggregates(descriptor)) {
+    return err(
+      failure(
+        'FORBIDDEN',
+        `Source "${options.sourceKey}" may not be used for published aggregate figures. ` +
+          (ineligibilityReason(descriptor) ??
+            'Its licence reserves aggregate use, so no map or count may be drawn from it.'),
+      ),
+    );
+  }
+
+  const database = getDatabase();
+  if (!database.ok) return database;
+
+  const areas = await database.value.geography.findMany({
+    where: { asgsEdition: options.edition, level: { in: [...options.levels] } },
+    select: { id: true, code: true, name: true, level: true },
+    orderBy: { name: 'asc' },
+  });
+
+  const series = await database.value.labourMarketSeries.findMany({
+    where: {
+      sourceKey: options.sourceKey,
+      dataset: options.dataset,
+      sourceOccupationCode: options.totalOccupationCode,
+      geographyId: { in: areas.map((area) => area.id) },
+    },
+    select: { id: true, geographyId: true },
+  });
+
+  if (series.length === 0) {
+    return ok({
+      period: null,
+      regions: [],
+      // Nothing is "missing a figure" when the dataset is not loaded at all.
+      // That is a different state, and the caller distinguishes it by the
+      // empty region list and null period rather than by a list of gaps.
+      withoutData: [],
+    });
+  }
+
+  const seriesIds = series.map((row) => row.id);
+
+  // One period for the whole map. Reading each region's own latest would let a
+  // region that stopped reporting sit beside current ones as though it were
+  // current, which misdates the map without any figure being wrong.
+  const latest = await database.value.labourMarketMetric.aggregate({
+    where: { seriesId: { in: seriesIds } },
+    _max: { periodStart: true },
+  });
+  const period = latest._max.periodStart;
+  if (period === null) {
+    return ok({
+      period: null,
+      regions: [],
+      // Nothing is "missing a figure" when the dataset is not loaded at all.
+      // That is a different state, and the caller distinguishes it by the
+      // empty region list and null period rather than by a list of gaps.
+      withoutData: [],
+    });
+  }
+
+  const metrics = await database.value.labourMarketMetric.findMany({
+    where: { seriesId: { in: seriesIds }, periodStart: period },
+    select: { seriesId: true, value: true, valueState: true },
+  });
+
+  const geographyBySeries = new Map(series.map((row) => [row.id, row.geographyId]));
+  const observationByGeography = new Map<string, Observation>();
+  for (const metric of metrics) {
+    const geographyId = geographyBySeries.get(metric.seriesId);
+    if (geographyId === null || geographyId === undefined) continue;
+    observationByGeography.set(
+      geographyId,
+      makeObservation(
+        period,
+        metric.valueState as ValueState,
+        metric.value === null ? null : Number(metric.value.toString()),
+      ),
+    );
+  }
+
+  // An area is only in scope if the dataset reports on it at all. Everything
+  // else is outside this dataset's design, not absent from it.
+  const inScope = new Set(
+    series
+      .map((row) => row.geographyId)
+      .filter((id): id is string => id !== null && id !== undefined),
+  );
+
+  const regions: RegionTotal[] = [];
+  const withoutData: Omit<RegionTotal, 'observation'>[] = [];
+  for (const area of areas) {
+    if (!inScope.has(area.id)) continue;
+    const identity = {
+      geographyId: area.id,
+      code: area.code,
+      name: area.name,
+      level: area.level as GeographyLevel,
+    };
+    const observation = observationByGeography.get(area.id);
+    if (observation === undefined) withoutData.push(identity);
+    else regions.push({ ...identity, observation });
+  }
+
+  return ok({ period, regions, withoutData });
 }

@@ -54,16 +54,26 @@ export async function listByLevel(
   return ok(rows.map(toDomain));
 }
 
-/** Children of an area, by the parent's code. */
+/**
+ * Children of an area at one level, by the parent's code.
+ *
+ * The level is required, not optional. GCCSA and SA4 both hang off STATE and
+ * both partition it, so "the children of New South Wales" is an ambiguous
+ * question: answering it with every child returns 30 SA4s and 4 GCCSAs
+ * covering the same ground, and any caller that sums them double counts.
+ * Making the caller name the partition removes the trap rather than
+ * documenting it.
+ */
 export async function listChildren(
   edition: string,
   parentCode: string,
+  level: GeographyLevel,
 ): Promise<Result<GeographyArea[], Failure>> {
   const database = getDatabase();
   if (!database.ok) return database;
 
   const rows = await database.value.geography.findMany({
-    where: { asgsEdition: edition, parent: { code: parentCode } },
+    where: { asgsEdition: edition, level, parent: { code: parentCode } },
     include: withParent,
     orderBy: { code: 'asc' },
   });

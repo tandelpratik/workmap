@@ -43,7 +43,7 @@ const REGISTRY_DIR = join('data', 'geography');
 const PUBLIC_DIR = join('public', 'geography');
 
 interface LayerSpec {
-  readonly level: 'COUNTRY' | 'STATE' | 'SA4';
+  readonly level: 'COUNTRY' | 'STATE' | 'GCCSA' | 'SA4';
   readonly archive: string;
   readonly codeField: string;
   readonly nameField: string;
@@ -65,6 +65,16 @@ const LAYERS: readonly LayerSpec[] = [
     codeField: 'STE_CODE26',
     nameField: 'STE_NAME26',
     parentCodeField: 'AUS_CODE26',
+  },
+  {
+    // Beside SA4, not above it. JSA IVI reports the eight capital cities at
+    // this level and the rest of the country at SA4, so both are needed for a
+    // national picture. The shapefile abbreviates the field to GCC, not GCCSA.
+    level: 'GCCSA',
+    archive: 'GCCSA_2026_AUST_SHP_GDA2020.zip',
+    codeField: 'GCC_CODE26',
+    nameField: 'GCC_NAME26',
+    parentCodeField: 'STE_CODE26',
   },
   {
     level: 'SA4',
@@ -293,6 +303,7 @@ async function topoFeatureIds(path: string): Promise<Set<string>> {
 async function buildTiers(
   sa4Archive: string,
   steArchive: string,
+  gccsaArchive: string,
   registry: readonly RegistryEntry[],
 ): Promise<string[]> {
   await mkdir(PUBLIC_DIR, { recursive: true });
@@ -312,6 +323,18 @@ async function buildTiers(
       `-o format=topojson id-field=SA4_CODE26 "${overview}"`,
   );
   written.push(overview);
+
+  // The capital cities. JSA IVI reports these instead of their constituent
+  // SA4s, so without this layer the map has eight holes over most of the
+  // population. Drawn from the same simplification tier as the SA4 overview so
+  // the two read as one surface where they meet.
+  const gccsa = join(PUBLIC_DIR, `gccsa-overview-${EDITION}.topo.json`);
+  await mapshaper.runCommands(
+    `-i "${gccsaArchive}" -filter-fields GCC_CODE26,GCC_NAME26,STE_CODE26 ` +
+      `-simplify ${TIERS.overview.retain} keep-shapes ${islandFilter}-clean ` +
+      `-o format=topojson id-field=GCC_CODE26 "${gccsa}"`,
+  );
+  written.push(gccsa);
 
   const states = join(PUBLIC_DIR, `state-overview-${EDITION}.topo.json`);
   await mapshaper.runCommands(
@@ -413,6 +436,7 @@ export async function build(): Promise<void> {
   const written = await buildTiers(
     join(RAW_DIR, 'SA4_2026_AUST_SHP_GDA2020.zip'),
     join(RAW_DIR, 'STE_2026_AUST_SHP_GDA2020.zip'),
+    join(RAW_DIR, 'GCCSA_2026_AUST_SHP_GDA2020.zip'),
     registry,
   );
 

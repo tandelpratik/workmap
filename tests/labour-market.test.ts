@@ -658,6 +658,10 @@ withDatabase('importing a workbook', () => {
     const database = getDatabase();
     if (!database.ok) throw new Error('no database');
 
+    // What the table held before this test touched it.
+    const baseline = await countSeries('jsa-ivi');
+    const seriesBaseline = baseline.ok ? baseline.value : 0;
+
     const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
     const { tmpdir } = await import('node:os');
     const { join } = await import('node:path');
@@ -673,12 +677,22 @@ withDatabase('importing a workbook', () => {
     let first: Awaited<ReturnType<typeof importJsaIvi>> | null = null;
     let second: Awaited<ReturnType<typeof importJsaIvi>> | null = null;
     let third: Awaited<ReturnType<typeof importJsaIvi>> | null = null;
+    // Counted as deltas, not absolutes. A real IVI release in the database is
+    // a normal state for a developer machine, and asserting "the table holds
+    // exactly 2 series" fails the moment anyone imports actual data. What this
+    // test is about is what one import writes, so that is what it measures.
     let storedSeries = -1;
     let storedMetrics = -1;
 
     try {
       await database.value.$transaction(
         async (tx) => {
+          const seriesBefore = await tx.labourMarketSeries.count({
+            where: { sourceKey: 'jsa-ivi' },
+          });
+          const metricsBefore = await tx.labourMarketMetric.count({
+            where: { series: { sourceKey: 'jsa-ivi' } },
+          });
           first = await importJsaIvi({
             filePath,
             client: tx,
@@ -692,12 +706,13 @@ withDatabase('importing a workbook', () => {
             triggeredBy: 'test',
           });
 
-          storedSeries = await tx.labourMarketSeries.count({
-            where: { sourceKey: 'jsa-ivi' },
-          });
-          storedMetrics = await tx.labourMarketMetric.count({
-            where: { series: { sourceKey: 'jsa-ivi' } },
-          });
+          storedSeries =
+            (await tx.labourMarketSeries.count({ where: { sourceKey: 'jsa-ivi' } })) -
+            seriesBefore;
+          storedMetrics =
+            (await tx.labourMarketMetric.count({
+              where: { series: { sourceKey: 'jsa-ivi' } },
+            })) - metricsBefore;
 
           throw new Rollback();
         },
@@ -741,8 +756,9 @@ withDatabase('importing a workbook', () => {
     expect(storedSeries).toBe(2);
     expect(storedMetrics).toBe(4);
 
-    // And none of it was kept.
+    // And none of it was kept: the rollback leaves the table exactly as the
+    // test found it, whether that was empty or held a real release.
     const remaining = await countSeries('jsa-ivi');
-    expect(remaining.ok && remaining.value).toBe(0);
+    expect(remaining.ok && remaining.value).toBe(seriesBaseline);
   }, 180_000);
 });

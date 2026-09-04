@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDatabase } from '@/db/client';
 import { sourceDescriptors } from '@/config/sources';
+import { listRegionTotals } from '@/db/repositories/labour-market';
 import { isProductionEligible } from '@/domain/source';
 
 /**
@@ -423,6 +424,77 @@ withDatabase('seeded source registry', () => {
     });
     for (const row of rows) {
       expect(row.attributionText, `"${row.key}" must carry its attribution`).toBeTruthy();
+    }
+  });
+});
+
+/**
+ * The map's licence gate.
+ *
+ * A choropleth is an aggregate presentation, so the query behind it must
+ * refuse any source whose licence reserves aggregate use. Adzuna is the case
+ * this exists for: fully verified for publishing advertisements, and barred
+ * from exactly this. The refusal lives in the repository rather than in the
+ * page, so a second page cannot reintroduce the problem by forgetting.
+ */
+withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () => {
+  it('refuses Adzuna, which is verified but barred from aggregation', async () => {
+    const result = await listRegionTotals({
+      sourceKey: 'adzuna',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['SA4'],
+      totalOccupationCode: '0',
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('FORBIDDEN');
+  });
+
+  it('refuses a source that is not registered at all', async () => {
+    const result = await listRegionTotals({
+      sourceKey: 'not-a-source',
+      dataset: 'x',
+      edition: 'ASGS2026',
+      levels: ['SA4'],
+      totalOccupationCode: '0',
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('NOT_FOUND');
+  });
+
+  it('allows JSA, which is CC BY and permits aggregation', async () => {
+    const result = await listRegionTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+      totalOccupationCode: '0',
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('never reports a figure and a missing figure as the same region', async () => {
+    // The map draws these differently and must be able to: an unshaded region
+    // means nothing was published, not that nothing was advertised (ADR-0002).
+    const result = await listRegionTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+      totalOccupationCode: '0',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const withFigures = new Set(result.value.regions.map((region) => region.code));
+    for (const region of result.value.withoutData) {
+      expect(withFigures.has(region.code)).toBe(false);
     }
   });
 });

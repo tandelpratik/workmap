@@ -108,6 +108,321 @@
     "changeSincePreviousEdition": "No change"
   },
   {
+    "code": "1GSYD",
+    "name": "Greater Sydney",
+    "level": "GCCSA",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 12368.725,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "1RNSW",
+    "name": "Rest of NSW",
+    "level": "GCCSA",
+    "parentCode": "1",
+    "hasGeometry": true,
+    "areaSqKm": 788428.9823,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "19499",
+    "name": "No usual address (NSW)",
+    "level": "GCCSA",
+    "parentCode": "1",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "19799",
+    "name": "Migratory - Offshore - Shipping (NSW)",
+    "level": "GCCSA",
+    "parentCode": "1",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "2GMEL",
+    "name": "Greater Melbourne",
+    "level": "GCCSA",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 9992.6078,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "2RVIC",
+    "name": "Rest of Vic",
+    "level": "GCCSA",
+    "parentCode": "2",
+    "hasGeometry": true,
+    "areaSqKm": 217503.6469,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "29499",
+    "name": "No usual address (Vic)",
+    "level": "GCCSA",
+    "parentCode": "2",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "29799",
+    "name": "Migratory - Offshore - Shipping (Vic)",
+    "level": "GCCSA",
+    "parentCode": "2",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "3GBRI",
+    "name": "Greater Brisbane",
+    "level": "GCCSA",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 15842.0097,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "3RQLD",
+    "name": "Rest of Qld",
+    "level": "GCCSA",
+    "parentCode": "3",
+    "hasGeometry": true,
+    "areaSqKm": 1714331.1578,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "39499",
+    "name": "No usual address (Qld)",
+    "level": "GCCSA",
+    "parentCode": "3",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "39799",
+    "name": "Migratory - Offshore - Shipping (Qld)",
+    "level": "GCCSA",
+    "parentCode": "3",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "4GADE",
+    "name": "Greater Adelaide",
+    "level": "GCCSA",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 3259.8875,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "4RSAU",
+    "name": "Rest of SA",
+    "level": "GCCSA",
+    "parentCode": "4",
+    "hasGeometry": true,
+    "areaSqKm": 980969.4207,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "49499",
+    "name": "No usual address (SA)",
+    "level": "GCCSA",
+    "parentCode": "4",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "49799",
+    "name": "Migratory - Offshore - Shipping (SA)",
+    "level": "GCCSA",
+    "parentCode": "4",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "5GPER",
+    "name": "Greater Perth",
+    "level": "GCCSA",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 6416.5731,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "5RWAU",
+    "name": "Rest of WA",
+    "level": "GCCSA",
+    "parentCode": "5",
+    "hasGeometry": true,
+    "areaSqKm": 2520216.1893,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "59499",
+    "name": "No usual address (WA)",
+    "level": "GCCSA",
+    "parentCode": "5",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "59799",
+    "name": "Migratory - Offshore - Shipping (WA)",
+    "level": "GCCSA",
+    "parentCode": "5",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "6GHOB",
+    "name": "Greater Hobart",
+    "level": "GCCSA",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 1695.3865,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "6RTAS",
+    "name": "Rest of Tas",
+    "level": "GCCSA",
+    "parentCode": "6",
+    "hasGeometry": true,
+    "areaSqKm": 66322.1781,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "69499",
+    "name": "No usual address (Tas)",
+    "level": "GCCSA",
+    "parentCode": "6",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "69799",
+    "name": "Migratory - Offshore - Shipping (Tas)",
+    "level": "GCCSA",
+    "parentCode": "6",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "Name change"
+  },
+  {
+    "code": "7GDAR",
+    "name": "Greater Darwin",
+    "level": "GCCSA",
+    "parentCode": "7",
+    "hasGeometry": true,
+    "areaSqKm": 3167.7033,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "7RNTE",
+    "name": "Rest of NT",
+    "level": "GCCSA",
+    "parentCode": "7",
+    "hasGeometry": true,
+    "areaSqKm": 1344966.8843,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "79499",
+    "name": "No usual address (NT)",
+    "level": "GCCSA",
+    "parentCode": "7",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "79799",
+    "name": "Migratory - Offshore - Shipping (NT)",
+    "level": "GCCSA",
+    "parentCode": "7",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "8ACTE",
+    "name": "Australian Capital Territory",
+    "level": "GCCSA",
+    "parentCode": "8",
+    "hasGeometry": true,
+    "areaSqKm": 2358.1328,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "89499",
+    "name": "No usual address (ACT)",
+    "level": "GCCSA",
+    "parentCode": "8",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "89799",
+    "name": "Migratory - Offshore - Shipping (ACT)",
+    "level": "GCCSA",
+    "parentCode": "8",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "9OTER",
+    "name": "Other Territories",
+    "level": "GCCSA",
+    "parentCode": "9",
+    "hasGeometry": true,
+    "areaSqKm": 255.742,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "99499",
+    "name": "No usual address (OT)",
+    "level": "GCCSA",
+    "parentCode": "9",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "99799",
+    "name": "Migratory - Offshore - Shipping (OT)",
+    "level": "GCCSA",
+    "parentCode": "9",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
+    "code": "ZZZZZ",
+    "name": "Outside Australia",
+    "level": "GCCSA",
+    "parentCode": "Z",
+    "hasGeometry": false,
+    "areaSqKm": null,
+    "changeSincePreviousEdition": "No change"
+  },
+  {
     "code": "101",
     "name": "Capital Region",
     "level": "SA4",
