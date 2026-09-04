@@ -43,11 +43,16 @@ the capital city dissolved into one shape from the SA4s the ABS says belong to
 it. Shading stays on the national bands in both views, so a colour means one
 thing everywhere.
 
+The map also filters by occupation: 57 groups as the publisher published them,
+from all occupations down to ICT professionals or farm workers. State, region
+and occupation compose, so `/map?state=1&region=1GSYD&occupation=26` is a fully
+specified question and a shareable link.
+
 Labour market history is retained at two reference periods
 ([ADR-0010](adr/0010-labour-market-retention-window.md)). Milestones 06 and 07,
 history and trend, therefore begin by widening that window and re-importing.
-The occupation matrix (11) is untouched, and the map has no filters yet:
-occupation is the valuable one, and its 2,850 series are already loaded.
+A period control waits on the same thing. Milestone 11, resolving occupation
+codes to a classification and building the matrix, is untouched.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so

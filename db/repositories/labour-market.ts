@@ -267,8 +267,8 @@ export async function listRegionTotals(options: {
   readonly dataset: string;
   readonly edition: string;
   readonly levels: readonly GeographyLevel[];
-  /** The source's code for "all occupations". JSA IVI uses "0". */
-  readonly totalOccupationCode: string;
+  /** The occupation to read. JSA IVI uses "0" for all occupations. */
+  readonly occupationCode: string;
 }): Promise<Result<RegionTotalsResult, Failure>> {
   const descriptor = findSourceDescriptor(options.sourceKey);
   if (descriptor === undefined) {
@@ -312,7 +312,7 @@ export async function listRegionTotals(options: {
     where: {
       sourceKey: options.sourceKey,
       dataset: options.dataset,
-      sourceOccupationCode: options.totalOccupationCode,
+      sourceOccupationCode: options.occupationCode,
       geographyId: { in: areas.map((area) => area.id) },
     },
     select: { id: true, geographyId: true },
@@ -492,4 +492,70 @@ export async function pruneLabourMarketHistory(options: {
   }
 
   return ok({ deleted, retained, removed: [...removable].reverse() });
+}
+
+// ---------------------------------------------------------------------------
+// Occupations
+// ---------------------------------------------------------------------------
+
+export interface OccupationOption {
+  /** The source's own code. */
+  readonly code: string;
+  /**
+   * The source's own name, or null when the source does not give the code one
+   * name.
+   *
+   * Null is a real answer here, not a missing value. JSA labels its
+   * all-occupations row per region, so code "0" arrives as fifty different
+   * names: "Greater Sydney TOTAL", "Capital Region TOTAL" and so on. Picking
+   * one of them would tell a reader in Perth that they were looking at Sydney,
+   * and inventing a name here would put our own labelling in a field that
+   * holds the publisher's. The caller labels it instead, and says so.
+   */
+  readonly name: string | null;
+}
+
+/**
+ * The occupations a dataset reports on, in the source's own code order.
+ *
+ * Read from the series rather than from an occupation table, because nothing
+ * has resolved these codes to a classification yet: ANZSCO against OSCA is
+ * milestone 11. What is stored is what the publisher wrote, which is enough to
+ * offer the reader a choice and is honest about where the vocabulary came from.
+ */
+export async function listOccupations(options: {
+  readonly sourceKey: string;
+  readonly dataset: string;
+}): Promise<Result<OccupationOption[], Failure>> {
+  const database = getDatabase();
+  if (!database.ok) return database;
+
+  const rows = await database.value.labourMarketSeries.findMany({
+    where: { sourceKey: options.sourceKey, dataset: options.dataset },
+    select: { sourceOccupationCode: true, sourceOccupationName: true },
+    distinct: ['sourceOccupationCode', 'sourceOccupationName'],
+    orderBy: { sourceOccupationCode: 'asc' },
+  });
+
+  const namesByCode = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const code = row.sourceOccupationCode;
+    if (code === null || code === '') continue;
+    const names = namesByCode.get(code) ?? new Set<string>();
+    if (row.sourceOccupationName !== null && row.sourceOccupationName !== '') {
+      names.add(row.sourceOccupationName);
+    }
+    namesByCode.set(code, names);
+  }
+
+  return ok(
+    [...namesByCode.entries()]
+      .map(([code, names]) => ({
+        code,
+        // One name means the source named it. Several means the source named
+        // it differently in different places, which is not a name.
+        name: names.size === 1 ? [...names][0]! : null,
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code)),
+  );
 }

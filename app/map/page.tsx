@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { findSourceDescriptor } from '@/config/sources';
-import { listRegionTotals } from '@/db/repositories/labour-market';
+import { listOccupations, listRegionTotals } from '@/db/repositories/labour-market';
 import { listByLevel } from '@/db/repositories/geography';
+import { OccupationFilter, occupationLabel } from '@/components/occupation-filter';
 import {
   buildChoroplethGeometry,
   buildStateChoroplethGeometry,
@@ -44,10 +45,11 @@ const TOTAL_OCCUPATION_CODE = '0';
 const TABLE_ID = 'vacancies-by-region';
 
 /**
- * ASGS codes are short alphanumerics, "101" and "1GSYD" among them. A query
- * string is external input, so it is bounded before it is used rather than
- * passed to a lookup and hoped about. Anything failing this is treated as no
- * selection rather than as an error: a malformed link still shows the map.
+ * ASGS codes are short alphanumerics, "101" and "1GSYD" among them, and JSA's
+ * occupation codes are shorter still. A query string is external input, so it
+ * is bounded before it is used rather than passed to a lookup and hoped about.
+ * Anything failing this is treated as no selection rather than as an error: a
+ * malformed link still shows the map.
  */
 const CODE_PATTERN = /^[A-Za-z0-9]{1,10}$/;
 
@@ -86,6 +88,27 @@ export default async function MapPage({
   const params = await searchParams;
   const requestedCode = selectedCodeFrom(params['region']);
   const requestedState = selectedCodeFrom(params['state']);
+  const requestedOccupation = selectedCodeFrom(params['occupation']);
+
+  // The vocabulary is the source's, so what may be asked for is decided by
+  // what it published rather than by a list written here. An occupation the
+  // dataset does not carry falls back to the total, which is the same posture
+  // the region and state parameters take.
+  const occupationList = await listOccupations({
+    sourceKey: SOURCE_KEY,
+    dataset: DATASET,
+  });
+  const occupations = occupationList.ok ? occupationList.value : [];
+  const occupation =
+    occupations.find((option) => option.code === requestedOccupation) ??
+    occupations.find((option) => option.code === TOTAL_OCCUPATION_CODE) ??
+    null;
+  const occupationCode = occupation?.code ?? TOTAL_OCCUPATION_CODE;
+  const unknownOccupation =
+    requestedOccupation !== null && occupation?.code !== requestedOccupation;
+  const isTotal = occupationCode === TOTAL_OCCUPATION_CODE;
+  const occupationName =
+    occupation === null ? 'All occupations' : occupationLabel(occupation);
   const totals = await listRegionTotals({
     sourceKey: SOURCE_KEY,
     dataset: DATASET,
@@ -93,7 +116,7 @@ export default async function MapPage({
     // Capitals at GCCSA, everywhere else at SA4. This is how IVI publishes,
     // and the two levels together cover the country exactly once.
     levels: ['GCCSA', 'SA4'],
-    totalOccupationCode: TOTAL_OCCUPATION_CODE,
+    occupationCode: occupationCode,
   });
 
   const descriptor = findSourceDescriptor(SOURCE_KEY);
@@ -206,7 +229,10 @@ export default async function MapPage({
           </h1>
           <Prose>
             <p>
-              Online job advertisements across {state === null ? 'Australia' : state.name}
+              {isTotal
+                ? 'Online job advertisements'
+                : `Advertisements for ${occupationName}`}{' '}
+              across {state === null ? 'Australia' : state.name}
               {period === null ? '' : `, ${monthFormat.format(period)}`}. Capital cities
               are shown as whole cities and the rest of the country by region, which is
               how the index is published.
@@ -224,6 +250,15 @@ export default async function MapPage({
                 so the whole country is shown instead.
               </p>
             ) : null}
+            {unknownOccupation ? (
+              <p>
+                <strong className="text-ink font-medium">
+                  This release does not report that occupation,
+                </strong>{' '}
+                so all occupations are shown instead. The list below is the
+                publisher&rsquo;s own, and it is what may be asked for.
+              </p>
+            ) : null}
             <p>
               <strong className="text-ink font-medium">
                 This is not a count of jobs.
@@ -235,6 +270,13 @@ export default async function MapPage({
             </p>
           </Prose>
         </header>
+
+        <OccupationFilter
+          occupations={occupations}
+          selected={occupationCode}
+          stateCode={state?.code ?? null}
+          regionCode={selectedCode}
+        />
 
         {hasFigures ? (
           <section className="mt-12">
@@ -305,7 +347,11 @@ export default async function MapPage({
               regions={regions}
               selectedCode={selectedCode}
               stateCode={state?.code ?? null}
-              caption={`Online job advertisements by region${
+              caption={`${
+                isTotal
+                  ? 'Online job advertisements'
+                  : `Advertisements for ${occupationName}`
+              } by region${
                 period === null ? '' : `, ${monthFormat.format(period)}`
               }. Ordered by number of advertisements.`}
             />

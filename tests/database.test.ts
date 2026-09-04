@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDatabase } from '@/db/client';
 import { sourceDescriptors } from '@/config/sources';
-import { listRegionTotals } from '@/db/repositories/labour-market';
+import { listOccupations, listRegionTotals } from '@/db/repositories/labour-market';
 import { isProductionEligible } from '@/domain/source';
 
 /**
@@ -437,6 +437,86 @@ withDatabase('seeded source registry', () => {
  * from exactly this. The refusal lives in the repository rather than in the
  * page, so a second page cannot reintroduce the problem by forgetting.
  */
+/**
+ * The occupation vocabulary offered to a reader.
+ *
+ * Written against real stored data rather than a fixture, because the point is
+ * what the publisher actually published. It asserts a property rather than a
+ * list, so a new release with different occupations does not fail it.
+ */
+withDatabase('occupations come from the source, with its own names', () => {
+  it('gives the all-occupations code no name, because the source gives it fifty', async () => {
+    const result = await listOccupations({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Nothing imported on this machine. The assertions below are about the
+    // shape of real data, so there is nothing to check.
+    if (result.value.length === 0) return;
+
+    const total = result.value.find((option) => option.code === '0');
+    expect(total, 'the release should carry an all-occupations row').toBeDefined();
+    // JSA names it "Greater Sydney TOTAL", "Capital Region TOTAL", once per
+    // region, so no single name is the source's name for the code. Returning
+    // one of them would attribute a region's label to the whole country.
+    expect(total?.name).toBeNull();
+
+    // Every other code is named once, and that name is the publisher's.
+    for (const option of result.value) {
+      if (option.code === '0') continue;
+      expect(option.name, `"${option.code}" should carry the source's name`).toBeTruthy();
+    }
+  });
+
+  it('reads a chosen occupation rather than only the total', async () => {
+    const occupations = await listOccupations({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+    });
+    if (!occupations.ok || occupations.value.length === 0) return;
+
+    const named = occupations.value.find((option) => option.code !== '0');
+    if (named === undefined) return;
+
+    const total = await listRegionTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+      occupationCode: '0',
+    });
+    const one = await listRegionTotals({
+      sourceKey: 'jsa-ivi',
+      dataset: 'Internet Vacancy Index',
+      edition: 'ASGS2026',
+      levels: ['GCCSA', 'SA4'],
+      occupationCode: named.code,
+    });
+
+    expect(total.ok && one.ok).toBe(true);
+    if (!total.ok || !one.ok) return;
+
+    // A single occupation cannot exceed all of them in any region. This is the
+    // assertion that would catch the filter silently ignoring its argument and
+    // returning the total for every choice.
+    const totalByCode = new Map(
+      total.value.regions.map((region) => [region.code, region.observation.value]),
+    );
+    for (const region of one.value.regions) {
+      const whole = totalByCode.get(region.code);
+      if (whole === null || whole === undefined || region.observation.value === null)
+        continue;
+      expect(
+        region.observation.value,
+        `"${region.name}" reports more ${named.code} than all occupations`,
+      ).toBeLessThanOrEqual(whole);
+    }
+  });
+});
+
 withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () => {
   it('refuses Adzuna, which is verified but barred from aggregation', async () => {
     const result = await listRegionTotals({
@@ -444,7 +524,7 @@ withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () =
       dataset: 'Internet Vacancy Index',
       edition: 'ASGS2026',
       levels: ['SA4'],
-      totalOccupationCode: '0',
+      occupationCode: '0',
     });
 
     expect(result.ok).toBe(false);
@@ -458,7 +538,7 @@ withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () =
       dataset: 'x',
       edition: 'ASGS2026',
       levels: ['SA4'],
-      totalOccupationCode: '0',
+      occupationCode: '0',
     });
 
     expect(result.ok).toBe(false);
@@ -472,7 +552,7 @@ withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () =
       dataset: 'Internet Vacancy Index',
       edition: 'ASGS2026',
       levels: ['GCCSA', 'SA4'],
-      totalOccupationCode: '0',
+      occupationCode: '0',
     });
 
     expect(result.ok).toBe(true);
@@ -486,7 +566,7 @@ withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () =
       dataset: 'Internet Vacancy Index',
       edition: 'ASGS2026',
       levels: ['GCCSA', 'SA4'],
-      totalOccupationCode: '0',
+      occupationCode: '0',
     });
 
     expect(result.ok).toBe(true);

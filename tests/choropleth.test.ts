@@ -6,6 +6,7 @@ import {
 } from '@/geography/choropleth';
 import { fillForStep, regionTitle } from '@/components/vacancy-map';
 import { regionHref } from '@/components/region-figure';
+import { occupationLabel } from '@/components/occupation-filter';
 
 /**
  * Choropleth classification.
@@ -175,5 +176,25 @@ describe('state geometry', () => {
         regionCodes: new Set(),
       }),
     ).rejects.toThrow(/No state outline/);
+  });
+});
+
+describe('occupation labels', () => {
+  it('shows the publisher’s own name with its code', () => {
+    expect(occupationLabel({ code: '26', name: 'ICT Professionals' })).toBe(
+      'ICT Professionals (26)',
+    );
+  });
+
+  it('names the total row ourselves, because the source does not', () => {
+    // JSA labels its all-occupations row per region: "Greater Sydney TOTAL",
+    // "Capital Region TOTAL", fifty of them. Picking one would tell a reader
+    // in Perth they were looking at Sydney, so the repository returns null and
+    // the view supplies our own wording (ADR-0002).
+    expect(occupationLabel({ code: '0', name: null })).toBe('All occupations');
+  });
+
+  it('falls back to the code rather than inventing a name', () => {
+    expect(occupationLabel({ code: '2B', name: null })).toBe('Code 2B');
   });
 });
