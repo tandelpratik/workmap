@@ -32,11 +32,16 @@ The product constitution and milestone specifications live in `.claude/`:
 Two surfaces are live. **Jobs** is a working search over ingested Adzuna
 advertisements. **Map** draws online job advertisements by region from the July
 2026 JSA IVI release: 50 areas, the eight capitals at GCCSA and the rest of the
-country at SA4, with a table of the same figures beside it.
+country at SA4, with a table of the same figures beside it. Selecting a region,
+on the map or in the table, opens a panel with its exact figure, its change on
+the month before and its rank. Selection is a URL, so it is shareable and needs
+no JavaScript.
 
-What remains of the market intelligence layer is history and trend (06, 07),
-the drilldown (10) and the occupation matrix (11). The map draws a single month
-and does not respond to selection yet.
+Labour market history is retained at two reference periods
+([ADR-0010](adr/0010-labour-market-retention-window.md)). Milestones 06 and 07,
+history and trend, therefore begin by widening that window and re-importing.
+The drilldown (10) and the occupation matrix (11) are untouched, and the map
+has no filters yet.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so

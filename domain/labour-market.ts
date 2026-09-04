@@ -101,6 +101,37 @@ export function observationIsConsistent(observation: Observation): boolean {
   }
 }
 
+/**
+ * Movement between two observations.
+ *
+ * Null whenever either side has no value. A gap is not zero, so a region that
+ * was not published last month has no change rather than a fall to nothing,
+ * and a region newly covered has no change rather than a rise from nothing
+ * (ADR-0002). This is the whole reason it returns a type instead of a number.
+ *
+ * `percent` is separately nullable: a rise from zero has no percentage, and
+ * reporting one as infinite or as 100 would be inventing a figure.
+ */
+export interface PeriodChange {
+  readonly absolute: number;
+  readonly percent: number | null;
+  readonly direction: 'UP' | 'DOWN' | 'FLAT';
+}
+
+export function changeBetween(
+  latest: Observation,
+  previous: Observation | null,
+): PeriodChange | null {
+  if (previous === null) return null;
+  if (latest.value === null || previous.value === null) return null;
+
+  const absolute = latest.value - previous.value;
+  const direction = absolute > 0 ? 'UP' : absolute < 0 ? 'DOWN' : 'FLAT';
+  const percent = previous.value === 0 ? null : (absolute / previous.value) * 100;
+
+  return { absolute, percent, direction };
+}
+
 // ---------------------------------------------------------------------------
 // Series
 // ---------------------------------------------------------------------------

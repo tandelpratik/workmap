@@ -6,6 +6,7 @@ import { listByLevel } from '@/db/repositories/geography';
 import { countSeries } from '@/db/repositories/labour-market';
 import {
   buildSeriesKey,
+  changeBetween,
   describeSeries,
   formatPeriod,
   makeObservation,
@@ -118,6 +119,59 @@ describe('observations pair a value with a state (ADR-0002)', () => {
     expect(
       observationIsConsistent({ periodStart: january, value: 0, valueState: 'ZERO' }),
     ).toBe(true);
+  });
+});
+
+describe('change between periods (ADR-0002)', () => {
+  const june = new Date('2026-06-01T00:00:00.000Z');
+  const july = new Date('2026-07-01T00:00:00.000Z');
+
+  it('reports the movement and its direction', () => {
+    const change = changeBetween(
+      makeObservation(july, 'PRESENT', 42880),
+      makeObservation(june, 'PRESENT', 41397),
+    );
+
+    expect(change).toEqual({
+      absolute: 1483,
+      percent: expect.closeTo(3.582, 2),
+      direction: 'UP',
+    });
+  });
+
+  it('has no change against a gap, rather than a fall to nothing', () => {
+    // The month before was not published. That is not a decline of the whole
+    // figure, and reporting one would be inventing a measurement.
+    expect(
+      changeBetween(
+        makeObservation(july, 'PRESENT', 900),
+        makeObservation(june, 'UNAVAILABLE'),
+      ),
+    ).toBeNull();
+
+    // No earlier month is held at all.
+    expect(changeBetween(makeObservation(july, 'PRESENT', 900), null)).toBeNull();
+  });
+
+  it('distinguishes a measured zero from an absent figure', () => {
+    // ZERO is a measurement, so it does produce a change.
+    const change = changeBetween(
+      makeObservation(july, 'PRESENT', 12),
+      makeObservation(june, 'ZERO'),
+    );
+
+    expect(change?.absolute).toBe(12);
+    // A rise from zero has no percentage. Infinity is not a figure to publish.
+    expect(change?.percent).toBeNull();
+  });
+
+  it('calls an unchanged figure flat rather than a rise of nothing', () => {
+    const change = changeBetween(
+      makeObservation(july, 'PRESENT', 500),
+      makeObservation(june, 'PRESENT', 500),
+    );
+
+    expect(change).toEqual({ absolute: 0, percent: 0, direction: 'FLAT' });
   });
 });
 
@@ -693,17 +747,30 @@ withDatabase('importing a workbook', () => {
           const metricsBefore = await tx.labourMarketMetric.count({
             where: { series: { sourceKey: 'jsa-ivi' } },
           });
+          // Retention is held open here on purpose. The fixture's periods are
+          // Jan and Feb 2006, so a real 2026 release in the database would
+          // prune them the moment they were written and this test would
+          // measure the retention policy instead of idempotence, differently
+          // depending on whose machine it ran on. Retention has its own tests.
+          const wideWindow = 1_200;
           first = await importJsaIvi({
             filePath,
             client: tx,
             triggeredBy: 'test',
+            retainPeriods: wideWindow,
           });
-          second = await importJsaIvi({ filePath, client: tx, triggeredBy: 'test' });
+          second = await importJsaIvi({
+            filePath,
+            client: tx,
+            triggeredBy: 'test',
+            retainPeriods: wideWindow,
+          });
           third = await importJsaIvi({
             filePath,
             client: tx,
             force: true,
             triggeredBy: 'test',
+            retainPeriods: wideWindow,
           });
 
           storedSeries =
@@ -760,5 +827,53 @@ withDatabase('importing a workbook', () => {
     // test found it, whether that was empty or held a real release.
     const remaining = await countSeries('jsa-ivi');
     expect(remaining.ok && remaining.value).toBe(seriesBaseline);
+  }, 180_000);
+
+  it('writes only the retained periods, rather than writing then pruning', async () => {
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+
+    const directory = await mkdtemp(join(tmpdir(), 'workmap-ivi-retain-'));
+    const filePath = join(directory, 'fixture-ivi.xlsx');
+    await writeFile(filePath, await fixtureWorkbook());
+
+    // The fixture holds two series across two months. With a window of one,
+    // the older month must never reach the database: a release carries years
+    // of history and writing it all to delete it afterwards is what the free
+    // tier cannot afford.
+    let outcome: Awaited<ReturnType<typeof importJsaIvi>> | null = null;
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          outcome = await importJsaIvi({
+            filePath,
+            client: tx,
+            triggeredBy: 'test',
+            retainPeriods: 1,
+          });
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+
+    const run = outcome as Awaited<ReturnType<typeof importJsaIvi>> | null;
+    if (run === null || !run.ok) throw new Error('import failed');
+
+    expect(run.value.status).toBe('COMPLETED');
+    // Two series, one month each.
+    expect(run.value.written).toBe(2);
+    // The other month was read and deliberately not written.
+    expect(run.value.outsideRetention).toBe(2);
+    expect(run.value.seen).toBe(4);
+    expect(run.value.retainedPeriods).toHaveLength(1);
   }, 180_000);
 });

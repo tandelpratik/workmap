@@ -3,6 +3,7 @@ import { findSourceDescriptor } from '@/config/sources';
 import { listRegionTotals } from '@/db/repositories/labour-market';
 import { buildChoroplethGeometry, quantileBins } from '@/geography/choropleth';
 import { VacancyLegend, VacancyMap } from '@/components/vacancy-map';
+import { RegionDetail, RegionNotFound } from '@/components/region-detail';
 import { SiteHeader } from '@/components/site-header';
 import { VacancyTable } from '@/components/vacancy-table';
 
@@ -11,6 +12,10 @@ import { VacancyTable } from '@/components/vacancy-table';
  *
  * Rendered entirely on the server. The reader receives finished SVG and a
  * table, with no map library and no client JavaScript.
+ *
+ * Selection is a query parameter, so a selected region is shareable, survives
+ * a reload, works without scripting and needs no state to keep in sync. Every
+ * region on the map and every row in the table is a link to this same page.
  *
  * Everything on this page comes from JSA IVI, which is CC BY 4.0 and the only
  * source currently licensed for published aggregate figures. Adzuna
@@ -26,6 +31,21 @@ const SOURCE_KEY = 'jsa-ivi';
 /** JSA's own code for the all-occupations row. */
 const TOTAL_OCCUPATION_CODE = '0';
 const TABLE_ID = 'vacancies-by-region';
+
+/**
+ * ASGS codes are short alphanumerics, "101" and "1GSYD" among them. A query
+ * string is external input, so it is bounded before it is used rather than
+ * passed to a lookup and hoped about. Anything failing this is treated as no
+ * selection rather than as an error: a malformed link still shows the map.
+ */
+const CODE_PATTERN = /^[A-Za-z0-9]{1,10}$/;
+
+function selectedCodeFrom(value: string | string[] | undefined): string | null {
+  const single = Array.isArray(value) ? value[0] : value;
+  if (single === undefined) return null;
+  const trimmed = single.trim();
+  return CODE_PATTERN.test(trimmed) ? trimmed : null;
+}
 
 export const metadata: Metadata = {
   title: 'Where the advertisements are',
@@ -47,7 +67,12 @@ function Prose({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function MapPage() {
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const requestedCode = selectedCodeFrom((await searchParams)['region']);
   const totals = await listRegionTotals({
     sourceKey: SOURCE_KEY,
     dataset: DATASET,
@@ -77,7 +102,26 @@ export default async function MapPage() {
     );
   }
 
-  const { period, regions, withoutData } = totals.value;
+  const { period, previousPeriod, regions, withoutData } = totals.value;
+
+  // A code that parses but names no region in this release is answered rather
+  // than ignored. Silently dropping it would leave a reader who followed a
+  // stale link looking at a map that behaved as though they had not clicked.
+  const selectedRegion =
+    requestedCode === null
+      ? null
+      : (regions.find((region) => region.code === requestedCode) ?? null);
+  const selectedCode = selectedRegion?.code ?? null;
+
+  // Rank is computed from the same ordering the table uses, so the panel and
+  // the table cannot disagree about which region is third.
+  const withFigures = [...regions]
+    .filter((region) => region.observation.value !== null)
+    .sort((a, b) => (b.observation.value ?? 0) - (a.observation.value ?? 0));
+  const rankIndex =
+    selectedRegion === null
+      ? -1
+      : withFigures.findIndex((region) => region.code === selectedRegion.code);
   const values = regions
     .map((region) => region.observation.value)
     .filter((value): value is number => value !== null);
@@ -127,11 +171,24 @@ export default async function MapPage() {
               regions={regions}
               bins={bins}
               tableId={TABLE_ID}
+              selectedCode={selectedCode}
             />
             <VacancyLegend
               bins={bins}
               hasMissing={regions.some((region) => region.observation.value === null)}
             />
+
+            {selectedRegion === null ? null : (
+              <RegionDetail
+                region={selectedRegion}
+                rank={rankIndex === -1 ? null : rankIndex + 1}
+                of={withFigures.length}
+                previousPeriod={previousPeriod}
+              />
+            )}
+            {requestedCode !== null && selectedRegion === null ? (
+              <RegionNotFound code={requestedCode} />
+            ) : null}
             <Prose>
               <p>
                 Shading is by rank, in five equal groups of regions, not by a fixed scale.
@@ -144,6 +201,7 @@ export default async function MapPage() {
             <VacancyTable
               id={TABLE_ID}
               regions={regions}
+              selectedCode={selectedCode}
               caption={`Online job advertisements by region${
                 period === null ? '' : `, ${monthFormat.format(period)}`
               }. Ordered by number of advertisements.`}

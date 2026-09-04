@@ -1,5 +1,4 @@
-import type { GeographyLevel } from '@/domain/geography';
-import type { RegionFigure } from './region-figure';
+import { absenceLabel, levelLabel, regionHref, type RegionFigure } from './region-figure';
 
 /**
  * The map's figures as a table.
@@ -12,46 +11,23 @@ import type { RegionFigure } from './region-figure';
  *
  * It is also the honest representation. The choropleth shades by rank; this
  * prints the figures.
+ *
+ * Every row selects, exactly as the map does, so a reader who cannot use the
+ * map has the same interaction rather than a read-only copy of it.
  */
 
 const numberFormat = new Intl.NumberFormat('en-AU');
-
-/** How the publisher describes an absent figure, in the reader's terms. */
-function absenceLabel(state: string): string {
-  switch (state) {
-    case 'SUPPRESSED':
-      return 'Withheld by the publisher';
-    case 'NOT_COVERED':
-      return 'Outside this dataset';
-    case 'UNAVAILABLE':
-      return 'Not published';
-    default:
-      return 'No figure';
-  }
-}
-
-/** The publisher's own name for the level, for a reader who is not an ASGS user. */
-function levelLabel(level: GeographyLevel): string {
-  switch (level) {
-    case 'GCCSA':
-      return 'Capital city';
-    case 'SA4':
-      return 'Region';
-    case 'STATE':
-      return 'State or territory';
-    case 'COUNTRY':
-      return 'Country';
-  }
-}
 
 export function VacancyTable({
   id,
   regions,
   caption,
+  selectedCode,
 }: {
   id: string;
   regions: readonly RegionFigure[];
   caption: string;
+  selectedCode: string | null;
 }) {
   const ranked = [...regions].sort((a, b) => {
     const left = a.observation.value;
@@ -82,23 +58,47 @@ export function VacancyTable({
         </tr>
       </thead>
       <tbody>
-        {ranked.map((region) => (
-          <tr key={region.code} className="border-rule border-b">
-            <th scope="row" className="text-ink py-2 pr-4 text-left font-normal">
-              {region.name}
-            </th>
-            <td className="text-ink-faint py-2 pr-4">{levelLabel(region.level)}</td>
-            <td className="text-ink py-2 text-right font-mono tabular-nums">
-              {region.observation.value === null ? (
-                <span className="text-ink-faint font-sans">
-                  {absenceLabel(region.observation.valueState)}
-                </span>
-              ) : (
-                numberFormat.format(region.observation.value)
-              )}
-            </td>
-          </tr>
-        ))}
+        {ranked.map((region) => {
+          const isSelected = region.code === selectedCode;
+          return (
+            <tr
+              key={region.code}
+              className={
+                isSelected
+                  ? 'border-rule bg-paper-sunken border-b'
+                  : 'border-rule border-b'
+              }
+            >
+              <th scope="row" className="py-2 pr-4 text-left font-normal">
+                {/*
+                  Selecting a selected row clears it, so the control is the
+                  same shape as the map's: one link, two directions.
+                */}
+                <a
+                  href={regionHref(isSelected ? null : region.code)}
+                  aria-current={isSelected ? 'true' : undefined}
+                  className={
+                    isSelected
+                      ? 'text-ink font-medium underline underline-offset-4'
+                      : 'text-ink hover:text-accent underline-offset-4 hover:underline'
+                  }
+                >
+                  {region.name}
+                </a>
+              </th>
+              <td className="text-ink-faint py-2 pr-4">{levelLabel(region.level)}</td>
+              <td className="text-ink py-2 text-right font-mono tabular-nums">
+                {region.observation.value === null ? (
+                  <span className="text-ink-faint font-sans">
+                    {absenceLabel(region.observation.valueState)}
+                  </span>
+                ) : (
+                  numberFormat.format(region.observation.value)
+                )}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

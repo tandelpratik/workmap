@@ -20,6 +20,9 @@ import { readWorkbook } from '@/integrations/jsa/workbook';
 import { failure, invariant, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import { logger } from '@/lib/logger';
+import { retention } from '@/config/retention';
+import { keepRecentPeriods } from './retention';
+import { pruneLabourMarketHistory } from '@/db/repositories/labour-market';
 import {
   buildGeographyLookup,
   normaliseCode,
@@ -80,6 +83,8 @@ export interface IviImportOptions {
   readonly force?: boolean;
   /** Parse and report without writing anything. */
   readonly dryRun?: boolean;
+  /** Reference periods to keep. Defaults to config/retention.ts. */
+  readonly retainPeriods?: number;
   readonly maxQuarantineRate?: number;
   readonly dataset?: string;
   readonly measure?: string;
@@ -105,6 +110,12 @@ export interface IviImportOutcome {
   readonly written: number;
   /** Observations already stored with the same value, so not written again. */
   readonly skipped: number;
+  /** Observations outside the retention window, which were never written. */
+  readonly outsideRetention: number;
+  /** The periods this import kept, newest first. */
+  readonly retainedPeriods: readonly Date[];
+  /** Observations deleted because they fell outside the window. */
+  readonly pruned: number;
   readonly quarantined: number;
   readonly seriesSeen: number;
   readonly seriesWritten: number;
@@ -336,6 +347,9 @@ export async function importJsaIvi(
         seen: 0,
         written: 0,
         skipped: 0,
+        outsideRetention: 0,
+        retainedPeriods: [],
+        pruned: 0,
         quarantined: 0,
         seriesSeen: 0,
         seriesWritten: 0,
@@ -358,8 +372,21 @@ export async function importJsaIvi(
   });
   if (!parsed.ok) return parsed;
 
-  const { series, observations, duplicatesDropped, problems, sheets } = parsed.value;
+  const {
+    series: parsedSeries,
+    observations,
+    duplicatesDropped,
+    problems,
+    sheets,
+  } = parsed.value;
   const seen = observations + problems.length;
+
+  // Only the retained window is written. A release carries every month it has
+  // ever published and the product shows two, so the rest is dropped here
+  // rather than written and pruned afterwards (ingestion/retention.ts).
+  const retainPeriods = options.retainPeriods ?? retention.labourMarketPeriods;
+  const window = keepRecentPeriods(parsedSeries, retainPeriods);
+  const series = window.series;
 
   if (options.dryRun) {
     return ok({
@@ -370,6 +397,9 @@ export async function importJsaIvi(
       seen,
       written: 0,
       skipped: duplicatesDropped,
+      outsideRetention: window.dropped,
+      retainedPeriods: window.periods,
+      pruned: 0,
       quarantined: problems.length,
       seriesSeen: series.length,
       seriesWritten: 0,
@@ -407,6 +437,7 @@ export async function importJsaIvi(
   }
 
   let written = 0;
+  let pruned = 0;
   let skipped = duplicatesDropped;
   let seriesWritten = 0;
   let geographyResolved = 0;
@@ -477,6 +508,26 @@ export async function importJsaIvi(
       );
     }
 
+    // Housekeeping, after the data is safely written: periods left behind by
+    // an earlier import with a wider window, and the period this release just
+    // pushed out of it. A failure here leaves the database larger than wanted
+    // and entirely correct, so it is logged rather than failing the run.
+    const pruneOutcome = await pruneLabourMarketHistory({
+      sourceKey: JSA_SOURCE_KEY,
+      dataset,
+      retainPeriods,
+      client: database,
+    });
+    if (pruneOutcome.ok) {
+      pruned = pruneOutcome.value.deleted;
+    } else {
+      logger.warn('JSA IVI retention prune failed, data is unaffected', {
+        runId,
+        code: pruneOutcome.error.code,
+        message: pruneOutcome.error.message,
+      });
+    }
+
     await database.ingestionRun.update({
       where: { id: runId },
       data: {
@@ -512,6 +563,9 @@ export async function importJsaIvi(
     seen,
     written,
     skipped,
+    outsideRetention: window.dropped,
+    retainedPeriods: window.periods,
+    pruned,
     quarantined: problems.length,
     seriesSeen: series.length,
     seriesWritten,
@@ -527,6 +581,9 @@ export async function importJsaIvi(
     seriesWritten,
     written,
     skipped,
+    outsideRetention: window.dropped,
+    retainedPeriods: window.periods.map((period) => period.toISOString().slice(0, 10)),
+    pruned,
     quarantined: problems.length,
     geographyUnresolved: outcome.geography.unresolved,
   });

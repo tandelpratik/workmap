@@ -108,3 +108,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Map region links.
+ *
+ * The global focus outline is an outline, and browsers paint outlines on SVG
+ * elements inconsistently. Focus is therefore drawn as a stroke on the shape
+ * itself, which is a property SVG renders reliably. The hover weight is
+ * lighter than the selected outline the map draws on top, so hovering is
+ * visibly not the same thing as having selected.
+ */
+.map-region:focus-visible {
+  outline: none;
+}
+
+.map-region:focus-visible > path,
+.map-region:hover > path {
+  stroke: var(--color-ink);
+  stroke-width: 1.1;
+}

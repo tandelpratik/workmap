@@ -81,6 +81,20 @@ reaches it through `app/` or `api/`.
 7. **Render.** Loading, empty, error and unavailable are all implemented; every
    visualisation has an accessible equivalent.
 
+## Retention
+
+Labour market history is kept at the two most recent reference periods per
+dataset, which is what the product displays: the latest month and its change on
+the month before. The window is applied while importing rather than afterwards,
+so a release costs thousands of writes rather than hundreds of thousands
+followed by as many deletes, and it is read from the file rather than from the
+clock, so a late or archived release keeps its own newest months. The published
+workbook remains the record of everything outside the window. See ADR-0010.
+
+This is the one place in the system that deletes rather than expires. Elsewhere
+deleting would destroy the evidence that a record existed; here the evidence is
+the publisher's own file.
+
 ## Three data lineages
 
 The most important structural rule in the system. No two of these are ever

@@ -1,3 +1,4 @@
+import type { Prisma } from '@/db/generated/client/client';
 import { getDatabase } from '../client';
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
@@ -221,11 +222,15 @@ export interface RegionTotal {
   readonly level: GeographyLevel;
   /** The figure, or the reason there is no figure. Never coerced to zero. */
   readonly observation: Observation;
+  /** The period before it, where one is held. Null is "no comparison". */
+  readonly previous: Observation | null;
 }
 
 export interface RegionTotalsResult {
   /** The period every figure belongs to. Null when nothing is loaded. */
   readonly period: Date | null;
+  /** The period the change is measured against. Null when only one is held. */
+  readonly previousPeriod: Date | null;
   readonly regions: readonly RegionTotal[];
   /**
    * Regions this dataset reports on that carry no figure for this period.
@@ -236,7 +241,7 @@ export interface RegionTotalsResult {
    * data, they are represented by Greater Sydney. Counting them as gaps would
    * report a two-thirds hole in a dataset that actually covers the country.
    */
-  readonly withoutData: readonly Omit<RegionTotal, 'observation'>[];
+  readonly withoutData: readonly Omit<RegionTotal, 'observation' | 'previous'>[];
 }
 
 /**
@@ -307,6 +312,7 @@ export async function listRegionTotals(options: {
   if (series.length === 0) {
     return ok({
       period: null,
+      previousPeriod: null,
       regions: [],
       // Nothing is "missing a figure" when the dataset is not loaded at all.
       // That is a different state, and the caller distinguishes it by the
@@ -320,14 +326,24 @@ export async function listRegionTotals(options: {
   // One period for the whole map. Reading each region's own latest would let a
   // region that stopped reporting sit beside current ones as though it were
   // current, which misdates the map without any figure being wrong.
-  const latest = await database.value.labourMarketMetric.aggregate({
+  //
+  // The period before it comes back too, because a figure on its own says
+  // nothing about direction. Two is all there is: history is retained at two
+  // periods (config/retention.ts), so this is the whole table, not a window
+  // onto a longer one.
+  const periods = await database.value.labourMarketMetric.groupBy({
+    by: ['periodStart'],
     where: { seriesId: { in: seriesIds } },
-    _max: { periodStart: true },
+    orderBy: { periodStart: 'desc' },
+    take: 2,
   });
-  const period = latest._max.periodStart;
+
+  const period = periods[0]?.periodStart ?? null;
+  const previousPeriod = periods[1]?.periodStart ?? null;
   if (period === null) {
     return ok({
       period: null,
+      previousPeriod: null,
       regions: [],
       // Nothing is "missing a figure" when the dataset is not loaded at all.
       // That is a different state, and the caller distinguishes it by the
@@ -336,24 +352,28 @@ export async function listRegionTotals(options: {
     });
   }
 
+  const wanted = previousPeriod === null ? [period] : [period, previousPeriod];
   const metrics = await database.value.labourMarketMetric.findMany({
-    where: { seriesId: { in: seriesIds }, periodStart: period },
-    select: { seriesId: true, value: true, valueState: true },
+    where: { seriesId: { in: seriesIds }, periodStart: { in: wanted } },
+    select: { seriesId: true, periodStart: true, value: true, valueState: true },
   });
 
   const geographyBySeries = new Map(series.map((row) => [row.id, row.geographyId]));
   const observationByGeography = new Map<string, Observation>();
+  const previousByGeography = new Map<string, Observation>();
   for (const metric of metrics) {
     const geographyId = geographyBySeries.get(metric.seriesId);
     if (geographyId === null || geographyId === undefined) continue;
-    observationByGeography.set(
-      geographyId,
-      makeObservation(
-        period,
-        metric.valueState as ValueState,
-        metric.value === null ? null : Number(metric.value.toString()),
-      ),
+    const observation = makeObservation(
+      metric.periodStart,
+      metric.valueState as ValueState,
+      metric.value === null ? null : Number(metric.value.toString()),
     );
+    const target =
+      metric.periodStart.getTime() === period.getTime()
+        ? observationByGeography
+        : previousByGeography;
+    target.set(geographyId, observation);
   }
 
   // An area is only in scope if the dataset reports on it at all. Everything
@@ -365,7 +385,7 @@ export async function listRegionTotals(options: {
   );
 
   const regions: RegionTotal[] = [];
-  const withoutData: Omit<RegionTotal, 'observation'>[] = [];
+  const withoutData: Omit<RegionTotal, 'observation' | 'previous'>[] = [];
   for (const area of areas) {
     if (!inScope.has(area.id)) continue;
     const identity = {
@@ -376,8 +396,90 @@ export async function listRegionTotals(options: {
     };
     const observation = observationByGeography.get(area.id);
     if (observation === undefined) withoutData.push(identity);
-    else regions.push({ ...identity, observation });
+    else
+      regions.push({
+        ...identity,
+        observation,
+        // Absent rather than zero when the month before was not published or
+        // not held. The panel says so instead of drawing a change of nothing.
+        previous: previousByGeography.get(area.id) ?? null,
+      });
   }
 
-  return ok({ period, regions, withoutData });
+  return ok({ period, previousPeriod, regions, withoutData });
+}
+
+// ---------------------------------------------------------------------------
+// Retention
+// ---------------------------------------------------------------------------
+
+export interface PruneResult {
+  /** Observations removed. */
+  readonly deleted: number;
+  /** The periods that remain, newest first. */
+  readonly retained: readonly Date[];
+  /** Periods that were removed, oldest first. */
+  readonly removed: readonly Date[];
+}
+
+/**
+ * Drops every reference period outside the retention window.
+ *
+ * Deletion, not expiry. The rest of the system expires rather than deletes,
+ * because deleting a listing destroys the record that it existed. This is the
+ * opposite case: the published workbook is the record, and these rows are a
+ * copy of a fraction of it. Re-importing with a wider window restores them
+ * exactly (config/retention.ts).
+ *
+ * Periods are removed one at a time rather than in a single statement. A
+ * release carries years of monthly figures across thousands of series, so the
+ * first prune deletes a quarter of a million rows, and a single unbounded
+ * DELETE against a free-tier database is how a migration becomes an incident.
+ */
+export async function pruneLabourMarketHistory(options: {
+  readonly sourceKey: string;
+  readonly dataset: string;
+  readonly retainPeriods: number;
+  /** Injected by the importer, which runs inside its own transaction. */
+  readonly client?: Prisma.TransactionClient;
+}): Promise<Result<PruneResult, Failure>> {
+  if (!Number.isInteger(options.retainPeriods) || options.retainPeriods < 1) {
+    return err(
+      failure(
+        'INVALID_INPUT',
+        `Retention must be a whole number of periods, at least 1. Received ${String(options.retainPeriods)}.`,
+      ),
+    );
+  }
+
+  let database: Prisma.TransactionClient;
+  if (options.client === undefined) {
+    const resolved = getDatabase();
+    if (!resolved.ok) return resolved;
+    database = resolved.value;
+  } else {
+    database = options.client;
+  }
+
+  const scope = { series: { sourceKey: options.sourceKey, dataset: options.dataset } };
+
+  const periods = await database.labourMarketMetric.groupBy({
+    by: ['periodStart'],
+    where: scope,
+    orderBy: { periodStart: 'desc' },
+  });
+
+  const retained = periods.slice(0, options.retainPeriods).map((row) => row.periodStart);
+  const removable = periods.slice(options.retainPeriods).map((row) => row.periodStart);
+
+  let deleted = 0;
+  // Oldest first, so an interrupted prune leaves the newest periods intact.
+  for (const period of [...removable].reverse()) {
+    const outcome = await database.labourMarketMetric.deleteMany({
+      where: { ...scope, periodStart: period },
+    });
+    deleted += outcome.count;
+  }
+
+  return ok({ deleted, retained, removed: [...removable].reverse() });
 }

@@ -1,18 +1,23 @@
 import type { Bin, ChoroplethGeometry } from '@/geography/choropleth';
 import { binFor } from '@/geography/choropleth';
-import type { RegionFigure } from './region-figure';
+import { regionHref, type RegionFigure } from './region-figure';
 
 /**
  * Regional vacancy choropleth.
  *
- * Static SVG rendered on the server. There is no client JavaScript here: the
- * national view does not pan or zoom, so shipping a map engine to draw it
+ * Rendered on the server as static SVG. No map library reaches the browser:
+ * the national view does not pan or zoom, so shipping a tile engine to draw it
  * would be cost without benefit.
  *
+ * Interaction is links, not scripts. Each region is an anchor to
+ * `/map?region=<code>`, so selecting one is a navigation: it works without
+ * JavaScript, survives a reload, is shareable, and is keyboard operable
+ * because links already are. That is the whole mechanism.
+ *
  * Accessibility (constitution): the map is never the only representation. The
- * page pairs it with a table of the same figures, this SVG is marked up so a
- * screen reader is sent to that table rather than reading 50 paths, and every
- * region carries a title with its name and figure for pointer users.
+ * page pairs it with a table of the same figures, and each region link carries
+ * its name and figure as its accessible name, so the map is navigable rather
+ * than an opaque picture.
  */
 
 const SCALE_FILLS = [
@@ -50,12 +55,15 @@ export function VacancyMap({
   regions,
   bins,
   tableId,
+  selectedCode,
 }: {
   geometry: ChoroplethGeometry;
   regions: readonly RegionFigure[];
   bins: readonly Bin[];
   /** The table carrying the same figures, for the accessible description. */
   tableId: string;
+  /** The selected region's code, or null when nothing is selected. */
+  selectedCode: string | null;
 }) {
   const drawn = regions
     .map((region) => {
@@ -67,14 +75,19 @@ export function VacancyMap({
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
+  const selected = drawn.find((entry) => entry.region.code === selectedCode) ?? null;
+
   return (
     <figure className="m-0">
       <svg
         viewBox={`0 0 ${String(geometry.width)} ${String(geometry.height)}`}
         className="h-auto w-full"
-        role="img"
+        // Not role="img": that would prune the region links from the
+        // accessibility tree while leaving them focusable, which is the worst
+        // of both. It is a group of links, and it says so.
+        role="group"
         aria-describedby={tableId}
-        aria-label="Online job advertisements by region. The same figures are listed in the table below."
+        aria-label="Online job advertisements by region. Each region is a link to its figures, and the same figures are listed in the table below."
       >
         {/*
           State outlines beneath the data. They are what makes a partial map
@@ -89,13 +102,21 @@ export function VacancyMap({
 
         <g stroke="var(--color-paper)" strokeWidth={0.4}>
           {drawn.map(({ region, area, value, bin }) => (
-            <path
+            <a
               key={region.code}
-              d={area.d}
-              fill={bin === null ? 'var(--color-scale-none)' : fillForStep(bin.step)}
+              href={regionHref(region.code === selectedCode ? null : region.code)}
+              className="map-region"
+              aria-label={regionTitle(region.name, value)}
+              aria-current={region.code === selectedCode ? 'true' : undefined}
             >
-              <title>{regionTitle(region.name, value)}</title>
-            </path>
+              <path
+                d={area.d}
+                fill={bin === null ? 'var(--color-scale-none)' : fillForStep(bin.step)}
+              >
+                {/* Pointer users get the same label as a native tooltip. */}
+                <title>{regionTitle(region.name, value)}</title>
+              </path>
+            </a>
           ))}
         </g>
 
@@ -105,6 +126,23 @@ export function VacancyMap({
             <path key={`edge-${area.code}`} d={area.d} />
           ))}
         </g>
+
+        {/*
+          The selection, drawn above everything. Painting it in place would let
+          a neighbour drawn later cover the outline on the shared border, which
+          is exactly where the reader is looking. Shape, not colour: the border
+          is heavier, and the panel and the table say which region it is.
+        */}
+        {selected === null ? null : (
+          <path
+            d={selected.area.d}
+            fill="none"
+            stroke="var(--color-ink)"
+            strokeWidth={1.6}
+            strokeLinejoin="round"
+            aria-hidden="true"
+          />
+        )}
       </svg>
     </figure>
   );
