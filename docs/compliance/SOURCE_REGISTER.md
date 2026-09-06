@@ -54,7 +54,7 @@ this register.
 | `abs-asgs`      | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
 | `anzsco`        | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
 | `adzuna`        | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
-| `smartjobs-qld` | Job listings        | `PENDING`          | `VERIFIED`     | Not yet: built, never crawled         |
+| `smartjobs-qld` | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 3.0 AU                 |
 | `jobs-wa`       | Job listings        | `BLOCKED`          | `PROHIBITED`   | **Never**, without written permission |
 | `workday`       | Job listings        | `BLOCKED`          | `RESTRICTED`   | Only per employer, on written consent |
 | `pageup`        | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: access blocked, terms unread      |
@@ -537,6 +537,50 @@ to the declared licence fails the build rather than passing unnoticed.
 advertisement carrying third party material may fall outside the grant.
 Advertisement text should be treated more cautiously than the factual fields.
 
+**Activated 2026-09-01.** Idempotency holds against the live portal: a re-run
+recognises listings already stored and asks the portal for nothing about them.
+Every region has resolved to a real ASGS area, and nothing has been quarantined
+for bad data.
+
+**Operational note.** A run that dies without recording its own failure used to
+hold the single-active-run lock forever, because the handler that would mark it
+FAILED needs the same database that has just become unreachable. That happened
+here on 2026-09-05 and left the source un-ingestible until the row was cleared
+by hand. Runs older than two hours are now treated as abandoned and released
+automatically (`ingestion/stale-runs.ts`).
+
+**Coverage: resolved 2026-09-05. The crawler reaches the whole portal.**
+A run on that date walked 2,118 of the 2,127 rows the portal reported, with
+nothing quarantined.
+
+The earlier limit of about 56 rows was never the portal's doing. Two faults of
+ours produced it, and both are worth recording because they had the same
+signature: something that made the source look far smaller than it is, in
+silence.
+
+1. **The parser followed one link form out of two.** The portal writes some
+   results as `jncustomsearch.viewFullSingle?...&in_jnCounter=N` and others as
+   a vanity path such as `/jobs/QLD-QLD-PTCAP2026`, mixed within one page. Rows
+   using the second form were dropped without a word, which read as pages
+   decaying (20 rows, then 14, 12, 9, 1) and then as the portal running out of
+   results. The detail pages behind both forms are identical.
+2. **A single dropped connection ended the crawl.** The client had no retry, so
+   one transient network failure stopped the paging walk and left the rest
+   unread. Transient failures are now retried twice with increasing backoff;
+   refusals (4xx) are never retried, and retries count against the request
+   budget so a struggling host cannot be hammered under cover of the ceiling.
+
+Filtering by region was also tried as a way to partition the result set into
+shallow slices. It is not needed now, and it did not work as attempted: the
+`in_multi01_id` field alone is ignored and returns the unfiltered total, so it
+would need the paired label field as well.
+
+**What a full crawl costs.** About 107 page requests plus one detail request per
+listing, so roughly 2,200 requests. At the default pacing that is around 90
+minutes. Runs are bounded by a request budget and report `stoppedOnBudget` when
+they stop early, so a partial run is legible as partial rather than being
+mistaken for a small portal.
+
 **Technical note, measured 2026-08-31.** Runs on NGA.NET. **2,038 live jobs**
 at time of writing. The search is a form POST; paging works by replaying the
 server's own hidden fields (`in_pg` as the cursor, `in_nav=next_set`) rather
@@ -749,3 +793,5 @@ Independent of any terms, and not subject to trade-off:
 | 2026-08-28 | JSA IVI verified as CC BY 4.0 from the copyright page, supplied by the product owner. Attribution recorded. Linking clause flagged; written confirmation recommended before monetisation.                                                                                                                                                                                                                                                        |
 | 2026-08-29 | Adzuna access granted and its API terms verified. `ACTIVE` / `VERIFIED` for publishing listings. Aggregation barred without written consent, enforced by `permitsDerivedAggregates`. Mandatory attribution recorded. Logo asset still outstanding.                                                                                                                                                                                               |
 | 2026-08-31 | Six direct job-listing candidates registered from the feasibility study. `smartjobs-qld` verified as CC BY and the first listing source permitted to aggregate. `jobs-wa` verified as `PROHIBITED`: non-commercial use only. `workday` `RESTRICTED`, barred by employer terms and openable only per employer on written consent. `pageup`, `iworkfor-nsw` and `careers-vic` recorded `UNVERIFIED`. Rio Tinto added to the standing prohibitions. |
+| 2026-09-01 | `smartjobs-qld` activated after its adapter and ingestion were built and tested. First live runs stored 25 listings, idempotency confirmed (a re-run refetched nothing it already held), and every region resolved to a real ASGS area. Known limit recorded: the crawler currently reaches about 56 of the portal's 2,131 listings because deep pagination returns decaying then empty pages.                                                   |
+| 2026-09-05 | `smartjobs-qld` coverage resolved: the crawler now reaches the whole portal (2,118 of 2,127 rows walked, nothing quarantined). Two faults of ours had capped it near 56: a parser that followed only one of the portal's two result-link forms, and a client with no retry, so one dropped connection ended a crawl. Abandoned runs are now released automatically rather than wedging the source.                                               |

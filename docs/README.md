@@ -29,8 +29,10 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Two surfaces are live. **Jobs** is a working search over ingested Adzuna
-advertisements. **Map** draws online job advertisements by region from the July
+Two surfaces are live. **Jobs** is a working search over ingested
+advertisements from Adzuna and Queensland Smart Jobs, 1,244 of them, each
+carrying what its advertisement says about visa sponsorship, quoted from the
+advertisement rather than characterised. **Map** draws online job advertisements by region from the July
 2026 JSA IVI release: 50 areas, the eight capitals at GCCSA and the rest of the
 country at SA4, with a table of the same figures beside it. Selecting a region,
 on the map or in the table, opens a panel with its exact figure, its change on
@@ -63,8 +65,11 @@ question (ANZSCO against OSCA) recorded in the source register.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so
-counts, averages and the heatmap stay on JSA IVI, which is CC BY 4.0. ABS ASGS
-supplies geography. A development-only synthetic source exists for the pipeline
+counts, averages and the heatmap stay on JSA IVI, which is CC BY 4.0. Queensland
+Smart Jobs went live on 2026-09-01 and is the one listing source licensed for
+both republication and aggregation, though its listings are Queensland
+Government vacancies and never a picture of the Queensland labour market. ABS
+ASGS supplies geography. A development-only synthetic source exists for the pipeline
 and can never run in production. See
 [ADR-0009](adr/0009-source-activation-and-synthetic-containment.md) and the
 [source register](compliance/SOURCE_REGISTER.md).

@@ -99,7 +99,11 @@ describe('source registry', () => {
     // happen as a side effect of an unrelated edit. Adding a key here requires
     // a matching entry in docs/compliance/SOURCE_REGISTER.md with evidence.
     const eligible = sourceDescriptors.filter(isProductionEligible).map((d) => d.key);
-    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs', 'adzuna']);
+    // smartjobs-qld joined on 2026-09-01. Its licence was verified first, its
+    // adapter and ingestion were built and tested first, and activation was a
+    // separate decision taken afterwards. That order is the point of the two
+    // axes existing.
+    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs', 'adzuna', 'smartjobs-qld']);
   });
 
   it('gives every verified source that requires attribution its exact wording', () => {
@@ -140,20 +144,30 @@ describe('source registry', () => {
     const aggregable = sourceDescriptors
       .filter(canPublishDerivedAggregates)
       .map((d) => d.key);
-    expect(aggregable).toEqual(['jsa-ivi', 'abs-asgs']);
+    // smartjobs-qld is CC BY, so counts derived from it may be published. What
+    // the licence permits and what a figure means are still different
+    // questions: these are Queensland Government vacancies, never the
+    // Queensland labour market, and anything published from them has to say so.
+    expect(aggregable).toEqual(['jsa-ivi', 'abs-asgs', 'smartjobs-qld']);
   });
 
-  it('records Queensland as CC BY, and permitted for aggregation once built', () => {
-    // The only live listing source found whose licence permits both
-    // republication and published statistics. Verified 2026-08-31 against the
-    // footer licence link and qld.gov.au/legal/copyright. Activation is PENDING
-    // because nothing ingests it yet, so the gates keep it out of production.
+  it('records Queensland as CC BY, live, and permitted for aggregation', () => {
+    // The only live listing source whose licence permits both republication
+    // and published statistics. Verified 2026-08-31 against the pages' own
+    // AGLS metadata (DCTERMS.license, CC BY 3.0 AU) and
+    // qld.gov.au/legal/copyright, then activated 2026-09-01 once the adapter
+    // and ingestion had been built and tested.
     const qld = findSourceDescriptor('smartjobs-qld');
     expect(qld?.complianceStatus).toBe('VERIFIED');
+    expect(qld?.activation).toBe('ACTIVE');
     expect(qld?.permitsDerivedAggregates).toBe(true);
-    expect(qld?.activation).toBe('PENDING');
-    expect(isProductionEligible(qld!)).toBe(false);
-    expect(canPublishDerivedAggregates(qld!)).toBe(false);
+    expect(isProductionEligible(qld!)).toBe(true);
+    expect(canPublishDerivedAggregates(qld!)).toBe(true);
+    // CC BY is satisfied only if the wording is actually there to render, and
+    // the version has to be the one the pages declare, not the one the
+    // whole-of-government policy page states by default.
+    expect(qld?.attributionText).toContain('CC BY 3.0 AU');
+    expect(qld?.attributionText).toContain('The State of Queensland');
   });
 
   it('records WA as prohibited, however good its data is', () => {

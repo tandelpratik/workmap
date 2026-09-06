@@ -14,13 +14,16 @@
 /** One row of the search results list. */
 export interface SmartJobsSearchRow {
   /**
-   * The portal's listing counter, taken from the detail link.
+   * Whatever the result link identified the row by.
    *
-   * This addresses a row, not a vacancy. It is not used as the idempotency
-   * key: the stable reference (`QLD/164089`) lives on the detail page. Kept so
-   * the detail page can be fetched and so a parse can be traced back.
+   * The portal uses two link forms and they carry different identifiers: an
+   * `in_jnCounter` query parameter on one, and a slug such as
+   * `QLD-QLD-PTCAP2026` on the vanity path form. Either way this addresses a
+   * row, not a vacancy, and is never the idempotency key: the stable reference
+   * lives on the detail page. Kept so a parse can be traced back to the row
+   * that produced it.
    */
-  readonly jnCounter: string;
+  readonly rowRef: string;
   readonly title: string;
   /** The agency, as the portal words it. Null when the row omits it. */
   readonly employer: string | null;

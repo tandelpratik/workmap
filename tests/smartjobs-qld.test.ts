@@ -68,6 +68,31 @@ describe('Smart Jobs search results parsing', () => {
     expect(row.localities.length).toBeGreaterThan(5);
   });
 
+  it('follows both link forms the portal mixes into one page', () => {
+    // Regression, and the expensive one. The portal links some results as
+    // `jncustomsearch.viewFullSingle?...&in_jnCounter=N` and others as a
+    // vanity path `/jobs/QLD-QLD-PTCAP2026`. The parser matched only the
+    // first, so it dropped about 40% of the rows on a deep page in silence.
+    // That read as the portal running out of results and made the source look
+    // an order of magnitude smaller than it is.
+    const vanity =
+      '<h2 class="resultset-title">of <strong>2127</strong> matching jobs</h2>' +
+      '<ol class="search-results jobs"><li><h3>' +
+      '<A HREF="/jobs/QLD-QLD-PTCAP2026"><span class="result-title">' +
+      '<strong>Public Trust Officers - multiple locations</strong>, Public Trust Office' +
+      '</span></a><span class="type">Permanent</span></h3>' +
+      '<ul class="location"><li><strong class="locality">Cairns region</strong></li></ul>' +
+      '</li></ol>';
+
+    const [row] = parseSearchResults(vanity).rows;
+    expect(row).toBeDefined();
+    expect(row?.title).toBe('Public Trust Officers - multiple locations');
+    expect(row?.employer).toBe('Public Trust Office');
+    // The slug identifies the row when there is no counter to read.
+    expect(row?.rowRef).toBe('QLD-QLD-PTCAP2026');
+    expect(row?.detailUrl).toBe('https://smartjobs.qld.gov.au/jobs/QLD-QLD-PTCAP2026');
+  });
+
   it('carries the portal cursor forward instead of inventing an offset', () => {
     const page = parseSearchResults(searchHtml);
     expect(page.nextPageForm).not.toBeNull();
@@ -276,6 +301,62 @@ describe('Smart Jobs client', () => {
     await expect(client.searchNextPage({ in_pg: '20' })).rejects.toThrow(/budget/i);
   });
 
+  it('retries a dropped connection rather than abandoning the crawl', async () => {
+    // A live run lost its connection at page three and ended there, leaving
+    // most of the portal unread. One blip should not look like the source
+    // running out of results.
+    let calls = 0;
+    const client = new SmartJobsClient({
+      fetch: async () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError('fetch failed');
+        return okResponse(searchHtml);
+      },
+      sleep: async () => {},
+    });
+
+    const page = await client.searchFirstPage();
+    expect(page.total).toBe(2038);
+    expect(calls).toBe(2);
+    // The retry was a real request and is counted, so a failing host cannot be
+    // hammered under cover of the budget.
+    expect(client.requestsMade).toBe(2);
+  });
+
+  it('backs off further on each retry', async () => {
+    const waits: number[] = [];
+    const client = new SmartJobsClient({
+      delayMs: 1000,
+      fetch: async () => {
+        throw new TypeError('fetch failed');
+      },
+      sleep: async (ms) => {
+        waits.push(ms);
+      },
+    });
+
+    await expect(client.searchFirstPage()).rejects.toThrow(/fetch failed/);
+    // No wait before the very first attempt; each retry waits longer, because
+    // the polite answer to a struggling server is to ask less often.
+    expect(waits).toEqual([2000, 3000]);
+  });
+
+  it('does not retry a refusal', async () => {
+    // A 4xx is the server declining. Repeating a request it has already
+    // refused is useless and rude.
+    let calls = 0;
+    const client = new SmartJobsClient({
+      fetch: async () => {
+        calls += 1;
+        return new Response('no', { status: 403 });
+      },
+      sleep: async () => {},
+    });
+
+    await expect(client.searchFirstPage()).rejects.toThrow(/403/);
+    expect(calls).toBe(1);
+  });
+
   it('refuses to follow a link off the portal host', async () => {
     const client = new SmartJobsClient({
       fetch: async () => okResponse(detailHtml),
@@ -389,19 +470,43 @@ const withDatabase = describe.skipIf(!process.env['DATABASE_URL']);
 
 withDatabase('Smart Jobs ingestion', () => {
   it('refuses to ingest while the source is not activated', async () => {
-    // The source is VERIFIED and PENDING: permitted, not turned on. Activation
-    // is the product owner's decision and the gate enforces it rather than
-    // warning about it (ADR-0009). This calls the real function against the
-    // real registry on purpose, because a stubbed gate proves nothing.
-    const result = await ingestSmartJobsQld({
-      client: stubSource(),
-      triggeredBy: 'test',
-    });
+    // Activation is the product owner's decision and the gate enforces it
+    // rather than warning about it (ADR-0009). The source is set back to
+    // PENDING inside a rolled-back transaction rather than relying on the
+    // registry's current state: this test is about the gate, and it has to
+    // keep proving the gate works after the source is switched on for real.
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
 
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error.code).toBe('FORBIDDEN');
-    expect(result.error.message).toContain('PENDING');
+    let result: Awaited<ReturnType<typeof ingestSmartJobsQld>> | null = null;
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'PENDING' },
+          });
+
+          result = await ingestSmartJobsQld({
+            db: tx,
+            client: stubSource(),
+            triggeredBy: 'test',
+          });
+
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    const outcome = result as Awaited<ReturnType<typeof ingestSmartJobsQld>> | null;
+    expect(outcome).not.toBeNull();
+    expect(outcome?.ok).toBe(false);
+    if (outcome === null || outcome.ok) return;
+    expect(outcome.error.code).toBe('FORBIDDEN');
+    expect(outcome.error.message).toContain('PENDING');
   });
 
   it('stores listings once, and makes no requests for ones it already has', async () => {
@@ -426,6 +531,12 @@ withDatabase('Smart Jobs ingestion', () => {
             where: { key: SOURCE_KEY },
             data: { activation: 'ACTIVE' },
           });
+
+          // Ingested listings from a real run are a normal state for this
+          // database. This test is about what one ingestion does, so it starts
+          // from a known empty state for this source. Inside the rolled-back
+          // transaction, so no real listing is lost.
+          await tx.job.deleteMany({ where: { sourceKey: SOURCE_KEY } });
 
           first = await ingestSmartJobsQld({
             db: tx,
@@ -489,6 +600,64 @@ withDatabase('Smart Jobs ingestion', () => {
     expect(client.detailCount).toBe(detailsAfterFirst);
   }, 180_000);
 
+  it('keeps the listings it fetched when a run dies part way through', async () => {
+    // The property that matters most on an unreliable connection. Runs used to
+    // hold every fetched listing in memory and write once at the end, so a
+    // dropped connection threw away the whole run: twice, an hour of polite
+    // crawling produced nothing and the next run refetched the same pages.
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    const client = stubSource();
+    // The fixture yields three rows, so the batch size is set to one: the
+    // point is to prove a flush happened before the failure, not to move a
+    // large volume. An earlier version of this test asked for a failure after
+    // thirty details against a three-row fixture, so the failure never fired
+    // and the test passed by never reaching what it was checking.
+    const failAfter = 2;
+    let fetched = 0;
+    const flaky = {
+      ...client,
+      fetchJobDetail: (url: string) => {
+        fetched += 1;
+        if (fetched > failAfter) return Promise.reject(new Error('connection lost'));
+        return client.fetchJobDetail(url);
+      },
+    };
+
+    let stored = -1;
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'ACTIVE' },
+          });
+          await tx.job.deleteMany({ where: { sourceKey: SOURCE_KEY } });
+
+          await expect(
+            ingestSmartJobsQld({
+              db: tx,
+              client: flaky,
+              writeBatchSize: 1,
+              triggeredBy: 'test',
+            }),
+          ).rejects.toThrow(/connection lost/);
+
+          stored = await tx.job.count({ where: { sourceKey: SOURCE_KEY } });
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    // The run failed, and the work it had already done survived it.
+    expect(stored).toBeGreaterThan(0);
+    expect(stored).toBeLessThanOrEqual(failAfter);
+  }, 180_000);
+
   it('stops at the request budget rather than finishing the crawl', async () => {
     const database = getDatabase();
     if (!database.ok) throw new Error('no database');
@@ -503,6 +672,12 @@ withDatabase('Smart Jobs ingestion', () => {
             where: { key: SOURCE_KEY },
             data: { activation: 'ACTIVE' },
           });
+
+          // Ingested listings from a real run are a normal state for this
+          // database. This test is about what one ingestion does, so it starts
+          // from a known empty state for this source. Inside the rolled-back
+          // transaction, so no real listing is lost.
+          await tx.job.deleteMany({ where: { sourceKey: SOURCE_KEY } });
 
           // One search page plus two details, and no more. A crawler that
           // treats its budget as a target rather than a ceiling is how a
@@ -529,5 +704,15 @@ withDatabase('Smart Jobs ingestion', () => {
     expect(run.value.detailsFetched).toBe(2);
     // It saw a full page of rows and deliberately left most of them.
     expect(run.value.seen).toBeGreaterThan(run.value.detailsFetched);
+
+    // The run says it stopped early, so a partial crawl is legible as partial.
+    expect(run.value.stoppedOnBudget).toBe(true);
+
+    // And nothing is quarantined for it. Regression: the budget error was a
+    // SmartJobsRequestError, so ingestion could not tell "we chose to stop"
+    // from "the source returned something wrong", and a healthy bounded run
+    // reported two quarantined records. Quarantine has to mean bad data or it
+    // is not worth watching.
+    expect(run.value.quarantined).toBe(0);
   }, 180_000);
 });

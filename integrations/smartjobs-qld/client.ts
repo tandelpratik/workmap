@@ -35,6 +35,23 @@ function userAgent(): string {
   return `${name}Bot/0.1 (+${contact}; job listing indexing)`;
 }
 
+/**
+ * The run reached its own request ceiling and stopped.
+ *
+ * Deliberately its own type, and not a subclass of the transport error. A
+ * budget is a decision we made about someone else's server, so reaching it is
+ * a normal end to a run, not a failure of the source. Conflating the two made
+ * a healthy bounded run report quarantined records, which is exactly the
+ * signal that has to stay trustworthy: quarantine should mean "this data was
+ * wrong", never "we chose to stop".
+ */
+export class SmartJobsBudgetReached extends Error {
+  constructor(readonly budget: number) {
+    super(`request budget of ${budget} reached; stopping this run`);
+    this.name = 'SmartJobsBudgetReached';
+  }
+}
+
 export class SmartJobsRequestError extends Error {
   constructor(
     message: string,
@@ -50,6 +67,8 @@ export interface SmartJobsClientOptions {
   readonly delayMs?: number;
   /** Hard ceiling on requests per run, so a paging bug cannot run away. */
   readonly maxRequests?: number;
+  /** Extra attempts after a transient failure. Zero disables retrying. */
+  readonly maxRetries?: number;
   /** Test seams. Neither is used in production. */
   readonly fetch?: typeof globalThis.fetch;
   readonly sleep?: (ms: number) => Promise<void>;
@@ -61,6 +80,7 @@ const defaultSleep = (ms: number): Promise<void> =>
 export class SmartJobsClient {
   private readonly delayMs: number;
   private readonly maxRequests: number;
+  private readonly maxRetries: number;
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly sleep: (ms: number) => Promise<void>;
   private requestCount = 0;
@@ -68,6 +88,7 @@ export class SmartJobsClient {
   constructor(options: SmartJobsClientOptions = {}) {
     this.delayMs = options.delayMs ?? 1500;
     this.maxRequests = options.maxRequests ?? 200;
+    this.maxRetries = options.maxRetries ?? 2;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
     this.sleep = options.sleep ?? defaultSleep;
   }
@@ -77,19 +98,7 @@ export class SmartJobsClient {
     return this.requestCount;
   }
 
-  private async request(url: string, body?: Record<string, string>): Promise<string> {
-    if (this.requestCount >= this.maxRequests) {
-      throw new SmartJobsRequestError(
-        `request budget of ${this.maxRequests} reached; refusing to continue`,
-      );
-    }
-    // Pace before every request after the first, so a caller cannot skip the
-    // delay by interleaving search and detail calls.
-    if (this.requestCount > 0) {
-      await this.sleep(this.delayMs);
-    }
-    this.requestCount += 1;
-
+  private async attempt(url: string, body?: Record<string, string>): Promise<string> {
     const response = await this.fetchImpl(url, {
       method: body ? 'POST' : 'GET',
       headers: {
@@ -107,6 +116,55 @@ export class SmartJobsClient {
       );
     }
     return response.text();
+  }
+
+  /**
+   * Whether a failure is worth trying again.
+   *
+   * A dropped connection or a 5xx is the network or the server having a
+   * moment. A 4xx is the server declining, and repeating a request it has
+   * already refused is both useless and rude.
+   */
+  private static isTransient(error: unknown): boolean {
+    if (error instanceof SmartJobsRequestError) {
+      return error.status === undefined || error.status >= 500;
+    }
+    // fetch rejects with a TypeError on a network failure.
+    return error instanceof Error;
+  }
+
+  private async request(url: string, body?: Record<string, string>): Promise<string> {
+    let lastError: unknown;
+
+    // One try plus two retries. A single dropped connection used to end the
+    // whole paging walk and leave most of the portal unread, which made a
+    // transient network blip look like the source running out of results.
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      if (this.requestCount >= this.maxRequests) {
+        throw new SmartJobsBudgetReached(this.maxRequests);
+      }
+      // Pace before every request after the first, so a caller cannot skip the
+      // delay by interleaving search and detail calls. A retry waits longer
+      // each time, because the polite response to a server having trouble is
+      // to ask less often rather than to try harder.
+      if (this.requestCount > 0) {
+        await this.sleep(this.delayMs * (attempt + 1));
+      }
+      // Retries are real requests and count against the budget, so a failing
+      // host cannot be hammered under cover of the ceiling.
+      this.requestCount += 1;
+
+      try {
+        return await this.attempt(url, body);
+      } catch (error) {
+        if (!SmartJobsClient.isTransient(error)) throw error;
+        lastError = error;
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new SmartJobsRequestError(`Smart Jobs request failed for ${url}`);
   }
 
   /** The first page of results, which also carries the total and the cursor. */

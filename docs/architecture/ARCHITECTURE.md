@@ -14,7 +14,7 @@ constitution disagree, the constitution wins.
   ├── JSA IVI    ACTIVE ──▶ integrations/jsa       statistics, CC BY 4.0
   ├── ABS ASGS   ACTIVE ──▶ ingestion/geography    boundaries, CC BY 4.0
   ├── Adzuna     ACTIVE ──▶ integrations/adzuna    listings only, no aggregates
-  ├── QLD       PENDING ──▶ integrations/smartjobs-qld   built, not ingested
+  ├── QLD        ACTIVE ──▶ integrations/smartjobs-qld   listings + aggregates
   └── Synthetic     DEV ──▶ integrations/synthetic never in production
                                   │
                                   ▼
@@ -144,10 +144,13 @@ divide the product rather than open it:
 - **The bar is a gate, not a note.** `canPublishDerivedAggregates()` decides it
   once, `listRegionTotals` refuses any source that fails it, and an exact-list
   test fails if a later edit flips a flag.
-- **Queensland Smart Jobs is verified and permits both**, which is what makes
-  it worth wiring: it is the only live listing source found that permits
-  republication and aggregation together. The adapter exists; nothing ingests
-  it yet.
+- **Queensland Smart Jobs is verified, active and permits both.** It is the
+  only live listing source found that permits republication and aggregation
+  together, which is what made it worth crawling. Activated 2026-09-01, and
+  744 listings are held; see [milestone 13b](../milestones/13b-smartjobs-activation.md).
+  What the licence permits and what a figure means stay separate questions:
+  these are Queensland Government vacancies, never the Queensland labour
+  market.
 - **The synthetic source stays out of production**, held there by five
   independent mechanisms.
 
@@ -217,7 +220,9 @@ authorized access.
 
 ## Current status
 
-Two surfaces are live: job search over Adzuna listings, and the regional vacancy
-map over JSA IVI. Both render on the server and ship neither a map library nor a
-search runtime to the browser. How the system reached this shape is recorded in
+Two surfaces are live: job search over Adzuna and Queensland Smart Jobs
+listings, and the regional vacancy map over JSA IVI. Both render on the server
+and ship neither a map library nor a search runtime to the browser. Each listing
+carries what its advertisement says about visa sponsorship, quoted rather than
+characterised (milestone 17a). How the system reached this shape is recorded in
 [milestones/](../milestones/).

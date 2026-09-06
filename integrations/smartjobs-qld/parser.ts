@@ -94,21 +94,39 @@ function splitTitleAndEmployer(text: string): { title: string; employer: string 
   };
 }
 
+/**
+ * The two shapes a result link takes.
+ *
+ * The portal mixes them within one page: a query-string form carrying
+ * `in_jnCounter`, and a vanity path such as `/jobs/QLD-QLD-PTCAP2026`. They
+ * are the same kind of listing and the detail pages are identical, so both are
+ * followed.
+ *
+ * Matching only the first cost about 40% of the rows on a deep page. They were
+ * dropped in silence, which read as the portal running out of results rather
+ * than as a parser that could not see them, and it made the whole source look
+ * an order of magnitude smaller than it is.
+ */
+const RESULT_LINK =
+  /<a\s+href="((?:jncustomsearch\.viewFullSingle\?|\/jobs\/)[^"]*)"[^>]*>([\s\S]*?)<\/a>/i;
+
 function parseRow(li: string): SmartJobsSearchRow | null {
-  const link = li.match(
-    /<a\s+href="(jncustomsearch\.viewFullSingle\?[^"]*)"[^>]*>([\s\S]*?)<\/a>/i,
-  );
+  const link = li.match(RESULT_LINK);
   if (!link) return null;
 
   const href = decodeEntities(group(link, 1, 'a result link'));
-  const counter = href.match(/in_jnCounter=(\d+)/i);
-  if (!counter) {
-    throw new SmartJobsParseError(`a result link carried no in_jnCounter: ${href}`);
+  // Whichever form the link took, take its identifier for tracing.
+  const rowRef =
+    href.match(/in_jnCounter=(\d+)/i)?.[1] ??
+    href.match(/\/jobs\/([^?#/]+)/i)?.[1] ??
+    null;
+  if (rowRef === null) {
+    throw new SmartJobsParseError(`a result link carried no identifier: ${href}`);
   }
 
   const heading = stripTags(group(link, 2, 'a result heading'));
   if (heading.length === 0) {
-    throw new SmartJobsParseError(`result ${counter[1]} had an empty heading`);
+    throw new SmartJobsParseError(`result ${rowRef} had an empty heading`);
   }
   const { title, employer } = splitTitleAndEmployer(heading);
 
@@ -117,7 +135,7 @@ function parseRow(li: string): SmartJobsSearchRow | null {
   const description = li.match(/<div class="search-description">([\s\S]*?)<\/div>/i);
 
   return {
-    jnCounter: group(counter, 1, 'in_jnCounter'),
+    rowRef,
     title,
     employer,
     employmentText: type ? emptyToNull(stripTags(group(type, 1, 'a type span'))) : null,

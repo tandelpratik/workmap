@@ -222,11 +222,19 @@ index.
   employer figure is indicative, not a population estimate.
 - **These are undocumented internal endpoints.** They can change without notice.
   Any adapter must fail loudly rather than silently.
-- ~~**QLD's listing structure was not mapped.**~~ **Resolved 2026-09-01.** The
-  extraction path was mapped and built: 2,038 live jobs, a form-POST search
-  paged by replaying the server's own cursor, JSON-LD on detail pages carrying
-  the stable `QLD/164089` reference, and a closed region vocabulary. See
-  `integrations/smartjobs-qld/`.
+- ~~**QLD's listing structure was not mapped.**~~ **Resolved, and the source is
+  now live.** The extraction path was mapped and built on 2026-09-01: a
+  form-POST search paged by replaying the server's own cursor, JSON-LD on
+  detail pages carrying a stable `QLD/...` reference, and a closed region
+  vocabulary that needs no free-text geocoding. Activated 2026-09-01, and
+  proved on 2026-09-05, when a run walked 2,118 of the 2,127 rows the portal
+  reported with nothing quarantined.
+
+  Two of our own faults had capped that near 56 rows and are worth carrying
+  forward to any future adapter, because both made the source look far smaller
+  than it is without erroring: a parser that followed only one of the portal's
+  **two** result-link forms, and a client with no retry, so a single dropped
+  connection ended a crawl. See `integrations/smartjobs-qld/` and the register.
 
 ## Bottom line
 

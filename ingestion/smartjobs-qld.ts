@@ -9,6 +9,7 @@ import {
 } from '@/domain/job';
 import {
   SmartJobsClient,
+  SmartJobsBudgetReached,
   SmartJobsRequestError,
 } from '@/integrations/smartjobs-qld/client';
 import { SOURCE_KEY, toNormalizedJob } from '@/integrations/smartjobs-qld/mapper';
@@ -22,6 +23,8 @@ import type {
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import { logger } from '@/lib/logger';
+import { sponsorshipFieldsFor } from './sponsorship';
+import { reapStaleRuns } from './stale-runs';
 import {
   buildGeographyLookup,
   resolveGeographyAtLevel,
@@ -69,6 +72,12 @@ export interface SmartJobsSource {
 export interface SmartJobsIngestOptions {
   /** Hard ceiling on HTTP requests for this run, search and detail together. */
   readonly maxRequests?: number;
+  /**
+   * How many listings to write at a time. Test seam: the property worth
+   * proving is that an interrupted run keeps what it had already written, and
+   * demonstrating it needs a batch smaller than the fixture.
+   */
+  readonly writeBatchSize?: number;
   /** How old a stored listing may be before its detail page is read again. */
   readonly refreshAfterDays?: number;
   readonly expireAfterDays?: number;
@@ -99,6 +108,14 @@ export interface SmartJobsIngestOutcome {
   readonly expired: number;
   /** Regions the portal named that the adapter does not map. */
   readonly unknownRegions: readonly string[];
+  /**
+   * Whether the run stopped because it spent its request budget.
+   *
+   * Reported so a partial run is legible as partial. Without it, a run that
+   * covered a tenth of the portal looks the same as one that covered all of
+   * it, and the difference matters when reading how fresh the listings are.
+   */
+  readonly stoppedOnBudget: boolean;
 }
 
 interface Caches {
@@ -273,6 +290,10 @@ function rowFor(job: NormalizedJob, caches: Caches, contentHash: string, now: Da
     description: job.description,
     descriptionFormat: job.descriptionFormat,
     descriptionIsExcerpt: job.descriptionIsExcerpt,
+    // Derived here, beside the description it reads, so the finding cannot
+    // drift from the text it describes. Recomputed on every write for the same
+    // reason: an advertisement that is edited must not keep an old verdict.
+    ...sponsorshipFieldsFor(job),
     companyId: companyKey === '' ? null : (caches.companies.get(companyKey) ?? null),
     locationId: locationKey === '' ? null : (caches.locations.get(locationKey) ?? null),
     employmentType: job.employmentType,
@@ -389,6 +410,15 @@ async function expireStale(database: Database, expireAfterDays: number): Promise
   return result.count;
 }
 
+/**
+ * How many listings are written at a time.
+ *
+ * Small enough that a dropped connection costs at most this many fetches, and
+ * large enough that the write is not a round trip per listing. The database is
+ * in another region, so each flush is worth several hundred milliseconds.
+ */
+const WRITE_BATCH_SIZE = 25;
+
 export async function ingestSmartJobsQld(
   options: SmartJobsIngestOptions = {},
 ): Promise<Result<SmartJobsIngestOutcome, Failure>> {
@@ -436,6 +466,12 @@ export async function ingestSmartJobsQld(
   // --- Run -----------------------------------------------------------------
   let runId: string;
   try {
+    // A run that died without recording it holds the single-active-run lock
+    // forever. Released here rather than requiring someone to clear a row by
+    // hand, because the failure that causes it is a dropped connection, which
+    // is routine on a database that suspends when idle.
+    await reapStaleRuns(database, { sourceKey: SOURCE_KEY, dataset: DATASET });
+
     const run = await database.ingestionRun.create({
       data: {
         sourceKey: SOURCE_KEY,
@@ -461,6 +497,8 @@ export async function ingestSmartJobsQld(
   let detailsFetched = 0;
   let skippedFresh = 0;
   let quarantined = 0;
+  /** Whether the run ended because it spent its budget rather than finished. */
+  let stoppedOnBudget = false;
   let created = 0;
   let updated = 0;
   let unchanged = 0;
@@ -502,18 +540,30 @@ export async function ingestSmartJobsQld(
         requests += 1;
         rows.push(...page.rows);
       }
+      // Pages remain but the budget does not. Same event as the client's own
+      // ceiling, so it is recorded the same way: the run is partial, and says
+      // so, rather than looking like a complete crawl of a small portal.
+      if (page.nextPageForm !== null) stoppedOnBudget = true;
     } catch (error) {
-      // A transport or parse failure part way through does not discard the
-      // pages that succeeded. The run records it and works with what it has.
-      await database.ingestionError.create({
-        data: {
-          runId,
-          sourceKey: SOURCE_KEY,
-          kind: error instanceof SmartJobsParseError ? 'VALIDATION' : 'TRANSPORT',
-          message: error instanceof Error ? error.message : String(error),
-        },
-      });
-      quarantined += 1;
+      // Reaching our own ceiling is how a bounded run is meant to end. It
+      // leaves the remaining pages for the next run and is not a fault of the
+      // source, so it is not recorded as one: a quarantine record has to mean
+      // "this data was wrong", or the number stops being worth watching.
+      if (error instanceof SmartJobsBudgetReached) {
+        stoppedOnBudget = true;
+      } else {
+        // A transport or parse failure part way through does not discard the
+        // pages that succeeded. The run records it and works with what it has.
+        await database.ingestionError.create({
+          data: {
+            runId,
+            sourceKey: SOURCE_KEY,
+            kind: error instanceof SmartJobsParseError ? 'VALIDATION' : 'TRANSPORT',
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+        quarantined += 1;
+      }
     }
 
     seen = rows.length;
@@ -568,32 +618,60 @@ export async function ingestSmartJobsQld(
     }
 
     // --- Detail pages, within the budget -----------------------------------
-    const jobs: NormalizedJob[] = [];
+    //
+    // Written in batches as they are fetched, not accumulated and written at
+    // the end. A run that held everything in memory lost all of it when the
+    // connection dropped, which happened twice: an hour of polite crawling
+    // produced nothing, and the next run had to fetch the same pages again.
+    // Committing as it goes means an interrupted run still leaves its work
+    // behind, and the next run skips what is already stored.
+    const pending: NormalizedJob[] = [];
+
+    const batchSize = Math.max(1, options.writeBatchSize ?? WRITE_BATCH_SIZE);
+
+    const flush = async (): Promise<void> => {
+      if (pending.length === 0) return;
+      const counts = await writeJobs(database, caches, pending, unknownRegions);
+      created += counts.created;
+      updated += counts.updated;
+      unchanged += counts.unchanged;
+      pending.length = 0;
+    };
+
     for (const row of toFetch) {
-      if (requests >= maxRequests) break;
+      if (requests >= maxRequests) {
+        stoppedOnBudget = true;
+        break;
+      }
 
       try {
         const detail = await client.fetchJobDetail(row.detailUrl);
         requests += 1;
         detailsFetched += 1;
-        jobs.push(toNormalizedJob(row, detail));
+        pending.push(toNormalizedJob(row, detail));
+        if (pending.length >= batchSize) await flush();
       } catch (error) {
+        // No request was made, so it does not count against the budget, and
+        // there is nothing left to spend: stop rather than walk the remaining
+        // rows only to fail on each one.
+        if (error instanceof SmartJobsBudgetReached) {
+          stoppedOnBudget = true;
+          break;
+        }
         requests += 1;
         if (
           error instanceof SmartJobsRequestError ||
           error instanceof SmartJobsParseError
         ) {
-          await quarantine(`${row.detailUrl}: ${error.message}`, row.jnCounter);
+          await quarantine(`${row.detailUrl}: ${error.message}`, row.rowRef);
           continue;
         }
         throw error;
       }
     }
 
-    const counts = await writeJobs(database, caches, jobs, unknownRegions);
-    created = counts.created;
-    updated = counts.updated;
-    unchanged = counts.unchanged;
+    // Whatever the loop ended on, budget or exhaustion, the remainder is kept.
+    await flush();
 
     expired = await expireStale(database, expireAfterDays);
 
@@ -609,18 +687,38 @@ export async function ingestSmartJobsQld(
       },
     });
   } catch (error) {
-    await database.ingestionRun.update({
-      where: { id: runId },
-      data: {
-        status: 'FAILED',
-        finishedAt: new Date(),
-        recordsSeen: seen,
-        recordsWritten: created + updated,
-        recordsSkipped: unchanged + skippedFresh,
-        recordsQuarantined: quarantined,
-        error: error instanceof Error ? error.message : String(error),
-      },
-    });
+    // Recording the failure needs the database, and the most likely reason a
+    // long run fails is that the database went away. When that happens this
+    // update throws too, and its error replaces the real one: the operator is
+    // told the connection dropped while trying to write, and never told what
+    // the run was actually doing.
+    //
+    // So the bookkeeping is allowed to fail quietly and the original error is
+    // always the one that propagates. The row is left RUNNING, which the stale
+    // run reaper releases on the next attempt.
+    try {
+      await database.ingestionRun.update({
+        where: { id: runId },
+        data: {
+          status: 'FAILED',
+          finishedAt: new Date(),
+          recordsSeen: seen,
+          recordsWritten: created + updated,
+          recordsSkipped: unchanged + skippedFresh,
+          recordsQuarantined: quarantined,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    } catch (bookkeeping) {
+      logger.warn('Could not record the failure of this run', {
+        runId,
+        // Both are reported: which one is the cause matters when reading this
+        // later, and the second is usually the same outage as the first.
+        cause: error instanceof Error ? error.message : String(error),
+        while_recording:
+          bookkeeping instanceof Error ? bookkeeping.message : String(bookkeeping),
+      });
+    }
     throw error;
   }
 
@@ -637,6 +735,7 @@ export async function ingestSmartJobsQld(
     quarantined,
     expired,
     unknownRegions: [...unknownRegions].sort(),
+    stoppedOnBudget,
   };
 
   logger.info('Smart Jobs ingestion complete', {
@@ -650,6 +749,7 @@ export async function ingestSmartJobsQld(
     updated,
     quarantined,
     unknownRegions: outcome.unknownRegions.length,
+    stoppedOnBudget,
   });
 
   return ok(outcome);

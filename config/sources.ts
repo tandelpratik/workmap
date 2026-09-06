@@ -126,10 +126,13 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     key: 'smartjobs-qld',
     displayName: 'Smart Jobs and Careers',
     kind: 'JOB_LISTING',
-    // Permitted, and the adapter and ingestion path are both built and
-    // tested, but the live portal has never been crawled. Activating this is a
-    // decision to start, so it stays PENDING until it is taken.
-    activation: 'PENDING',
+    // Activated 2026-09-01 by the product owner. The licence was verified on
+    // 2026-08-31 (CC BY 3.0 AU, declared in the pages' own AGLS metadata), the
+    // adapter and ingestion path were built and tested first, and the crawler
+    // paces itself because the portal publishes no rate limit. This is the
+    // only live listing source the product is licensed to both republish and
+    // aggregate.
+    activation: 'ACTIVE',
     complianceStatus: 'VERIFIED',
     attributionRequired: true,
     // CC BY requires attribution, a licence notice, a link and an indication

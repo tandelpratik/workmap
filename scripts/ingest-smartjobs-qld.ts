@@ -12,9 +12,9 @@ import { ingestSmartJobsQld } from '@/ingestion/smartjobs-qld';
  * Raising the budget is a decision about someone else's server, so it is a
  * flag rather than a constant.
  *
- * The source must be ACTIVE and VERIFIED before this does anything. It is
- * PENDING until the product owner activates it, and the gate refuses rather
- * than warns.
+ * The source must be ACTIVE and VERIFIED before this does anything. It has
+ * been both since 2026-09-01, and the gate refuses rather than warns if that
+ * ever changes.
  */
 try {
   process.loadEnvFile('.env');
