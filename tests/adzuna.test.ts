@@ -11,6 +11,7 @@ import {
   salaryPeriods,
   type NormalizedJob,
 } from '@/domain/job';
+import { sponsorshipSignals } from '@/domain/sponsorship';
 import { canPublishDerivedAggregates } from '@/domain/source';
 import { findSourceDescriptor } from '@/config/sources';
 import {
@@ -91,6 +92,7 @@ describe('job domain and persistence enums agree', () => {
     ['SalaryPeriod', salaryPeriods, prismaEnums.SalaryPeriod],
     ['SalaryBasis', salaryBases, prismaEnums.SalaryBasis],
     ['JobStatus', jobStatuses, prismaEnums.JobStatus],
+    ['SponsorshipSignal', sponsorshipSignals, prismaEnums.SponsorshipSignal],
   ];
 
   for (const [name, domainValues, prismaEnum] of cases) {

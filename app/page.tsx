@@ -2,7 +2,9 @@ import { getAdzunaCredentials } from '@/config/env';
 import { lastRetrievedAt, searchJobs } from '@/db/repositories/job';
 import { AdzunaAttribution } from '@/components/adzuna-attribution';
 import { JobList } from '@/components/job-list';
+import { SponsorshipKey } from '@/components/sponsorship-badge';
 import { JobSearchForm } from '@/components/job-search-form';
+import { sponsorshipSignals } from '@/domain/sponsorship';
 import { SiteHeader } from '@/components/site-header';
 
 /**
@@ -40,11 +42,16 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
 function pageHref(params: {
   q?: string | undefined;
   where?: string | undefined;
+  sponsorship?: string | undefined;
   page: number;
 }): string {
   const search = new URLSearchParams();
   if (params.q) search.set('q', params.q);
   if (params.where) search.set('where', params.where);
+  // Carried through paging. Dropping it would quietly widen the result set on
+  // page two, so a reader filtering for sponsorship would find listings that
+  // do not match without being told the filter had gone.
+  if (params.sponsorship) search.set('sponsorship', params.sponsorship);
   if (params.page > 1) search.set('page', String(params.page));
   const query = search.toString();
   return query === '' ? '/' : `/?${query}`;
@@ -58,6 +65,13 @@ export default async function HomePage({
   const params = await searchParams;
   const text = first(params['q']);
   const location = first(params['where']);
+  // Bounded against the vocabulary rather than passed through: a query string
+  // is external input, and an unrecognised value shows every listing rather
+  // than erroring, which is how the other filters behave.
+  const requestedSponsorship = first(params['sponsorship']);
+  const sponsorship = sponsorshipSignals.find(
+    (signal) => signal === requestedSponsorship,
+  );
   const requestedPage = Number(first(params['page']) ?? '1');
   const page = Number.isFinite(requestedPage)
     ? Math.max(1, Math.trunc(requestedPage))
@@ -66,6 +80,7 @@ export default async function HomePage({
   const result = await searchJobs({
     ...(text ? { text } : {}),
     ...(location ? { location } : {}),
+    ...(sponsorship ? { sponsorship } : {}),
     page,
     pageSize: PAGE_SIZE,
   });
@@ -89,7 +104,7 @@ export default async function HomePage({
           </p>
         </header>
 
-        <JobSearchForm text={text} location={location} />
+        <JobSearchForm text={text} location={location} sponsorship={sponsorship} />
 
         {!result.ok ? (
           <Notice title="Search is unavailable">
@@ -167,13 +182,46 @@ export default async function HomePage({
 
             <JobList jobs={result.value.jobs} />
 
+            {/*
+              What the sponsorship labels mean, shown once rather than repeated
+              on every listing. "Not known" carries most of the weight: it is
+              on the majority of listings, because most advertisements reach us
+              as excerpts, and a reader has to understand it is a limit of what
+              we hold rather than something the employer said.
+            */}
+            <section className="border-rule mt-10 border-t pt-6">
+              <h2 className="text-ink-faint font-mono text-xs tracking-widest uppercase">
+                About the sponsorship labels
+              </h2>
+              <SponsorshipKey />
+              <p className="text-ink-faint max-w-measure mt-4 text-xs leading-relaxed">
+                These labels report what each advertisement says, quoted from the
+                advertisement itself. They are not advice about any person&rsquo;s visa
+                position or eligibility. For that, see the{' '}
+                <a
+                  href="https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ink hover:text-accent underline underline-offset-4"
+                >
+                  Department of Home Affairs
+                </a>
+                .
+              </p>
+            </section>
+
             <nav
               className="mt-8 flex items-center justify-between text-sm"
               aria-label="Pagination"
             >
               {page > 1 ? (
                 <a
-                  href={pageHref({ q: text, where: location, page: page - 1 })}
+                  href={pageHref({
+                    q: text,
+                    where: location,
+                    sponsorship,
+                    page: page - 1,
+                  })}
                   className="text-ink hover:text-accent underline underline-offset-4"
                 >
                   Previous
@@ -187,7 +235,12 @@ export default async function HomePage({
               </span>
               {page * result.value.pageSize < result.value.total ? (
                 <a
-                  href={pageHref({ q: text, where: location, page: page + 1 })}
+                  href={pageHref({
+                    q: text,
+                    where: location,
+                    sponsorship,
+                    page: page + 1,
+                  })}
                   className="text-ink hover:text-accent underline underline-offset-4"
                 >
                   Next

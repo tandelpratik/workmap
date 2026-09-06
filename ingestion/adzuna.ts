@@ -19,6 +19,7 @@ import { ADZUNA_SOURCE_KEY, mapSearchResponse } from '@/integrations/adzuna/mapp
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import { logger } from '@/lib/logger';
+import { sponsorshipFieldsFor } from './sponsorship';
 import {
   australianStateCode,
   buildGeographyLookup,
@@ -239,6 +240,10 @@ function rowFor(job: NormalizedJob, caches: Caches, contentHash: string, now: Da
     description: job.description,
     descriptionFormat: job.descriptionFormat,
     descriptionIsExcerpt: job.descriptionIsExcerpt,
+    // Derived here, beside the description it reads, so the finding cannot
+    // drift from the text it describes. Recomputed on every write for the same
+    // reason: an advertisement that is edited must not keep an old verdict.
+    ...sponsorshipFieldsFor(job),
     companyId: companyKey === null ? null : (caches.companies.get(companyKey) ?? null),
     locationId: locationKey === null ? null : (caches.locations.get(locationKey) ?? null),
     sourceCategoryTag: job.category?.tag ?? null,

@@ -104,6 +104,21 @@ enum GeographyLevel {
   @@map("geography_level")
 }
 
+/// What an advertisement says about visa sponsorship.
+///
+/// This records wording, never eligibility. INDETERMINATE exists because most
+/// listings arrive as excerpts: silence in a fragment is not silence in the
+/// advertisement, and reporting it as NOT_MENTIONED would turn a gap in our
+/// data into a claim about someone's job advertisement.
+enum SponsorshipSignal {
+  MENTIONED
+  EXCLUDED
+  NOT_MENTIONED
+  INDETERMINATE
+
+  @@map("sponsorship_signal")
+}
+
 enum JobStatus {
   ACTIVE
   EXPIRED
@@ -427,6 +442,16 @@ model Job {
   /// complete listing misrepresents an employer's advertisement.
   descriptionIsExcerpt Boolean @default(false) @map("description_is_excerpt")
 
+  /// What this advertisement says about visa sponsorship, and the words that
+  /// said it. Derived from the description above, so it is recomputed whenever
+  /// that changes rather than being a separate assertion about the employer.
+  ///
+  /// The evidence is not decoration. A label without the wording behind it is
+  /// our claim rather than the employer's statement, and it must be shown
+  /// beside the label so a reader can check it against the original.
+  sponsorshipSignal   SponsorshipSignal @default(INDETERMINATE) @map("sponsorship_signal")
+  sponsorshipEvidence Json?             @map("sponsorship_evidence")
+
   companyId String?  @map("company_id")
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -497,6 +522,7 @@ model Job {
   @@index([contentHash])
   @@index([isSynthetic])
   @@index([status, lastSeenAt])
+  @@index([sponsorshipSignal])
   @@index([occupationId])
   @@index([locationId])
   @@index([companyId])

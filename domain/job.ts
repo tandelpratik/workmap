@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { SponsorshipFinding } from './sponsorship';
 
 /**
  * Job listing contracts (ADR-0001).
@@ -128,6 +129,12 @@ export interface JobListing {
   readonly categoryLabel: string | null;
   readonly applyUrl: string;
   readonly postedAt: Date | null;
+  /**
+   * What this advertisement said about visa sponsorship, and the words that
+   * said it. Carried on the listing because it is only ever shown beside the
+   * listing it was read from, never as a standalone claim about an employer.
+   */
+  readonly sponsorship: SponsorshipFinding;
   readonly sourceKey: string;
   readonly retrievedAt: Date;
 }

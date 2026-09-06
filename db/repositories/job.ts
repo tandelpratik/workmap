@@ -9,6 +9,7 @@ import type {
   SalaryBasis,
   SalaryPeriod,
 } from '@/domain/job';
+import type { SponsorshipEvidence, SponsorshipSignal } from '@/domain/sponsorship';
 
 /**
  * Job repository.
@@ -34,6 +35,14 @@ export interface JobSearchQuery {
   readonly location?: string;
   readonly category?: string;
   readonly employmentType?: EmploymentType;
+  /**
+   * Restrict to advertisements carrying a particular sponsorship finding.
+   *
+   * A filter over what advertisements say, not over who may apply. Filtering
+   * to MENTIONED narrows the list to advertisements that mention sponsorship;
+   * it does not assert that anyone is eligible for anything.
+   */
+  readonly sponsorship?: SponsorshipSignal;
   readonly page?: number;
   readonly pageSize?: number;
 }
@@ -51,6 +60,9 @@ const MAX_PAGE_SIZE = 50;
 interface JobRow {
   id: string;
   title: string;
+  sponsorshipSignal: string;
+  /** JSON, so its shape is checked on the way out. See parseEvidence. */
+  sponsorshipEvidence: unknown;
   description: string | null;
   descriptionIsExcerpt: boolean;
   employmentType: string | null;
@@ -104,10 +116,38 @@ function contractLabel(value: string | null): string | null {
   return normalised.charAt(0).toUpperCase() + normalised.slice(1);
 }
 
+/**
+ * Reads stored evidence back, defensively.
+ *
+ * The column is JSON, so its shape is not guaranteed by the database. Anything
+ * unexpected yields an empty list rather than a partial quotation: showing a
+ * mangled excerpt as an employer's words is worse than showing none.
+ */
+function parseEvidence(value: unknown): readonly SponsorshipEvidence[] {
+  if (!Array.isArray(value)) return [];
+  const out: SponsorshipEvidence[] = [];
+  for (const item of value) {
+    if (item === null || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const phrase = record['phrase'];
+    const context = record['context'];
+    if (typeof phrase !== 'string' || typeof context !== 'string') continue;
+    out.push({ phrase, context });
+  }
+  return out;
+}
+
 function toDomain(row: JobRow): JobListing {
   return {
     id: row.id,
     title: row.title,
+    sponsorship: {
+      signal: row.sponsorshipSignal as SponsorshipSignal,
+      // Stored as JSON, so it is validated on the way out rather than trusted.
+      // A malformed value yields no evidence, which shows the label without a
+      // quotation instead of rendering something we cannot vouch for.
+      evidence: parseEvidence(row.sponsorshipEvidence),
+    },
     companyName: row.company?.name ?? null,
     locationLabel: row.location?.rawText ?? null,
     stateCode: row.location?.stateCode ?? null,
@@ -126,6 +166,8 @@ function toDomain(row: JobRow): JobListing {
 
 const jobSelect = {
   id: true,
+  sponsorshipSignal: true,
+  sponsorshipEvidence: true,
   title: true,
   description: true,
   descriptionIsExcerpt: true,
@@ -172,6 +214,7 @@ export async function searchJobs(
     ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
     ...(query.category ? { sourceCategoryTag: query.category } : {}),
     ...(query.employmentType ? { employmentType: query.employmentType } : {}),
+    ...(query.sponsorship ? { sponsorshipSignal: query.sponsorship } : {}),
     ...(location
       ? {
           location: {

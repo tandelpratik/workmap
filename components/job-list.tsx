@@ -1,4 +1,5 @@
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
+import { SponsorshipBadge } from './sponsorship-badge';
 import { JobsworthLabel } from './adzuna-attribution';
 
 /**
@@ -100,6 +101,18 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
                 {job.description}
               </p>
             )}
+
+            {/*
+              What the advertisement said about sponsorship, with the wording
+              that said it. Placed above the metadata rather than among it,
+              because a quotation from an employer is not a tag.
+            */}
+            <div className="mt-3">
+              <SponsorshipBadge
+                signal={job.sponsorship.signal}
+                evidence={job.sponsorship.evidence}
+              />
+            </div>
 
             <p className="text-ink-faint mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs tracking-wide uppercase">
               {job.employmentType === null ? null : (
