@@ -1,0 +1,70 @@
+# Scheduled Queensland Smart Jobs ingestion.
+#
+# Why this runs here and not on Vercel Cron, which schedules every other
+# ingestion in this project: a function on the Hobby plan is capped at 60
+# seconds, and the crawler paces itself at 1.5 seconds a request because the
+# portal publishes no rate limit. That is roughly 40 requests, or 38 listings,
+# a day. The portal advertises about 2,127 vacancies and stored listings are
+# refreshed after a week, so a 60 second daily run would never converge: it
+# would go stale faster than it filled.
+#
+# The pacing is not the thing to change. It is a decision about how much
+# traffic to send a public service that never asked for any, so the scheduler
+# moved instead.
+#
+# This workflow needs one secret, DATABASE_URL, the pooled Neon connection
+# string. It runs only on a schedule or a manual dispatch from the default
+# branch, so a pull request cannot reach it.
+name: Ingest Queensland Smart Jobs
+
+on:
+  schedule:
+    # 16:00 UTC is 02:00 in Brisbane. A crawl this long belongs in the hours
+    # when the people who depend on the portal are not using it.
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      max_requests:
+        description: 'Hard ceiling on HTTP requests for this run'
+        required: false
+        default: '500'
+      delay_ms:
+        description: 'Pause between requests, in milliseconds. Raise it, never lower it.'
+        required: false
+        default: '1500'
+
+# One crawl at a time. The single-active-run lock in the database enforces this
+# as well, and the stale-run reaper recovers from a killed process, but a queue
+# here means the second run waits rather than being refused.
+concurrency:
+  group: ingest-smartjobs-qld
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    # A 500 request run takes about 40 minutes against the live portal. The
+    # timeout is a guard against a hung request, not a target.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Crawl
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_ENV: production
+          LOG_LEVEL: info
+        run: |
+          npm run qld:ingest -- \
+            --max-requests=${{ inputs.max_requests || '500' }} \
+            --delay-ms=${{ inputs.delay_ms || '1500' }}

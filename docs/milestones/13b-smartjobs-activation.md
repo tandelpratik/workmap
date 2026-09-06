@@ -150,18 +150,25 @@ must not be read as the whole portal until several more runs have gone by.
 
 ## Open issues
 
-1. **Nothing schedules the Queensland crawl.** It is a command. Ninety minutes
-   does not fit a Vercel function, so scheduling means either chunked runs
-   driven by the request budget, which the ingestion already supports, or
-   somewhere else to run it. This is the next real decision for this source.
-2. **Deduplication has not met the Queensland corpus.** Milestone 15 recorded it
-   as untested against real duplicates, and it still is: `npm run jobs:dedupe`
-   has not been run since Queensland landed. There are zero duplicate groups
-   across 1,244 listings, which is a fact about nothing having run rather than a
-   finding.
+1. ~~**Nothing schedules the Queensland crawl.**~~ **Resolved 2026-09-06.** It
+   runs daily at 16:00 UTC from GitHub Actions, not Vercel Cron: a Hobby
+   function is capped at 60 seconds, which at 1.5 seconds a request is about 38
+   listings a day against a portal of 2,127 whose stored copies go stale after
+   a week. It would never converge. The pacing was not the thing to change, so
+   the scheduler moved. See
+   [`.github/workflows/ingest-smartjobs-qld.yml`](../../.github/workflows/ingest-smartjobs-qld.yml)
+   and the [deployment runbook](../DEPLOYMENT.md). It needs a `DATABASE_URL`
+   repository secret before its first run.
+2. ~~**Deduplication has not met the Queensland corpus.**~~ **Run 2026-09-06:**
+   1,244 listings examined across two live sources, zero groups. The first real
+   cross-source check, and the answer is that these two corpora do not overlap
+   yet. See [milestone 15](15-deduplication.md).
 3. **Nine rows are unaccounted for**, 2,118 walked against 2,127 reported. Small
    enough to be listings that expired mid-crawl, which is expected on a live
    portal, but that has not been shown.
+4. **The corpus is a third of the portal.** 744 listings of about 2,127. Each
+   scheduled run advances it, and the runbook records how to fill it in one
+   pass instead of waiting.
 
 ## Sign-off
 

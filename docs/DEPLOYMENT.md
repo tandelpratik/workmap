@@ -127,6 +127,55 @@ Adzuna's own allowance is the harder limit: 25 requests a minute, 250 a day,
 1,000 a week and 2,500 a month. A daily run of 5 requests uses 150 a month, so
 there is room to increase frequency or breadth later.
 
+### Queensland Smart Jobs, which does not fit a Vercel function
+
+The Queensland crawl runs from GitHub Actions instead, daily at 16:00 UTC,
+which is 02:00 in Brisbane:
+[`.github/workflows/ingest-smartjobs-qld.yml`](../.github/workflows/ingest-smartjobs-qld.yml).
+
+The arithmetic is why. The portal publishes no rate limit, so the client paces
+itself at 1.5 seconds a request, and a Hobby function is capped at 60 seconds.
+That is about 40 requests, or 38 listings, a day, against a portal advertising
+roughly 2,127 vacancies whose stored copies are refreshed after a week. A
+60 second daily run would go stale faster than it filled. Lowering the pacing
+would fix the arithmetic and is not on the table: it is a decision about how
+much traffic to send a public service that never asked for any.
+
+A run costs two requests per new listing and none at all for one already held
+and still fresh, so the cost falls sharply once the corpus is built:
+
+| Phase                     | Requests per run | Wall clock  |
+| ------------------------- | ---------------- | ----------- |
+| Filling, from empty       | ~2,200 in total  | ~90 minutes |
+| Scheduled run, default    | 500              | ~40 minutes |
+| Steady state, once filled | ~410             | ~35 minutes |
+
+Steady state is 107 search pages plus a detail page for each listing that is
+new or older than the seven day refresh window, which is about a seventh of the
+portal a day.
+
+**Setup.** The workflow needs one repository secret, `DATABASE_URL`, holding the
+pooled Neon connection string. Nothing else: the crawler needs no credentials
+of its own, because the portal is public and unauthenticated. Actions minutes
+are free on a public repository and drawn from the 2,000 minute monthly
+allowance on a private one, where a daily 40 minute run uses roughly 1,200.
+
+**Filling the corpus** takes several runs, or one manual run with a larger
+budget. Use the workflow dispatch, or run it locally:
+
+```
+npm run qld:ingest -- --max-requests=2500
+```
+
+Each run reports `stoppedOnBudget`, which distinguishes a run that covered the
+portal from one that ran out of budget part way. Runs are resumable by
+construction: listings are written in batches as they are fetched, and anything
+already stored costs no request on the next pass.
+
+**Do not schedule this on Vercel as well.** Two schedulers writing one source
+would collide, and the second would simply be refused by the single-active-run
+lock.
+
 ## Health
 
 `GET /api/health` reports build identity, environment, database reachability and

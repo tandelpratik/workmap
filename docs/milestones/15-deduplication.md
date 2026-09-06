@@ -99,9 +99,14 @@ release.
 
 ## Open issues
 
-1. **Untested against real duplicates.** There are none yet: Queensland has not
-   been crawled. The first live run is where these rules meet reality, and the
-   counts it reports should be read before trusting them.
+1. ~~**Untested against real duplicates.**~~ **First cross-source run,
+   2026-09-06:** 1,244 listings from two live sources, zero groups, nothing
+   released. So the rules have now met real data from more than one provider
+   and asserted nothing, which is the correct answer for these two corpora:
+   500 Adzuna listings drawn from the whole country against 744 Queensland
+   Government vacancies. It is evidence that the same-source guard and the
+   all-three-components rule hold on live rows, and it is not yet evidence that
+   a true duplicate would be caught. That needs an overlap to exist.
 2. **No review tooling.** The prompt asks for it. Groups are inspectable in the
    database and every decision carries its signature, but nothing surfaces them
    for a human to confirm or reject. That belongs with the admin milestone.
