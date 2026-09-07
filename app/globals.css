@@ -226,6 +226,25 @@ body {
 }
 
 /*
+ * Native select popups.
+ *
+ * The option list is drawn by the browser, not by the page, and it takes its
+ * colours from the control. A select left transparent reads to Chrome as
+ * author-styled: it stops painting the scheme-aware native popup, drops the
+ * list on white, and lets the options inherit the page's ink, which in the
+ * night edition is near-white. White on white, and every choice but the
+ * highlighted one invisible.
+ *
+ * So both halves are stated. The controls carry a real background in their own
+ * markup, and the options carry theirs here, because no utility class can
+ * reach an <option>.
+ */
+option {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/*
  * Map region links.
  *
  * The global focus outline is an outline, and browsers paint outlines on SVG

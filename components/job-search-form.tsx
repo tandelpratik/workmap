@@ -21,8 +21,15 @@ import { FieldLabel } from '@/components/ui/label';
  * between four controls rather than the full width it appeared to ask for.
  */
 
-/** Shared by both text inputs and the select, so they sit on one baseline. */
-const control = 'text-ink mt-1 block h-8 w-full bg-transparent text-base outline-none';
+/**
+ * Shared by both text inputs and the select, so they sit on one baseline.
+ *
+ * The ground is stated rather than left transparent. It is the same colour as
+ * the cell behind it, so nothing changes to look at, but a transparent form
+ * control is what makes a browser paint the select's option list itself, and
+ * it gets the night edition wrong. See the note in globals.css.
+ */
+const control = 'text-ink bg-paper mt-1 block h-8 w-full text-base outline-none';
 
 export function JobSearchForm({
   text,

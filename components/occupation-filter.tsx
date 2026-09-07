@@ -86,7 +86,8 @@ export function OccupationFilter({
           id="occupation"
           name="occupation"
           defaultValue={selected}
-          className="text-ink mt-1 block h-8 w-full bg-transparent text-base outline-none"
+          /* Not transparent: see the select note in globals.css. */
+          className="text-ink bg-paper mt-1 block h-8 w-full text-base outline-none"
         >
           {occupations.map((option) => (
             <option key={option.code} value={option.code}>
