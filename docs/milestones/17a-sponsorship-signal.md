@@ -42,8 +42,8 @@ The fourth is the one that makes the other three honest. Adzuna returns a
 snippet rather than the full text of an advertisement, so on those listings the
 absence of a phrase is a gap in our data, not a statement by an employer.
 Collapsing that into `NOT_MENTIONED` would turn our incompleteness into a claim
-about somebody's advertisement, and it is the majority case: 496 of the 1,244
-listings currently stored.
+about somebody's advertisement, and it is every Adzuna listing we hold: 496 of
+the 2,713 stored.
 
 `detectSponsorship` therefore takes `isExcerpt` as a required argument. It is
 not optional because getting it wrong is exactly the failure that matters: the
@@ -118,18 +118,20 @@ verdict.
 
 ## What the current corpus says
 
-Of 1,244 stored listings:
+Of 2,713 stored listings, after the Queensland corpus was filled on 2026-09-07:
 
 | Signal          | Count | Where from                                   |
 | --------------- | ----: | -------------------------------------------- |
-| `MENTIONED`     |     8 | 3 Adzuna, 5 Queensland                       |
+| `MENTIONED`     |     9 | 3 Adzuna, 6 Queensland                       |
 | `EXCLUDED`      |     1 | Adzuna                                       |
-| `NOT_MENTIONED` |   739 | Queensland, whose detail pages are full text |
+| `NOT_MENTIONED` | 2,207 | Queensland, whose detail pages are full text |
 | `INDETERMINATE` |   496 | Adzuna, which sends excerpts                 |
 
-Nine listings in twelve hundred say anything at all about sponsorship. That is
-the honest answer for this corpus, and it is worth reporting plainly rather
-than making the feature look more productive than it is.
+Ten listings in 2,713 say anything at all about sponsorship, and quadrupling
+the corpus barely moved that. It is the honest answer for this corpus and worth
+reporting plainly rather than making the feature look more productive than it
+is. A Queensland Government portal is not where sponsorship offers concentrate,
+which is a fact about the source rather than about the detector.
 
 ## Files changed
 

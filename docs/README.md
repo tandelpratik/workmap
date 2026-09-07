@@ -30,7 +30,7 @@ The product constitution and milestone specifications live in `.claude/`:
 ## Project status
 
 Two surfaces are live. **Jobs** is a working search over ingested
-advertisements from Adzuna and Queensland Smart Jobs, 1,244 of them, each
+advertisements from Adzuna and Queensland Smart Jobs, 2,713 of them, each
 carrying what its advertisement says about visa sponsorship, quoted from the
 advertisement rather than characterised. **Map** draws online job advertisements by region from the July
 2026 JSA IVI release: 50 areas, the eight capitals at GCCSA and the rest of the

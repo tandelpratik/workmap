@@ -398,6 +398,12 @@ async function writeJobs(
  * They are not deleted. An expired advert leaves search but stays on record,
  * because deleting it destroys the first-seen history any later trend work
  * needs (ADR-0005).
+ *
+ * This reads `lastSeenAt`, which the search walk maintains for every listing
+ * the portal still advertises, whether or not the run refetched its detail
+ * page. That is the invariant this depends on: expiry must follow the
+ * employer withdrawing an advertisement, never our own request ceiling. The
+ * caller only invokes it after a complete walk for the same reason.
  */
 async function expireStale(database: Database, expireAfterDays: number): Promise<number> {
   const cutoff = new Date(Date.now() - expireAfterDays * 24 * 60 * 60 * 1000);
@@ -499,6 +505,13 @@ export async function ingestSmartJobsQld(
   let quarantined = 0;
   /** Whether the run ended because it spent its budget rather than finished. */
   let stoppedOnBudget = false;
+  /**
+   * Whether the search walk reached the end of the portal.
+   *
+   * Expiry rests on this and nothing else. A walk that stopped early has
+   * established nothing about the listings it never reached.
+   */
+  let searchComplete = false;
   let created = 0;
   let updated = 0;
   let unchanged = 0;
@@ -544,6 +557,7 @@ export async function ingestSmartJobsQld(
       // ceiling, so it is recorded the same way: the run is partial, and says
       // so, rather than looking like a complete crawl of a small portal.
       if (page.nextPageForm !== null) stoppedOnBudget = true;
+      else searchComplete = true;
     } catch (error) {
       // Reaching our own ceiling is how a bounded run is meant to end. It
       // leaves the remaining pages for the next run and is not a fault of the
@@ -584,31 +598,42 @@ export async function ingestSmartJobsQld(
           });
 
     const staleAfter = new Date(Date.now() - refreshAfterDays * 24 * 60 * 60 * 1000);
-    const freshById = new Map<string, string>();
+    const storedByUrl = new Map<
+      string,
+      { readonly id: string; readonly fresh: boolean }
+    >();
     for (const row of known) {
-      // Never verified means never fetched, so it is not fresh.
-      if (
-        row.sourceUrl !== null &&
-        row.lastVerifiedAt !== null &&
-        row.lastVerifiedAt > staleAfter
-      ) {
-        freshById.set(row.sourceUrl, row.id);
-      }
+      if (row.sourceUrl === null) continue;
+      storedByUrl.set(row.sourceUrl, {
+        id: row.id,
+        // Never verified means never fetched, so it is not fresh.
+        fresh: row.lastVerifiedAt !== null && row.lastVerifiedAt > staleAfter,
+      });
     }
 
     const touchIds: string[] = [];
     const toFetch: SmartJobsSearchRow[] = [];
     for (const row of rows) {
-      const fresh = freshById.get(row.detailUrl);
-      if (fresh !== undefined) {
-        touchIds.push(fresh);
-        skippedFresh += 1;
-      } else {
-        toFetch.push(row);
-      }
+      const stored = storedByUrl.get(row.detailUrl);
+      /**
+       * Seen and verified are different facts, and conflating them expires
+       * live vacancies.
+       *
+       * The portal advertising a listing proves it is current, whatever we
+       * decide to do about its detail page afterwards. Touching only the ones
+       * that needed no request meant a stale listing the budget could not
+       * reach kept an old lastSeenAt on every run, and expireStale eventually
+       * retired it: a vacancy removed from search by our own request ceiling
+       * rather than by the employer withdrawing it.
+       */
+      if (stored !== undefined) touchIds.push(stored.id);
+      if (stored?.fresh === true) skippedFresh += 1;
+      else toFetch.push(row);
     }
 
     // Still advertised, so still current, and it cost no request to know.
+    // lastVerifiedAt is deliberately not touched here: that one means the
+    // detail page was read, and only a detail fetch may advance it.
     if (touchIds.length > 0) {
       const now = new Date();
       await database.job.updateMany({
@@ -673,7 +698,18 @@ export async function ingestSmartJobsQld(
     // Whatever the loop ended on, budget or exhaustion, the remainder is kept.
     await flush();
 
-    expired = await expireStale(database, expireAfterDays);
+    // Only a run that walked the whole portal may retire a listing. A partial
+    // walk has seen nothing of what it did not reach, so its silence about a
+    // listing is our shortfall rather than the employer's withdrawal.
+    if (searchComplete) {
+      expired = await expireStale(database, expireAfterDays);
+    } else {
+      logger.info('Search walk incomplete, so nothing was expired this run', {
+        runId,
+        rowsWalked: rows.length,
+        reportedTotal,
+      });
+    }
 
     await database.ingestionRun.update({
       where: { id: runId },

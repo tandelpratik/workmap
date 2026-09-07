@@ -5,7 +5,7 @@
   building one
 - **Outcome:** Complete. `smartjobs-qld` is `ACTIVE` and `VERIFIED`, the crawler
   reaches the whole portal, and a run that dies no longer wedges the source.
-  744 Queensland listings are stored.
+  2,213 Queensland listings are stored, which is the portal in full.
 
 ## What changed, in one line
 
@@ -117,11 +117,73 @@ The run of 2026-09-05, 19:15 to 20:03 UTC:
 | Quarantined        | 0                              |
 | Unresolved regions | 0                              |
 
-744 Queensland listings are stored in total. The portal is not mirrored yet:
-detail fetches are bounded by the request budget, so each run advances the
-corpus and the listings already held cost nothing on the next pass. That is the
-design working rather than a shortfall, but it does mean the Queensland corpus
-must not be read as the whole portal until several more runs have gone by.
+### The fill, 2026-09-07
+
+Two further runs closed the gap. The first was killed at about 1,100 listings
+when the process that owned it went away, and kept every one of them, which is
+the batched write earning its place. The second finished the job:
+
+| Figure            | Value                                  |
+| ----------------- | -------------------------------------- |
+| Requests          | 475 of a budget of 800                 |
+| Duration          | 27 minutes                             |
+| Rows walked       | 2,080 of the 2,095 the portal reported |
+| Details fetched   | 369, all of them new                   |
+| Skipped as fresh  | 1,710, costing no request              |
+| Quarantined       | 1                                      |
+| Expired           | 0                                      |
+| Stopped on budget | No. The walk finished                  |
+
+**2,213 listings are stored and all are active.** That is more than the 2,095
+the portal reported on the day, because the corpus keeps listings last
+advertised on an earlier crawl: 2,079 of them were seen today, and the
+remaining 134 will retire through the expiry window if the portal keeps not
+advertising them.
+
+The steady state is now the cheap one. A run costs the search walk plus a
+detail page only for what is new or past the refresh window, which is why 2,080
+rows cost 475 requests rather than 4,000.
+
+The one quarantined listing, `QLD-699105-26`, has failed twice on the same
+fault: its JSON-LD carries a bad escape sequence and is not valid JSON. It is
+one row in 2,080, it is recorded rather than guessed at, and no listing is
+invented to stand in for it.
+
+## The defect the fill exposed: seen is not verified
+
+Found while checking whether a budget-bounded run could retire a listing it had
+simply not reached. It could, and this is the same failure the whole source has
+been prone to: something that quietly makes the corpus smaller than the truth.
+
+`expireStale` retires any listing whose `lastSeenAt` is older than fourteen
+days. But `lastSeenAt` was only being touched for listings the run classified
+as **fresh**. A listing goes stale after seven days, joins the fetch queue, and
+if the request ceiling never reaches it, its `lastSeenAt` stands still while
+the portal advertises it on every single run. On day fourteen it was retired: a
+live vacancy removed from search by our own request budget rather than by the
+employer withdrawing it. The same held for any listing whose detail page fails
+to parse, which needs no budget pressure at all and would have taken
+`QLD-699105-26` out in a fortnight.
+
+The two columns mean different things and the code was conflating them.
+`lastSeenAt` means the portal is still advertising this, which the search walk
+proves for every row it reads. `lastVerifiedAt` means we read the detail page,
+which only a detail fetch may claim. So every stored listing the walk sees is
+now touched, whatever happens to its detail page afterwards, and
+`lastVerifiedAt` is left alone.
+
+A second guard sits behind it: **only a run that walked the whole portal may
+retire anything.** A partial walk has established nothing about the listings it
+never reached, so its silence about them is our shortfall rather than an
+employer's withdrawal. A run that stops early expires nothing and says so.
+
+Both regression tests were confirmed to fail against the previous code before
+the fix went in. Without it the first reports listings expired on a run that
+had just seen them advertised.
+
+This was not hypothetical for live data. The 744 listings stored on 2026-09-05
+would have gone stale on 09-12, and any the budget kept missing would have
+started disappearing from search on 09-19.
 
 ## Files changed
 
@@ -163,19 +225,30 @@ must not be read as the whole portal until several more runs have gone by.
    1,244 listings examined across two live sources, zero groups. The first real
    cross-source check, and the answer is that these two corpora do not overlap
    yet. See [milestone 15](15-deduplication.md).
-3. **Nine rows are unaccounted for**, 2,118 walked against 2,127 reported. Small
-   enough to be listings that expired mid-crawl, which is expected on a live
-   portal, but that has not been shown.
-4. **The corpus is a third of the portal.** 744 listings of about 2,127. Each
-   scheduled run advances it, and the runbook records how to fill it in one
-   pass instead of waiting.
+3. **A handful of rows go unaccounted for on every walk**: 2,118 of 2,127 on
+   09-05, and 2,080 of 2,095 on 09-07. Small enough to be listings withdrawn
+   mid-crawl, which is expected on a live portal, but that has not been shown.
+4. ~~**The corpus is a third of the portal.**~~ **Filled 2026-09-07.** 2,213
+   listings, all active.
+5. **One listing cannot be ingested at all.** `QLD-699105-26` publishes JSON-LD
+   containing a bad escape sequence, so it is not valid JSON. It has been
+   quarantined on two runs. One row in 2,080, recorded rather than guessed at,
+   and a candidate for a tolerant parse only if more listings start failing the
+   same way.
+6. **The expiry path is now correct but unexercised in production.** Nothing has
+   expired yet, because everything held has been seen recently. The first real
+   test is the 134 listings currently in the corpus that today's walk did not
+   see: they should retire around 09-21, and no listing the portal still
+   advertises should go with them.
 
 ## Sign-off
 
 - [x] Implementation complete
-- [x] Tests pass, 331 of 331
+- [x] Tests pass, 333 of 333
 - [x] Typecheck, lint, format pass
 - [x] Verified against the live portal, not only fixtures
 - [x] Compliance register and feasibility study updated
 - [x] Pacing, request ceiling and refusal handling unchanged in spirit: no
       source is asked for more than before, and a refusal is never retried
+- [x] Both expiry regression tests confirmed failing against the previous code
+- [x] Corpus filled and audited against the portal's own reported total

@@ -715,4 +715,150 @@ withDatabase('Smart Jobs ingestion', () => {
     // is not worth watching.
     expect(run.value.quarantined).toBe(0);
   }, 180_000);
+
+  it('keeps a listing the portal still advertises, even when the budget stops short of its detail page', async () => {
+    // The failure this guards against removes a live vacancy from search
+    // because of our own request ceiling. A listing goes stale after a week,
+    // joins the fetch queue, and if the budget never reaches it its lastSeenAt
+    // stands still while the portal advertises it on every single run. After
+    // the expiry window it was retired: a job somebody does not find, retired
+    // by our shortfall rather than by the employer withdrawing it.
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    let expired = 0;
+    let total = 0;
+    let stillActive = 0;
+    let oldestSeenAt = 0;
+
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'ACTIVE' },
+          });
+          await tx.job.deleteMany({ where: { sourceKey: SOURCE_KEY } });
+
+          const seeded = await ingestSmartJobsQld({
+            db: tx,
+            client: stubSource(),
+            triggeredBy: 'test',
+          });
+          if (!seeded.ok) throw new Error('the seeding run failed');
+
+          // Aged past both windows, which is what a listing looks like after a
+          // run of days where the budget ran out before reaching it.
+          const longAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000);
+          await tx.job.updateMany({
+            where: { sourceKey: SOURCE_KEY },
+            data: { lastSeenAt: longAgo, lastVerifiedAt: longAgo },
+          });
+
+          // Enough budget to walk the one search page and read a single detail
+          // page, so almost everything is seen and left unfetched.
+          const budgeted = await ingestSmartJobsQld({
+            db: tx,
+            client: stubSource(),
+            maxRequests: 2,
+            triggeredBy: 'test',
+          });
+          if (!budgeted.ok) throw new Error('the budgeted run failed');
+          expired = budgeted.value.expired;
+
+          total = await tx.job.count({ where: { sourceKey: SOURCE_KEY } });
+          stillActive = await tx.job.count({
+            where: { sourceKey: SOURCE_KEY, status: 'ACTIVE' },
+          });
+          const oldest = await tx.job.findFirst({
+            where: { sourceKey: SOURCE_KEY },
+            orderBy: { lastSeenAt: 'asc' },
+            select: { lastSeenAt: true },
+          });
+          oldestSeenAt = oldest?.lastSeenAt.getTime() ?? 0;
+
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    expect(total).toBeGreaterThan(1);
+    // The portal advertised every one of them in the run that just finished.
+    expect(expired).toBe(0);
+    expect(stillActive).toBe(total);
+
+    // Seen is a fact the search page establishes on its own. Verified is the
+    // separate question a budget is allowed to defer.
+    expect(oldestSeenAt).toBeGreaterThan(Date.now() - 60 * 60 * 1000);
+  }, 180_000);
+
+  it('retires nothing at all when it did not finish walking the portal', async () => {
+    // A partial walk has seen nothing of what it never reached, so its silence
+    // about a listing is our shortfall and not evidence of a withdrawal.
+    const database = getDatabase();
+    if (!database.ok) throw new Error('no database');
+
+    let expired = 0;
+    let stillActive = 0;
+    let stoppedOnBudget = false;
+
+    try {
+      await database.value.$transaction(
+        async (tx) => {
+          await tx.source.update({
+            where: { key: SOURCE_KEY },
+            data: { activation: 'ACTIVE' },
+          });
+          await tx.job.deleteMany({ where: { sourceKey: SOURCE_KEY } });
+
+          const seeded = await ingestSmartJobsQld({
+            db: tx,
+            client: stubSource(),
+            triggeredBy: 'test',
+          });
+          if (!seeded.ok) throw new Error('the seeding run failed');
+
+          // Long gone, and this time the portal is not asked about them: the
+          // budget is spent before the walk reaches the end of the pages.
+          const longAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+          await tx.job.updateMany({
+            where: { sourceKey: SOURCE_KEY },
+            data: { lastSeenAt: longAgo, lastVerifiedAt: longAgo },
+          });
+          await tx.job.updateMany({
+            where: { sourceKey: SOURCE_KEY },
+            data: { sourceUrl: 'https://smartjobs.qld.gov.au/moved-elsewhere' },
+          });
+
+          const partial = await ingestSmartJobsQld({
+            db: tx,
+            client: stubSource({ pages: 3 }),
+            maxRequests: 1,
+            triggeredBy: 'test',
+          });
+          if (!partial.ok) throw new Error('the partial run failed');
+          expired = partial.value.expired;
+          stoppedOnBudget = partial.value.stoppedOnBudget;
+
+          stillActive = await tx.job.count({
+            where: { sourceKey: SOURCE_KEY, status: 'ACTIVE' },
+          });
+
+          throw new Rollback();
+        },
+        { timeout: 120_000, maxWait: 30_000 },
+      );
+    } catch (error) {
+      if (!(error instanceof Rollback)) throw error;
+    }
+
+    // These listings were not seen on this run and are old enough to retire,
+    // and they still must not be, because the run never finished looking.
+    expect(stoppedOnBudget).toBe(true);
+    expect(expired).toBe(0);
+    expect(stillActive).toBeGreaterThan(0);
+  }, 180_000);
 });

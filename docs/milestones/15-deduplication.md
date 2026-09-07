@@ -107,6 +107,12 @@ release.
    Government vacancies. It is evidence that the same-source guard and the
    all-three-components rule hold on live rows, and it is not yet evidence that
    a true duplicate would be caught. That needs an overlap to exist.
+
+   Rerun on 2026-09-07 against the filled corpus, 2,713 listings: still zero
+   groups. Tripling one side of the comparison did not produce a single match,
+   which is worth knowing before anyone reads a low duplicate count as the
+   matcher working.
+
 2. **No review tooling.** The prompt asks for it. Groups are inspectable in the
    database and every decision carries its signature, but nothing surfaces them
    for a human to confirm or reject. That belongs with the admin milestone.
