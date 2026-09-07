@@ -93,6 +93,7 @@ Each directory has a README stating its boundary.
 ## Documentation
 
 - [Architecture](docs/architecture/ARCHITECTURE.md), the consolidated view
+- [Design system](docs/architecture/DESIGN_SYSTEM.md), the house style and its rules
 - [Decision records](docs/adr/README.md), and why the system is shaped this way
 - [Source register](docs/compliance/SOURCE_REGISTER.md), what may and may not be
   done with each data source

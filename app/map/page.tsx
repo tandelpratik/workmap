@@ -17,9 +17,23 @@ import {
   RegionDetail,
   RegionElsewhere,
   RegionNotFound,
+  RegionPrompt,
 } from '@/components/region-detail';
 import { regionHref } from '@/components/region-figure';
-import { SiteHeader } from '@/components/site-header';
+import { Masthead } from '@/components/layout/masthead';
+import { Colophon } from '@/components/layout/colophon';
+import {
+  Advisory,
+  Dateline,
+  Lede,
+  Note,
+  Notes,
+  PageBody,
+  PageTitle,
+  Plate,
+} from '@/components/layout/plate';
+import { FigureFrame } from '@/components/layout/figure-frame';
+import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
 import { VacancyTable } from '@/components/vacancy-table';
 
 /**
@@ -27,6 +41,13 @@ import { VacancyTable } from '@/components/vacancy-table';
  *
  * Rendered entirely on the server. The reader receives finished SVG and a
  * table, with no map library and no client JavaScript.
+ *
+ * Laid out as an atlas plate: the map is the page rather than an illustration
+ * inside it, the selected region's figures stand in the margin beside it, and
+ * the qualifications that used to run to three paragraphs above the fold are
+ * numbered notes under the graphic they qualify. The reader meets the data
+ * first and its limits immediately after, which is the order a statistical
+ * release uses and the opposite of the order this page used to.
  *
  * Selection is a query parameter, so a selected region is shareable, survives
  * a reload, works without scripting and needs no state to keep in sync. Every
@@ -74,14 +95,6 @@ const monthFormat = new Intl.DateTimeFormat('en-AU', {
   year: 'numeric',
   timeZone: 'UTC',
 });
-
-function Prose({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-ink-muted max-w-measure mt-3 space-y-3 text-sm leading-relaxed">
-      {children}
-    </div>
-  );
-}
 
 export default async function MapPage({
   searchParams,
@@ -146,20 +159,19 @@ export default async function MapPage({
         });
 
   const descriptor = findSourceDescriptor(SOURCE_KEY);
+  const attribution =
+    descriptor?.attributionText ??
+    'Based on Jobs and Skills Australia Internet Vacancy Index data.';
 
   if (!totals.ok) {
     return (
       <>
-        <SiteHeader current="map" />
-
-        <main id="main" className="mx-auto max-w-5xl px-6 py-16">
-          <h1 className="text-ink font-serif text-4xl font-semibold">
-            Where the advertisements are
-          </h1>
-          <Prose>
-            <p>This map cannot be shown. {totals.error.message}</p>
-          </Prose>
-        </main>
+        <Masthead current="map" />
+        <PageBody width="column">
+          <Dateline>Jobs and Skills Australia</Dateline>
+          <PageTitle>Where the advertisements are</PageTitle>
+          <Lede>This map cannot be shown. {totals.error.message}</Lede>
+        </PageBody>
       </>
     );
   }
@@ -182,6 +194,16 @@ export default async function MapPage({
     state === null
       ? national
       : national.filter((region) => region.stateCode === state.code);
+
+  // Filtered by the same state as the regions are. Counting national gaps
+  // against a state's regions produced a coverage line that was arithmetic
+  // between two different populations: "8 of 19" inside New South Wales, where
+  // eight was the number of blank regions in the country.
+  const missing =
+    state === null
+      ? withoutData
+      : withoutData.filter((region) => region.stateCode === state.code);
+  const inScope = regions.length + missing.length;
 
   // The selection is resolved against the whole country and then checked
   // against what is on screen, so "selected but not in this state" stays a
@@ -233,67 +255,71 @@ export default async function MapPage({
         });
 
   const hasFigures = regions.length > 0 && period !== null;
+  const periodLabel = period === null ? null : monthFormat.format(period);
+  const where = state === null ? 'Australia' : state.name;
+  const subject = isTotal
+    ? 'Online job advertisements'
+    : `Advertisements for ${occupationName}`;
+
+  const fields: ReleaseField[] = [
+    { label: 'Dataset', value: DATASET },
+    ...(periodLabel === null ? [] : [{ label: 'Reference period', value: periodLabel }]),
+    { label: 'Occupation', value: isTotal ? 'All occupations' : occupationName },
+    ...(inScope === 0
+      ? []
+      : [
+          {
+            label: 'Regions reporting',
+            value: `${String(regions.length)} of ${String(inScope)}`,
+          },
+        ]),
+  ];
 
   return (
     <>
-      <SiteHeader current="map" />
+      <Masthead
+        current="map"
+        release={periodLabel === null ? null : `IVI · ${periodLabel}`}
+      />
 
-      <main id="main" className="mx-auto max-w-5xl px-6 py-16">
+      <PageBody>
         <header>
           <Breadcrumb
             state={state === null ? null : { code: state.code, name: state.name }}
             regionCode={selectedCode}
           />
-          <p className="text-ink-faint text-xs font-medium tracking-widest uppercase">
-            Where
-          </p>
-          <h1 className="text-ink mt-2 font-serif text-4xl font-semibold text-balance">
+          <Dateline>Jobs and Skills Australia · Internet Vacancy Index</Dateline>
+          <PageTitle>
             {state === null
               ? 'Where the advertisements are'
               : `Advertisements in ${state.name}`}
-          </h1>
-          <Prose>
-            <p>
-              {isTotal
-                ? 'Online job advertisements'
-                : `Advertisements for ${occupationName}`}{' '}
-              across {state === null ? 'Australia' : state.name}
-              {period === null ? '' : `, ${monthFormat.format(period)}`}. Capital cities
-              are shown as whole cities and the rest of the country by region, which is
-              how the index is published.
-              {state === null
-                ? ''
-                : ' Boundaries here are finer than on the national map, and the shading' +
-                  ' means the same thing: the bands are the national ones, so a region' +
-                  ' does not change colour when you zoom into it.'}
-            </p>
-            {unknownState ? (
-              <p>
-                <strong className="text-ink font-medium">
-                  That state or territory was not recognised,
-                </strong>{' '}
-                so the whole country is shown instead.
-              </p>
-            ) : null}
-            {unknownOccupation ? (
-              <p>
-                <strong className="text-ink font-medium">
-                  This release does not report that occupation,
-                </strong>{' '}
-                so all occupations are shown instead. The list below is the
-                publisher&rsquo;s own, and it is what may be asked for.
-              </p>
-            ) : null}
-            <p>
+          </PageTitle>
+          <Lede>
+            {subject} across {where}
+            {periodLabel === null ? '' : `, ${periodLabel}`}. Capital cities are shown as
+            whole cities and the rest of the country by region, which is how the index is
+            published.
+          </Lede>
+
+          <ReleaseStrip fields={fields} />
+
+          {unknownState ? (
+            <Advisory>
               <strong className="text-ink font-medium">
-                This is not a count of jobs.
+                That state or territory was not recognised,
               </strong>{' '}
-              The Internet Vacancy Index counts advertisements appearing on a defined set
-              of job boards. Vacancies never advertised online, or advertised only through
-              an employer&rsquo;s own site, are not in it. It is an indicator of
-              advertising activity, not a measure of total Australian vacancies.
-            </p>
-          </Prose>
+              so the whole country is shown instead.
+            </Advisory>
+          ) : null}
+          {unknownOccupation ? (
+            <Advisory>
+              <strong className="text-ink font-medium">
+                This release does not report that occupation,
+              </strong>{' '}
+              so all occupations are shown instead. The list below is the
+              publisher&rsquo;s own, and it is what may be asked for.
+            </Advisory>
+          ) : null}
         </header>
 
         <OccupationFilter
@@ -304,119 +330,145 @@ export default async function MapPage({
         />
 
         {hasFigures ? (
-          <section className="mt-12">
-            {/*
-              Every region on the map is a link, which is what makes it
-              operable by keyboard, and also what puts fifty tab stops between
-              the page and the table. This is the standard escape hatch: hidden
-              until focused, so it costs a sighted mouse user nothing.
-            */}
-            <a
-              href={`#${TABLE_ID}`}
-              className="focus:bg-paper-raised focus:text-ink focus:border-rule-strong sr-only focus:not-sr-only focus:mb-4 focus:inline-block focus:border focus:px-3 focus:py-2 focus:text-sm"
+          <>
+            <Plate
+              margin={
+                selectedRegion !== null ? (
+                  <RegionDetail
+                    region={selectedRegion}
+                    rank={rankIndex === -1 ? null : rankIndex + 1}
+                    of={withFigures.length}
+                    previousPeriod={previousPeriod}
+                    stateCode={state?.code ?? null}
+                    drilldown={
+                      drilldownState === null
+                        ? null
+                        : { code: drilldownState.code, name: drilldownState.name }
+                    }
+                  />
+                ) : elsewhere !== null ? (
+                  <RegionElsewhere
+                    name={elsewhere.name}
+                    href={regionHref(elsewhere.code, elsewhere.stateCode)}
+                    where={
+                      states.find((area) => area.code === elsewhere.stateCode)?.name ??
+                      'another state'
+                    }
+                  />
+                ) : requestedCode !== null && requestedRegion === null ? (
+                  <RegionNotFound code={requestedCode} />
+                ) : (
+                  <RegionPrompt tableId={TABLE_ID} />
+                )
+              }
+              below={
+                <VacancyTable
+                  id={TABLE_ID}
+                  regions={regions}
+                  selectedCode={selectedCode}
+                  stateCode={state?.code ?? null}
+                  caption={`${subject} by region${
+                    periodLabel === null ? '' : `, ${periodLabel}`
+                  }. Ordered by number of advertisements. Select a region for its
+                  figures; bars are scaled to the largest figure shown.`}
+                />
+              }
             >
-              Skip the map, go to the table of figures
-            </a>
+              <div>
+                {/*
+                  Every region on the map is a link, which is what makes it
+                  operable by keyboard, and also what puts fifty tab stops
+                  between the page and the table. This is the standard escape
+                  hatch: hidden until focused, so it costs a sighted mouse user
+                  nothing.
+                */}
+                <a
+                  href={`#${TABLE_ID}`}
+                  className="focus:bg-paper-raised focus:text-ink focus:border-rule-strong sr-only focus:not-sr-only focus:mb-4 focus:inline-block focus:border focus:px-3 focus:py-2 focus:text-sm"
+                >
+                  Skip the map, go to the table of figures
+                </a>
 
-            <VacancyMap
-              geometry={geometry}
-              regions={regions}
-              bins={bins}
-              tableId={TABLE_ID}
-              selectedCode={selectedCode}
-              stateCode={state?.code ?? null}
-            />
-            <VacancyLegend
-              bins={bins}
-              hasMissing={regions.some((region) => region.observation.value === null)}
-            />
+                <FigureFrame
+                  title={`${subject} by region, ${where}`}
+                  subtitle={`${
+                    periodLabel === null ? 'Reference period not stated' : periodLabel
+                  }. Counts of advertisements, not of vacancies. Shaded by rank, in five equal groups of regions.`}
+                  source={attribution}
+                  legend={
+                    <VacancyLegend
+                      bins={bins}
+                      hasMissing={regions.some(
+                        (region) => region.observation.value === null,
+                      )}
+                    />
+                  }
+                >
+                  <VacancyMap
+                    geometry={geometry}
+                    regions={regions}
+                    bins={bins}
+                    tableId={TABLE_ID}
+                    selectedCode={selectedCode}
+                    stateCode={state?.code ?? null}
+                  />
+                </FigureFrame>
+              </div>
+            </Plate>
 
-            {selectedRegion === null ? null : (
-              <RegionDetail
-                region={selectedRegion}
-                rank={rankIndex === -1 ? null : rankIndex + 1}
-                of={withFigures.length}
-                previousPeriod={previousPeriod}
-                stateCode={state?.code ?? null}
-                drilldown={
-                  drilldownState === null
-                    ? null
-                    : { code: drilldownState.code, name: drilldownState.name }
-                }
-              />
-            )}
-            {elsewhere === null ? null : (
-              <RegionElsewhere
-                name={elsewhere.name}
-                href={regionHref(elsewhere.code, elsewhere.stateCode)}
-                where={
-                  states.find((area) => area.code === elsewhere.stateCode)?.name ??
-                  'another state'
-                }
-              />
-            )}
-            {requestedCode !== null && requestedRegion === null ? (
-              <RegionNotFound code={requestedCode} />
-            ) : null}
-            <Prose>
-              <p>
+            <Notes>
+              <Note>
+                <strong className="text-ink font-medium">
+                  This is not a count of jobs.
+                </strong>{' '}
+                The Internet Vacancy Index counts advertisements appearing on a defined
+                set of job boards. Vacancies never advertised online, or advertised only
+                through an employer&rsquo;s own site, are not in it. It is an indicator of
+                advertising activity, not a measure of total Australian vacancies.
+              </Note>
+              <Note>
                 Shading is by rank, in five equal groups of regions, not by a fixed scale.
                 Greater Sydney carries more advertisements than every regional area of New
                 South Wales combined, so a fixed scale would leave almost the whole map in
-                the palest band. The key prints the range each band covers.
-              </p>
-            </Prose>
-
-            <VacancyTable
-              id={TABLE_ID}
-              regions={regions}
-              selectedCode={selectedCode}
-              stateCode={state?.code ?? null}
-              caption={`${
-                isTotal
-                  ? 'Online job advertisements'
-                  : `Advertisements for ${occupationName}`
-              } by region${
-                period === null ? '' : `, ${monthFormat.format(period)}`
-              }. Ordered by number of advertisements.`}
-            />
-          </section>
+                the palest band. The key prints the value each band opens at.
+              </Note>
+              {state === null ? (
+                <Note>
+                  Capital cities are drawn as whole cities and the rest of each state
+                  region by region, because that is how the index is published. The two
+                  levels together cover the country exactly once.
+                </Note>
+              ) : (
+                <Note>
+                  Boundaries here are finer than on the national map, and the shading
+                  means the same thing: the bands are the national ones, so a region does
+                  not change colour when you zoom into it.
+                </Note>
+              )}
+              {missing.length > 0 ? (
+                <Note>
+                  {missing.length} of {inScope} regions this index reports on carry no
+                  figure for {periodLabel ?? 'this period'} and are left unshaded. No
+                  figure was published for them, which is not the same as no
+                  advertisements.
+                </Note>
+              ) : null}
+            </Notes>
+          </>
         ) : (
           <section className="border-rule-strong mt-12 border-t pt-6">
             <h2 className="text-ink font-serif text-2xl font-semibold">
               No figures loaded yet
             </h2>
-            <Prose>
-              <p>
-                The geography is in place but no Internet Vacancy Index release has been
-                imported. This is an empty database, not a month with no advertisements.
-              </p>
-            </Prose>
+            <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+              The geography is in place but no Internet Vacancy Index release has been
+              imported. This is an empty database, not a month with no advertisements.
+            </p>
           </section>
         )}
 
-        {withoutData.length > 0 && hasFigures ? (
-          <section className="border-rule mt-12 border-t pt-6">
-            <h2 className="text-ink font-serif text-xl font-semibold">Coverage</h2>
-            <Prose>
-              <p>
-                {withoutData.length} of {regions.length + withoutData.length} regions this
-                index reports on carry no figure for{' '}
-                {period === null ? 'this period' : monthFormat.format(period)}, and are
-                left unshaded. That means no figure was published for them, which is not
-                the same as no advertisements.
-              </p>
-            </Prose>
-          </section>
-        ) : null}
-
-        <footer className="border-rule-strong mt-16 border-t pt-6">
-          <p className="text-ink-faint max-w-measure text-xs leading-relaxed">
-            {descriptor?.attributionText ??
-              'Based on Jobs and Skills Australia Internet Vacancy Index data.'}
-          </p>
-        </footer>
-      </main>
+        <Colophon sources={[SOURCE_KEY, 'abs-asgs']} />
+      </PageBody>
     </>
   );
 }

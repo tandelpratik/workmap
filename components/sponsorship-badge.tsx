@@ -17,12 +17,19 @@ import {
  * points at official sources for anything further.
  */
 
-/** Shape is carried by more than colour, per the accessibility rules. */
+/**
+ * Meaning is carried by the words; the dot is an index, not the message.
+ *
+ * Each dot is outlined as well as filled. The two unknown states are the
+ * quietest colours in the palette by design, and against the night edition's
+ * ground an unoutlined one all but disappears, which leaves the label looking
+ * as though its marker failed to load.
+ */
 const STYLES: Record<SponsorshipSignal, { dot: string; text: string }> = {
-  MENTIONED: { dot: 'bg-state-available', text: 'text-ink' },
-  EXCLUDED: { dot: 'bg-state-blocked', text: 'text-ink' },
-  NOT_MENTIONED: { dot: 'bg-rule-strong', text: 'text-ink-muted' },
-  INDETERMINATE: { dot: 'bg-rule', text: 'text-ink-faint' },
+  MENTIONED: { dot: 'bg-state-available border-state-available', text: 'text-ink' },
+  EXCLUDED: { dot: 'bg-state-blocked border-state-blocked', text: 'text-ink' },
+  NOT_MENTIONED: { dot: 'bg-rule-strong border-rule-strong', text: 'text-ink-muted' },
+  INDETERMINATE: { dot: 'bg-rule border-rule-strong', text: 'text-ink-faint' },
 };
 
 export function SponsorshipBadge({
@@ -39,7 +46,7 @@ export function SponsorshipBadge({
       <p className={`flex items-start gap-2 text-sm ${style.text}`}>
         <span
           aria-hidden="true"
-          className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${style.dot}`}
+          className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full border ${style.dot}`}
         />
         <span>{sponsorshipLabel(signal)}</span>
       </p>
@@ -103,7 +110,7 @@ export function SponsorshipKey() {
           <dt className="flex shrink-0 items-center gap-2">
             <span
               aria-hidden="true"
-              className={`inline-block h-2 w-2 rounded-full ${STYLES[entry.signal].dot}`}
+              className={`inline-block h-2 w-2 rounded-full border ${STYLES[entry.signal].dot}`}
             />
             <span className="text-ink text-sm font-medium">
               {sponsorshipLabel(entry.signal)}

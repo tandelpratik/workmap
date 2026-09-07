@@ -1,13 +1,19 @@
 import { changeBetween } from '@/domain/labour-market';
+import { Stat } from '@/components/data/stat';
 import { absenceLabel, levelLabel, regionHref, type RegionFigure } from './region-figure';
 
 /**
- * The selected region's figures.
+ * The selected region's figures, set as the plate's marginalia.
  *
  * Server rendered from the URL, like the map that links to it. It states the
  * exact figure rather than a shade, which is the point of selecting: the
  * choropleth encodes rank, and a reader who wants the number should get the
  * number.
+ *
+ * It sits in the margin beside the map rather than under it, and stays in view
+ * while the table is scrolled, so the region a reader picked and the fifty
+ * they are comparing it against are legible at the same time. That adjacency
+ * is what a panel stacked below the graphic could never give them.
  *
  * Every absence is named. "No figure" and "withheld by the publisher" are
  * different facts, and a panel that printed a dash for both would flatten them
@@ -29,8 +35,8 @@ const monthFormat = new Intl.DateTimeFormat('en-AU', {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-rule flex items-baseline justify-between gap-6 border-b py-2 last:border-b-0">
-      <dt className="text-ink-muted text-sm">{label}</dt>
+    <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-b py-2 last:border-b-0">
+      <dt className="text-ink-faint text-label font-mono uppercase">{label}</dt>
       <dd className="text-ink text-right text-sm">{children}</dd>
     </div>
   );
@@ -59,41 +65,42 @@ export function RegionDetail({
   const value = region.observation.value;
 
   return (
-    <section
-      aria-labelledby="region-detail-heading"
-      className="border-rule-strong bg-paper-raised mt-8 border-t p-5"
-    >
+    <section aria-labelledby="region-detail-heading">
       <div className="flex items-baseline justify-between gap-4">
-        <h2
-          id="region-detail-heading"
-          className="text-ink font-serif text-2xl font-semibold"
-        >
-          {region.name}
-        </h2>
+        <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
         {/*
           Clearing the selection is a link to the unselected URL, so it works
           the same way selecting did, back button included.
         */}
         <a
           href={regionHref(null, stateCode)}
-          className="text-ink-muted hover:text-ink text-sm underline underline-offset-4"
+          className="text-ink-muted hover:text-accent text-xs underline underline-offset-4"
         >
           Clear
         </a>
       </div>
 
-      <dl className="mt-4">
-        <Row label="Advertisements">
-          {value === null ? (
-            <span className="text-ink-muted">
-              {absenceLabel(region.observation.valueState)}
-            </span>
-          ) : (
-            <span className="font-mono tabular-nums">{numberFormat.format(value)}</span>
-          )}
-        </Row>
+      <h2
+        id="region-detail-heading"
+        className="text-ink mt-2 font-serif text-2xl leading-tight font-semibold text-balance"
+      >
+        {region.name}
+      </h2>
 
-        <Row label="Change on the month before">
+      <div className="border-rule-strong mt-5 border-t pt-5">
+        <Stat
+          label="Advertisements"
+          value={
+            value === null
+              ? absenceLabel(region.observation.valueState)
+              : numberFormat.format(value)
+          }
+          muted={value === null}
+        />
+      </div>
+
+      <dl className="border-rule-strong mt-5 border-t">
+        <Row label="On the month before">
           {change === null ? (
             <span className="text-ink-muted">
               {/*
@@ -105,16 +112,18 @@ export function RegionDetail({
                 : `Not published for ${monthFormat.format(previousPeriod)}`}
             </span>
           ) : (
-            <span className="font-mono tabular-nums">
-              {signedFormat.format(change.absolute)}
-              {change.percent === null
-                ? ''
-                : ` (${percentFormat.format(change.percent)}%)`}
+            <span>
+              <span className="tabular font-mono">
+                {signedFormat.format(change.absolute)}
+                {change.percent === null
+                  ? ''
+                  : ` (${percentFormat.format(change.percent)}%)`}
+              </span>
               {/*
                 The words carry the direction. An arrow or a colour alone would
                 fail a reader who cannot resolve either.
               */}
-              <span className="text-ink-muted ml-2 font-sans">
+              <span className="text-ink-muted block text-xs">
                 {change.direction === 'UP'
                   ? 'more than the month before'
                   : change.direction === 'DOWN'
@@ -129,8 +138,8 @@ export function RegionDetail({
           {rank === null ? (
             <span className="text-ink-muted">Not ranked, no figure</span>
           ) : (
-            <span className="tabular-nums">
-              {rank} of {of} by number of advertisements
+            <span className="tabular">
+              {rank} of {of}
             </span>
           )}
         </Row>
@@ -144,7 +153,7 @@ export function RegionDetail({
       </dl>
 
       {drilldown === null ? null : (
-        <p className="mt-4 text-sm">
+        <p className="mt-5 text-sm">
           {/*
             The way in. Selecting tells the reader about one region; this is
             the question that usually follows, which is what the rest of its
@@ -163,7 +172,38 @@ export function RegionDetail({
 }
 
 /**
- * What the panel shows when the URL names a region the dataset does not have.
+ * The margin when nothing is selected.
+ *
+ * An empty column beside a map reads as something failing to load. This says
+ * what the map is for instead, and it is where the shading is explained, since
+ * that is the question a reader has while looking at it rather than four
+ * scrolls later.
+ */
+export function RegionPrompt({ tableId }: { tableId: string }) {
+  return (
+    <section aria-label="How to read this map">
+      <p className="text-ink-faint text-label font-mono uppercase">Reading the map</p>
+      <div className="text-ink-muted mt-3 space-y-3 text-sm leading-relaxed">
+        <p>
+          Select any region, on the map or in{' '}
+          <a href={`#${tableId}`} className="text-ink underline underline-offset-4">
+            the table
+          </a>
+          , for its figures and its change on the month before.
+        </p>
+        <p>
+          Shading is by rank, in five equal groups of regions, not by a fixed scale.
+          Greater Sydney carries more advertisements than every regional area of New South
+          Wales combined, so a fixed scale would leave almost the whole map in the palest
+          band.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * What the margin shows when the URL names a region the dataset does not have.
  *
  * A query string is external input, so it is validated and answered rather
  * than trusted. Saying nothing would leave a reader who followed a stale link
@@ -171,9 +211,10 @@ export function RegionDetail({
  */
 export function RegionNotFound({ code }: { code: string }) {
   return (
-    <section className="border-rule-strong mt-8 border-t pt-5">
-      <h2 className="text-ink font-serif text-2xl font-semibold">Region not found</h2>
-      <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+    <section>
+      <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
+      <h2 className="text-ink mt-2 font-serif text-2xl font-semibold">Not found</h2>
+      <p className="text-ink-muted mt-3 text-sm leading-relaxed">
         Nothing in this release is published under the code{' '}
         <span className="font-mono text-xs">{code}</span>. It may belong to a different
         ASGS edition, or to a level this index does not report on.{' '}
@@ -203,13 +244,16 @@ export function RegionElsewhere({
   href: string;
 }) {
   return (
-    <p className="border-rule text-ink-muted mt-8 border-t pt-5 text-sm leading-relaxed">
-      {name} is in {where}, so it is not shown on this map.{' '}
-      <a href={href} className="text-ink underline underline-offset-4">
-        Show {name}
-      </a>
-      .
-    </p>
+    <section>
+      <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
+      <p className="text-ink-muted mt-3 text-sm leading-relaxed">
+        {name} is in {where}, so it is not shown on this map.{' '}
+        <a href={href} className="text-ink underline underline-offset-4">
+          Show {name}
+        </a>
+        .
+      </p>
+    </section>
   );
 }
 
@@ -232,7 +276,7 @@ export function Breadcrumb({
 
   return (
     <nav aria-label="Breadcrumb" className="mb-4">
-      <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">
+      <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-xs">
         <li>
           <a
             href={regionHref(regionCode, null)}

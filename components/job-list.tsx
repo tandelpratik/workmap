@@ -1,3 +1,4 @@
+import { findSourceDescriptor } from '@/config/sources';
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
 import { SponsorshipBadge } from './sponsorship-badge';
 import { JobsworthLabel } from './adzuna-attribution';
@@ -5,11 +6,21 @@ import { JobsworthLabel } from './adzuna-attribution';
 /**
  * The results list.
  *
- * An editorial index: thin rules, one column, typography carrying the
+ * An editorial index: hairlines, one column, typography carrying the
  * hierarchy. Not a grid of cards. Every listing states where it came from and
  * whether the salary was quoted by the employer or estimated by the provider,
  * because a reader cannot judge a figure without knowing which it is
  * (ADR-0002).
+ *
+ * Naming the source on each listing is provenance, not decoration. Two
+ * licensed sources are live and they are not interchangeable: one is an
+ * aggregator's index of advertisements, the other is a state government's own
+ * board. A reader deciding how much weight to give a listing needs to know
+ * which they are looking at.
+ *
+ * The salary sits directly under the employer rather than at the foot of the
+ * entry, because it is the second thing anyone looks for and burying it under
+ * the description made every row scan the same.
  */
 
 const employmentLabels: Record<EmploymentType, string> = {
@@ -55,7 +66,7 @@ function formatSalary(salary: Salary): string {
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-AU', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
     timeZone: 'Australia/Sydney',
   }).format(date);
@@ -63,9 +74,10 @@ function formatDate(date: Date): string {
 
 export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
   return (
-    <ol className="border-rule mt-8 border-t">
+    <ol className="border-rule-heavy mt-8 border-t-2">
       {jobs.map((job) => {
         const salary = job.salary === null ? null : formatSalary(job.salary);
+        const source = findSourceDescriptor(job.sourceKey);
 
         return (
           <li key={job.id} className="border-rule border-b py-6">
@@ -83,7 +95,7 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               </a>
             </h3>
 
-            <p className="text-ink-muted mt-1 text-sm">
+            <p className="text-ink-muted mt-1.5 text-sm">
               {job.companyName ?? 'Employer not stated'}
               {job.locationLabel === null ? null : (
                 <>
@@ -96,8 +108,20 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               )}
             </p>
 
+            {salary === null ? null : (
+              <p className="tabular text-ink mt-2 text-sm font-medium">
+                {salary}
+                {job.salary?.basis === 'SOURCE_ESTIMATED' ? (
+                  <>
+                    <span className="text-ink-faint font-normal"> · </span>
+                    <JobsworthLabel />
+                  </>
+                ) : null}
+              </p>
+            )}
+
             {job.description === null ? null : (
-              <p className="text-ink max-w-measure mt-3 line-clamp-2 text-sm leading-relaxed">
+              <p className="text-ink-muted max-w-measure mt-3 line-clamp-2 text-sm leading-relaxed">
                 {job.description}
               </p>
             )}
@@ -114,7 +138,7 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               />
             </div>
 
-            <p className="text-ink-faint mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs tracking-wide uppercase">
+            <p className="text-ink-faint text-label mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono uppercase">
               {job.employmentType === null ? null : (
                 <span>{employmentLabels[job.employmentType]}</span>
               )}
@@ -128,19 +152,11 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               {job.descriptionIsExcerpt && job.description !== null ? (
                 <span>Excerpt</span>
               ) : null}
+              {/* Provenance, last, because it qualifies everything above it. */}
+              <span className="text-ink-muted">
+                {source?.displayName ?? job.sourceKey}
+              </span>
             </p>
-
-            {salary === null ? null : (
-              <p className="tabular text-ink mt-2 text-sm">
-                {salary}
-                {job.salary?.basis === 'SOURCE_ESTIMATED' ? (
-                  <>
-                    <span className="text-ink-faint"> · </span>
-                    <JobsworthLabel />
-                  </>
-                ) : null}
-              </p>
-            )}
           </li>
         );
       })}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Site icon">
+  <!--
+    A map sheet: a ruled grid with one cell picked out.
+
+    Deliberately not a letterform. The product name is configuration, so an
+    initial baked into an asset would make a rename a redraw. This is the
+    subject rather than the name, it survives being drawn at sixteen pixels,
+    and it uses the palette's ink and accent without depending on either scheme
+    being active, since an icon is composited by the browser chrome rather than
+    by the page.
+  -->
+  <rect width="32" height="32" fill="#17150f" />
+  <g stroke="#fbfaf7" stroke-width="1.25" opacity="0.55">
+    <path d="M0 10.667h32M0 21.333h32M10.667 0v32M21.333 0v32" />
+  </g>
+  <rect x="10.667" y="10.667" width="10.666" height="10.666" fill="#9c3d22" />
+</svg>

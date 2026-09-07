@@ -22,6 +22,18 @@ import type { GeographyLevel } from '@/domain/geography';
 
 const ARTEFACT_DIR = join(process.cwd(), 'public', 'geography');
 
+/**
+ * Fractional digits in generated path data.
+ *
+ * The frame is under a thousand units across and the drawn map is rarely wider
+ * than seven hundred CSS pixels, so a tenth of a unit is already finer than a
+ * device pixel. d3 defaults to three, which spends two characters per
+ * coordinate describing a position no display can resolve. Across fifty
+ * thousand coordinates that is a third of the document, transferred on every
+ * request, to draw the identical picture.
+ */
+const PATH_DIGITS = 1;
+
 /** Which file holds each level's overview geometry. */
 const OVERVIEW_FILES: Partial<Record<GeographyLevel, string>> = {
   STATE: 'state-overview',
@@ -100,7 +112,7 @@ export async function buildChoroplethGeometry(options: {
       type: 'FeatureCollection',
       features: states,
     } as FeatureCollection<Geometry>);
-  const path = geoPath(projection);
+  const path = geoPath(projection).digits(PATH_DIGITS);
 
   const toArea = (item: Feature<Geometry>): ProjectedArea | null => {
     const code = codeOf(item);
@@ -179,7 +191,7 @@ export async function buildStateChoroplethGeometry(options: {
       type: 'FeatureCollection',
       features: outline,
     } as FeatureCollection<Geometry>);
-  const path = geoPath(projection);
+  const path = geoPath(projection).digits(PATH_DIGITS);
 
   const toArea = (item: Feature<Geometry>): ProjectedArea | null => {
     const code = codeOf(item);

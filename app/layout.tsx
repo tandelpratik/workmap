@@ -36,6 +36,10 @@ export const metadata: Metadata = {
   },
   description: brand.description,
   applicationName: brand.productName,
+  // Read from the brand configuration rather than relying on the framework
+  // finding a file by name, so the asset and the config cannot disagree and a
+  // rename stays a configuration change (ADR-0007).
+  icons: { icon: brand.assets.faviconPath },
   openGraph: {
     title: brand.social.title,
     description: brand.social.description,
@@ -50,7 +54,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  colorScheme: 'light',
+  /*
+   * Both schemes are supported, so the browser is told so rather than being
+   * pinned to one. The tokens in globals.css define a warm night edition and
+   * the reader's own preference selects it.
+   */
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -62,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <a
           href="#main"
-          className="focus:bg-paper-raised focus:text-ink sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2"
+          className="focus:bg-paper-raised focus:text-ink focus:border-rule-heavy sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:border focus:px-3 focus:py-2 focus:text-sm"
         >
           Skip to content
         </a>

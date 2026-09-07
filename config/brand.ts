@@ -44,6 +44,7 @@ const brandSchema = z.object({
   assets: z.object({
     /** Null until a logo exists. The masthead falls back to typography. */
     logoPath: z.string().startsWith('/').nullable(),
+    /** Linked from the document head. The asset must exist under public/. */
     faviconPath: z.string().startsWith('/'),
   }),
 
@@ -75,7 +76,7 @@ export const brand: BrandConfig = brandSchema.parse({
 
   assets: {
     logoPath: null,
-    faviconPath: '/favicon.ico',
+    faviconPath: '/icon.svg',
   },
 
   locale: 'en-AU',

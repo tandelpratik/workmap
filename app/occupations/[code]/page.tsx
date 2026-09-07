@@ -8,7 +8,20 @@ import {
   cachedRegionTotals,
 } from '@/app/cached-queries';
 import { occupationLabel } from '@/components/occupation-filter';
-import { SiteHeader } from '@/components/site-header';
+import { Masthead } from '@/components/layout/masthead';
+import { Colophon } from '@/components/layout/colophon';
+import {
+  Dateline,
+  Lede,
+  Note,
+  Notes,
+  PageBody,
+  PageTitle,
+  Plate,
+} from '@/components/layout/plate';
+import { FigureFrame } from '@/components/layout/figure-frame';
+import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
+import { Stat } from '@/components/data/stat';
 import { VacancyTable } from '@/components/vacancy-table';
 
 /**
@@ -72,18 +85,10 @@ export async function generateMetadata({
   };
 }
 
-function Prose({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-ink-muted max-w-measure mt-3 space-y-3 text-sm leading-relaxed">
-      {children}
-    </div>
-  );
-}
-
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-rule flex items-baseline justify-between gap-6 border-b py-2 last:border-b-0">
-      <dt className="text-ink-muted text-sm">{label}</dt>
+    <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-b py-2 last:border-b-0">
+      <dt className="text-ink-faint text-label font-mono uppercase">{label}</dt>
       <dd className="text-ink text-right text-sm">{children}</dd>
     </div>
   );
@@ -124,19 +129,22 @@ export default async function OccupationPage({
   if (occupation === null) notFound();
 
   const label = occupationLabel(occupation);
+  const name = occupation.name ?? `Occupation ${occupation.code}`;
 
   const descriptor = findSourceDescriptor(SOURCE_KEY);
+  const attribution =
+    descriptor?.attributionText ??
+    'Based on Jobs and Skills Australia Internet Vacancy Index data.';
 
   if (!totals.ok) {
     return (
       <>
-        <SiteHeader current="occupations" />
-        <main id="main" className="mx-auto max-w-5xl px-6 py-16">
-          <h1 className="text-ink font-serif text-4xl font-semibold">{label}</h1>
-          <Prose>
-            <p>These figures cannot be shown. {totals.error.message}</p>
-          </Prose>
-        </main>
+        <Masthead current="occupations" />
+        <PageBody width="column">
+          <Dateline>Jobs and Skills Australia</Dateline>
+          <PageTitle>{name}</PageTitle>
+          <Lede>These figures cannot be shown. {totals.error.message}</Lede>
+        </PageBody>
       </>
     );
   }
@@ -168,14 +176,30 @@ export default async function OccupationPage({
     .filter((region) => region.observation.value !== null)
     .sort((a, b) => (b.observation.value ?? 0) - (a.observation.value ?? 0))[0];
 
+  const periodLabel = period === null ? null : monthFormat.format(period);
+  const reporting = regions.length + withoutData.length;
+
+  const fields: ReleaseField[] = [
+    { label: 'Dataset', value: DATASET },
+    ...(periodLabel === null ? [] : [{ label: 'Reference period', value: periodLabel }]),
+    { label: 'Publisher code', value: occupation.code },
+    {
+      label: 'Regions reporting',
+      value: `${String(regions.length)} of ${String(reporting)}`,
+    },
+  ];
+
   return (
     <>
-      <SiteHeader current="occupations" />
+      <Masthead
+        current="occupations"
+        release={periodLabel === null ? null : `IVI · ${periodLabel}`}
+      />
 
-      <main id="main" className="mx-auto max-w-5xl px-6 py-16">
+      <PageBody>
         <header>
           <nav aria-label="Breadcrumb" className="mb-4">
-            <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-sm">
+            <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-xs">
               <li>
                 <Link
                   href="/occupations"
@@ -194,21 +218,17 @@ export default async function OccupationPage({
             </ol>
           </nav>
 
-          <p className="text-ink-faint text-xs font-medium tracking-widest uppercase">
-            What
-          </p>
-          <h1 className="text-ink mt-2 font-serif text-4xl font-semibold text-balance">
-            {occupation.name ?? `Occupation ${occupation.code}`}
-          </h1>
-          <Prose>
-            <p>
-              Online job advertisements
-              {period === null ? '' : `, ${monthFormat.format(period)}`}, as published by
-              Jobs and Skills Australia under code{' '}
-              <span className="font-mono text-xs">{occupation.code}</span>. The name is
-              the publisher&rsquo;s own.
-            </p>
-          </Prose>
+          <Dateline>Jobs and Skills Australia · Internet Vacancy Index</Dateline>
+          <PageTitle>{name}</PageTitle>
+          <Lede>
+            Online job advertisements
+            {periodLabel === null ? '' : `, ${periodLabel}`}, as published by Jobs and
+            Skills Australia under code{' '}
+            <span className="font-mono text-base">{occupation.code}</span>. The name is
+            the publisher&rsquo;s own.
+          </Lede>
+
+          {period === null ? null : <ReleaseStrip fields={fields} />}
         </header>
 
         {period === null ? (
@@ -216,114 +236,123 @@ export default async function OccupationPage({
             <h2 className="text-ink font-serif text-2xl font-semibold">
               No figures loaded yet
             </h2>
-            <Prose>
-              <p>
-                No Internet Vacancy Index release has been imported. This is an empty
-                database, not a month with no advertisements.
-              </p>
-            </Prose>
+            <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+              No Internet Vacancy Index release has been imported. This is an empty
+              database, not a month with no advertisements.
+            </p>
           </section>
         ) : (
           <>
-            <section className="mt-12">
-              <dl className="border-rule-strong border-t">
-                <Row label="Advertisements, all regions">
-                  {summary?.total === null || summary === null ? (
-                    <span className="text-ink-muted">No figure</span>
-                  ) : (
-                    <span className="font-mono tabular-nums">
-                      {numberFormat.format(summary.total)}
+            <Plate
+              margin={
+                <div>
+                  <Stat
+                    label="Advertisements"
+                    value={
+                      summary === null || summary.total === null
+                        ? 'No figure'
+                        : numberFormat.format(summary.total)
+                    }
+                    muted={summary === null || summary.total === null}
+                    note="summed across every region the publisher reports"
+                  />
+
+                  <dl className="border-rule-strong mt-6 border-t">
+                    <Row label="On the month before">
+                      {change === null ? (
+                        <span className="text-ink-muted">
+                          {previousPeriod === null
+                            ? 'No earlier month held'
+                            : `Not published for ${monthFormat.format(previousPeriod)}`}
+                        </span>
+                      ) : (
+                        <span className="tabular font-mono">
+                          {signedFormat.format(change)}
+                          {percent === null ? '' : ` (${percentFormat.format(percent)}%)`}
+                        </span>
+                      )}
+                    </Row>
+
+                    <Row label="Rank among groups">
+                      {rankIndex === -1 ? (
+                        <span className="text-ink-muted">Not ranked</span>
+                      ) : (
+                        <span className="tabular">
+                          {rankIndex + 1} of {ranked.length}
+                        </span>
+                      )}
+                    </Row>
+
+                    <Row label="Most advertised in">
+                      {busiest === undefined ? (
+                        <span className="text-ink-muted">
+                          No region reported a figure
+                        </span>
+                      ) : (
+                        <span>
+                          {busiest.name}
+                          <span className="text-ink-muted tabular block font-mono text-xs">
+                            {numberFormat.format(busiest.observation.value ?? 0)}
+                          </span>
+                        </span>
+                      )}
+                    </Row>
+                  </dl>
+
+                  <p className="mt-5 text-sm">
+                    <a
+                      href={`/map?occupation=${encodeURIComponent(occupation.code)}`}
+                      className="text-ink hover:text-accent underline underline-offset-4"
+                    >
+                      See this occupation on the map
+                    </a>
+                    <span className="text-ink-muted block text-xs">
+                      where the same figures are shaded by region
                     </span>
-                  )}
-                </Row>
+                  </p>
+                </div>
+              }
+            >
+              <FigureFrame
+                title={`${label} by region`}
+                subtitle={`${
+                  periodLabel ?? 'Reference period not stated'
+                }. Counts of advertisements, not of vacancies. Bars are scaled to the largest region shown.`}
+                source={attribution}
+              >
+                <VacancyTable
+                  id={TABLE_ID}
+                  regions={regions}
+                  selectedCode={null}
+                  stateCode={null}
+                  caption="Ordered by number of advertisements. Region names link to the map."
+                />
+              </FigureFrame>
+            </Plate>
 
-                <Row label="Change on the month before">
-                  {change === null ? (
-                    <span className="text-ink-muted">
-                      {previousPeriod === null
-                        ? 'No earlier month held'
-                        : `Not published for ${monthFormat.format(previousPeriod)}`}
-                    </span>
-                  ) : (
-                    <span className="font-mono tabular-nums">
-                      {signedFormat.format(change)}
-                      {percent === null ? '' : ` (${percentFormat.format(percent)}%)`}
-                    </span>
-                  )}
-                </Row>
-
-                <Row label="Rank among groups">
-                  {rankIndex === -1 ? (
-                    <span className="text-ink-muted">Not ranked</span>
-                  ) : (
-                    <span className="tabular-nums">
-                      {rankIndex + 1} of {ranked.length} by advertisements
-                    </span>
-                  )}
-                </Row>
-
-                <Row label="Most advertised in">
-                  {busiest === undefined ? (
-                    <span className="text-ink-muted">No region reported a figure</span>
-                  ) : (
-                    <span>
-                      {busiest.name}
-                      <span className="text-ink-muted font-mono text-xs">
-                        {' '}
-                        {numberFormat.format(busiest.observation.value ?? 0)}
-                      </span>
-                    </span>
-                  )}
-                </Row>
-
-                <Row label="Regions reporting">
-                  <span className="tabular-nums">
-                    {regions.length} of {regions.length + withoutData.length}
-                  </span>
-                </Row>
-              </dl>
-
-              <Prose>
-                <p>
-                  The figure above is the sum of the regions the publisher reports on,
-                  added here rather than published as a national total by Jobs and Skills
-                  Australia. Its regions cover Australia exactly once, so the sum is well
-                  defined, but it is our arithmetic and not their figure.
-                </p>
-                <p>
-                  <a
-                    href={`/map?occupation=${encodeURIComponent(occupation.code)}`}
-                    className="text-ink hover:text-accent underline underline-offset-4"
-                  >
-                    See this occupation on the map
-                  </a>
-                  , where the same figures are shaded by region.
-                </p>
-              </Prose>
-            </section>
-
-            <VacancyTable
-              id={TABLE_ID}
-              regions={regions}
-              selectedCode={null}
-              stateCode={null}
-              caption={`${label} by region${
-                period === null ? '' : `, ${monthFormat.format(period)}`
-              }. Ordered by number of advertisements. Region names link to the map.`}
-            />
+            <Notes>
+              <Note>
+                The figure in the margin is the sum of the regions the publisher reports
+                on, added here rather than published as a national total by Jobs and
+                Skills Australia. Its regions cover Australia exactly once, so the sum is
+                well defined, but it is our arithmetic and not their figure.
+              </Note>
+              <Note>
+                The Internet Vacancy Index counts advertisements appearing on a defined
+                set of job boards. It is an indicator of advertising activity, not a
+                measure of total Australian vacancies.
+              </Note>
+              <Note>
+                Two reference periods are held, so this page states a month and its change
+                on the month before. That is a comparison, not a trend, and it is
+                deliberately not drawn as one.
+              </Note>
+            </Notes>
           </>
         )}
 
-        <footer className="border-rule-strong mt-16 border-t pt-6">
-          <p className="text-ink-faint max-w-measure text-xs leading-relaxed">
-            {descriptor?.attributionText ??
-              'Based on Jobs and Skills Australia Internet Vacancy Index data.'}{' '}
-            The Internet Vacancy Index counts advertisements on a defined set of job
-            boards. It is an indicator of advertising activity, not a measure of total
-            Australian vacancies.
-          </p>
-        </footer>
-      </main>
+        <Colophon sources={[SOURCE_KEY]} />
+      </PageBody>
     </>
   );
 }
