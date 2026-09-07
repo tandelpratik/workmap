@@ -107,3 +107,51 @@ Pages state a change on the month and say explicitly that it is not a trend.
 `npm run check` covers format, lint, typecheck and 333 tests across 17 files, all
 passing. `npm run build` succeeds. Every route smoke-tested against live data,
 including unknown state, unknown region, unknown occupation and the 404.
+
+## Follow-up: the primitives layer
+
+The pages were rebuilt before there was anything to build them out of, so the
+house style existed as class lists repeated by hand: the micro-label in
+fourteen places, three link treatments across seventeen, the button in three,
+the hairline grid in three, and four near-identical ranked tables.
+
+Tailwind v4 stays as the engine. On top of it the project now follows the
+shadcn/ui model without installing shadcn/ui: `components/ui/` holds primitives
+we own, variants are declared with `class-variance-authority`, and caller
+overrides resolve through `tailwind-merge`.
+
+The component library was considered and rejected. shadcn switched its
+primitive layer to Base UI in 2026 and both it and Radix run React hooks, so
+every component carries `use client`. This product ships no client JavaScript,
+and that is not incidental: selection is a link and filtering is a GET form,
+which is what makes a search shareable, a reload harmless and the back button
+correct. There is no dialog, dropdown or combobox here that a headless
+primitive would earn its keep on. The build still reports no `use client`
+directive anywhere in `app/` or `components/`.
+
+Added: `cn`, `Label`, `FieldLabel`, `TextLink`, `Button`, `HairlineGrid` and
+`RankedTable`. The table is the one that mattered. It carries obligations from
+the constitution, and each hand-written copy was a chance to drop one: the row
+header that tells a screen reader which row a figure belongs to, the real
+heading behind the "#" column, the absence label that distinguishes "no figure"
+from "withheld by the publisher", and the `aria-hidden` bar that never appears
+without its number. Fixed once now.
+
+### The trap in tailwind-merge
+
+`tailwind-merge` only knows Tailwind's own theme. Handed `text-label`, which is
+a custom font size here, it cannot classify it and falls through to the colour
+group, then decides `text-ink-faint text-label` is a colour written twice and
+drops one. That pair sets nearly every field label, column heading and source
+line on the site.
+
+It is configured with this project's theme scales in `components/ui/cn.ts`, and
+`tests/cn.test.ts` asserts the specific pairs that break without it. Adding a
+custom `--text-*` or `--container-*` token means adding it there too.
+
+Two dependencies, both server-side only: `class-variance-authority` 0.7 and
+`tailwind-merge` 3.6.
+
+Checks: 339 tests across 18 files, lint, typecheck and build all pass. Every
+route re-verified, and the four tables confirmed to render the same row counts,
+row headers, selection state and bars as before the consolidation.

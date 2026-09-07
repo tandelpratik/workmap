@@ -1,3 +1,8 @@
+import { Button } from '@/components/ui/button';
+import { cn } from '@/components/ui/cn';
+import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
+import { FieldLabel } from '@/components/ui/label';
+
 /**
  * The occupation control.
  *
@@ -9,7 +14,9 @@
  *
  * Set as one slim instrument bar above the figure rather than as a bordered
  * block of its own. A control that occupies a screen's worth of height before
- * the graphic it controls has the priority backwards.
+ * the graphic it controls has the priority backwards. It shares the hairline
+ * grid with the job search bar, so the two controls are visibly the same
+ * instrument in two places rather than two things that resemble each other.
  *
  * The state and the selected region ride along as hidden fields. Choosing an
  * occupation should change the figures and nothing else: a reader looking at
@@ -63,26 +70,18 @@ export function OccupationFilter({
     <form
       method="get"
       action="/map"
-      /*
-        The hairlines between cells are the grid's own gap showing the ground
-        through, so a seam is exactly one pixel wherever the layout breaks and
-        the bar cannot develop the doubled borders a stack of border-t and
-        border-l rules produces at a breakpoint.
-      */
-      className="border-rule bg-rule print-hide mt-8 grid grid-cols-1 gap-px border sm:grid-cols-[minmax(0,1fr)_auto]"
+      className={cn(
+        hairlineGrid,
+        'print-hide mt-8 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]',
+      )}
     >
       {stateCode === null ? null : <input type="hidden" name="state" value={stateCode} />}
       {regionCode === null ? null : (
         <input type="hidden" name="region" value={regionCode} />
       )}
 
-      <div className="bg-paper px-4 py-2.5">
-        <label
-          htmlFor="occupation"
-          className="text-ink-faint text-label block font-mono uppercase"
-        >
-          Occupation
-        </label>
+      <HairlineCell className="py-2.5">
+        <FieldLabel htmlFor="occupation">Occupation</FieldLabel>
         <select
           id="occupation"
           name="occupation"
@@ -95,15 +94,12 @@ export function OccupationFilter({
             </option>
           ))}
         </select>
-      </div>
+      </HairlineCell>
 
       <div className="bg-paper flex">
-        <button
-          type="submit"
-          className="text-paper-raised bg-ink hover:bg-accent m-2 min-h-11 w-full px-6 text-sm font-medium transition-colors sm:w-auto"
-        >
+        <Button type="submit" block className="m-2 sm:w-auto">
           Show
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,3 +1,5 @@
+import { Label } from '@/components/ui/label';
+
 /**
  * The plate.
  *
@@ -50,7 +52,7 @@ export function PageBody({
  * reference period tell them what they are looking at.
  */
 export function Dateline({ children }: { children: React.ReactNode }) {
-  return <p className="text-ink-faint text-label font-mono uppercase">{children}</p>;
+  return <Label>{children}</Label>;
 }
 
 export function PageTitle({ children }: { children: React.ReactNode }) {
@@ -139,7 +141,7 @@ export function Notes({
 }) {
   return (
     <section aria-label={title} className="border-rule-strong mt-12 border-t pt-5">
-      <h2 className="text-ink-faint text-label font-mono uppercase">{title}</h2>
+      <Label as="h2">{title}</Label>
       <ol className="text-ink-muted mt-4 grid grid-cols-1 gap-x-10 gap-y-3 text-xs leading-relaxed md:grid-cols-2">
         {children}
       </ol>

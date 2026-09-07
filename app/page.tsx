@@ -14,9 +14,11 @@ import { Colophon } from '@/components/layout/colophon';
 import { Dateline, Note, Notes, PageBody } from '@/components/layout/plate';
 import { FigureFrame } from '@/components/layout/figure-frame';
 import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
-import { Bar } from '@/components/data/bar';
+import { RankedTable } from '@/components/ui/ranked-table';
 import { VacancyLegend, VacancyMap } from '@/components/vacancy-map';
 import type { RegionFigure } from '@/components/region-figure';
+import { link } from '@/components/ui/link';
+import { cn } from '@/components/ui/cn';
 
 /**
  * The front page.
@@ -158,7 +160,6 @@ export default async function HomePage({
   const rankedStates = [...stateFigures].sort(
     (a, b) => (b.observation.value ?? 0) - (a.observation.value ?? 0),
   );
-  const stateMax = rankedStates[0]?.observation.value ?? 0;
 
   const bins = quantileBins(
     stateFigures
@@ -177,7 +178,6 @@ export default async function HomePage({
         .filter((entry) => entry.code !== TOTAL_OCCUPATION_CODE && entry.total !== null)
         .sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
     : [];
-  const occupationMax = groups[0]?.total ?? 0;
 
   const national = byOccupation.ok
     ? (byOccupation.value.occupations.find(
@@ -242,11 +242,7 @@ export default async function HomePage({
                 }. States and territories, summed from the regions the index reports. Counts of advertisements, not of vacancies.`}
                 legend={<VacancyLegend bins={bins} hasMissing={false} />}
                 aside={
-                  <Link
-                    href="/map"
-                    prefetch={false}
-                    className="text-ink hover:text-accent text-sm underline underline-offset-4"
-                  >
+                  <Link href="/map" prefetch={false} className={cn(link(), 'text-sm')}>
                     Open the map
                   </Link>
                 }
@@ -265,59 +261,24 @@ export default async function HomePage({
                 The map's accessible alternative, and on a phone its practical
                 one: nine rows, each a link into that state's regional view.
               */}
-              <div className="scroll-x mt-6">
-                <table
+              <div className="mt-6">
+                <RankedTable
                   id={STATE_TABLE_ID}
-                  className="w-full min-w-[16rem] border-collapse text-sm"
-                >
-                  <caption className="sr-only">
-                    Online job advertisements by state and territory
-                    {periodLabel === null ? '' : `, ${periodLabel}`}, summed from the
-                    regions the index reports. Ordered by number of advertisements.
-                  </caption>
-                  <thead>
-                    <tr className="border-rule-strong border-b">
-                      <th
-                        scope="col"
-                        className="text-ink-faint text-label py-2 pr-4 text-left font-mono font-normal uppercase"
-                      >
-                        State or territory
-                      </th>
-                      <th
-                        scope="col"
-                        className="text-ink-faint text-label py-2 text-right font-mono font-normal uppercase"
-                      >
-                        Advertisements
-                      </th>
-                      <th scope="col" className="hidden w-24 py-2 pl-4 sm:table-cell">
-                        <span className="sr-only">Relative size</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankedStates.map((figure) => (
-                      <tr
-                        key={figure.code}
-                        className="border-rule hover:bg-paper-sunken border-b"
-                      >
-                        <th scope="row" className="py-2.5 pr-4 text-left font-normal">
-                          <a
-                            href={`/map?state=${encodeURIComponent(figure.code)}`}
-                            className="text-ink hover:text-accent underline-offset-4 hover:underline"
-                          >
-                            {figure.name}
-                          </a>
-                        </th>
-                        <td className="text-ink tabular py-2.5 text-right font-mono">
-                          {numberFormat.format(figure.observation.value ?? 0)}
-                        </td>
-                        <td className="hidden py-2.5 pl-4 align-middle sm:table-cell">
-                          <Bar value={figure.observation.value} max={stateMax} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  minWidth="min-w-[16rem]"
+                  captionHidden
+                  caption={`Online job advertisements by state and territory${
+                    periodLabel === null ? '' : `, ${periodLabel}`
+                  }, summed from the regions the index reports. Ordered by number of
+                  advertisements.`}
+                  rows={rankedStates}
+                  rowKey={(figure) => figure.code}
+                  heading="State or territory"
+                  name={(figure) => ({
+                    label: figure.name,
+                    href: `/map?state=${encodeURIComponent(figure.code)}`,
+                  })}
+                  figure={(figure) => ({ value: figure.observation.value })}
+                />
               </div>
             </div>
 
@@ -333,62 +294,26 @@ export default async function HomePage({
                   <Link
                     href="/occupations"
                     prefetch={false}
-                    className="text-ink hover:text-accent text-sm underline underline-offset-4"
+                    className={cn(link(), 'text-sm')}
                   >
                     All groups
                   </Link>
                 }
               >
-                <div className="scroll-x">
-                  <table className="w-full min-w-[16rem] border-collapse text-sm">
-                    <caption className="sr-only">
-                      The largest occupation groups by number of online job advertisements
-                      {periodLabel === null ? '' : `, ${periodLabel}`}.
-                    </caption>
-                    <thead>
-                      <tr className="border-rule-strong border-b">
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label py-2 pr-4 text-left font-mono font-normal uppercase"
-                        >
-                          Occupation group
-                        </th>
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label py-2 text-right font-mono font-normal uppercase"
-                        >
-                          Advertisements
-                        </th>
-                        <th scope="col" className="hidden w-24 py-2 pl-4 sm:table-cell">
-                          <span className="sr-only">Relative size</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groups.slice(0, PREVIEW_ROWS).map((entry) => (
-                        <tr
-                          key={entry.code}
-                          className="border-rule hover:bg-paper-sunken border-b"
-                        >
-                          <th scope="row" className="py-2.5 pr-4 text-left font-normal">
-                            <a
-                              href={`/occupations/${encodeURIComponent(entry.code)}`}
-                              className="text-ink hover:text-accent underline-offset-4 hover:underline"
-                            >
-                              {occupationLabel(entry)}
-                            </a>
-                          </th>
-                          <td className="text-ink tabular py-2.5 text-right font-mono">
-                            {numberFormat.format(entry.total ?? 0)}
-                          </td>
-                          <td className="hidden py-2.5 pl-4 align-middle sm:table-cell">
-                            <Bar value={entry.total} max={occupationMax} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <RankedTable
+                  minWidth="min-w-[16rem]"
+                  captionHidden
+                  caption={`The largest occupation groups by number of online job
+                  advertisements${periodLabel === null ? '' : `, ${periodLabel}`}.`}
+                  rows={groups.slice(0, PREVIEW_ROWS)}
+                  rowKey={(entry) => entry.code}
+                  heading="Occupation group"
+                  name={(entry) => ({
+                    label: occupationLabel(entry),
+                    href: `/occupations/${encodeURIComponent(entry.code)}`,
+                  })}
+                  figure={(entry) => ({ value: entry.total })}
+                />
               </FigureFrame>
 
               <div className="border-rule-heavy mt-12 border-t-2 pt-5">
@@ -421,11 +346,7 @@ export default async function HomePage({
             <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
               No Internet Vacancy Index release has been imported. This is an empty
               database, not a month with no advertisements.{' '}
-              <Link
-                href="/jobs"
-                prefetch={false}
-                className="text-ink underline underline-offset-4"
-              >
+              <Link href="/jobs" prefetch={false} className={link()}>
                 Job advertisements
               </Link>{' '}
               are held separately and may still be available.

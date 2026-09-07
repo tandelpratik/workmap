@@ -2,6 +2,7 @@ import { findSourceDescriptor } from '@/config/sources';
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
 import { SponsorshipBadge } from './sponsorship-badge';
 import { JobsworthLabel } from './adzuna-attribution';
+import { link } from '@/components/ui/link';
 
 /**
  * The results list.
@@ -89,7 +90,7 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
                 // own tracking parameters and referrer, which is how they
                 // attribute the click we owe them for the listing.
                 rel="noopener"
-                className="text-ink hover:text-accent underline-offset-4 hover:underline"
+                className={link({ underline: 'hover' })}
               >
                 {job.title}
               </a>

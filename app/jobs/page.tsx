@@ -9,6 +9,8 @@ import { Masthead } from '@/components/layout/masthead';
 import { Colophon } from '@/components/layout/colophon';
 import { Dateline, Lede, PageBody, PageTitle } from '@/components/layout/plate';
 import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
+import { Label } from '@/components/ui/label';
+import { link } from '@/components/ui/link';
 
 /**
  * Job search.
@@ -157,7 +159,7 @@ export default async function JobsPage({
             {result.error.code === 'NOT_CONFIGURED' ? (
               <p>
                 This deployment is missing configuration.{' '}
-                <a href="/api/health" className="text-ink underline underline-offset-4">
+                <a href="/api/health" className={link()}>
                   /api/health
                 </a>{' '}
                 names the variables at fault. Guessing at{' '}
@@ -221,7 +223,7 @@ export default async function JobsPage({
                     sponsorship,
                     page: page - 1,
                   })}
-                  className="text-ink hover:text-accent underline underline-offset-4"
+                  className={link()}
                 >
                   Previous
                 </a>
@@ -239,7 +241,7 @@ export default async function JobsPage({
                     sponsorship,
                     page: page + 1,
                   })}
-                  className="text-ink hover:text-accent underline underline-offset-4"
+                  className={link()}
                 >
                   Next
                 </a>
@@ -256,9 +258,7 @@ export default async function JobsPage({
               we hold rather than something the employer said.
             */}
             <section className="border-rule-strong mt-12 border-t pt-5">
-              <h2 className="text-ink-faint text-label font-mono uppercase">
-                About the sponsorship labels
-              </h2>
+              <Label as="h2">About the sponsorship labels</Label>
               <SponsorshipKey />
               <p className="text-ink-faint max-w-measure mt-4 text-xs leading-relaxed">
                 These labels report what each advertisement says, quoted from the
@@ -268,7 +268,7 @@ export default async function JobsPage({
                   href="https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-ink hover:text-accent underline underline-offset-4"
+                  className={link()}
                 >
                   Department of Home Affairs
                 </a>

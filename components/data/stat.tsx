@@ -1,3 +1,5 @@
+import { Label } from '@/components/ui/label';
+
 /**
  * A headline figure.
  *
@@ -25,7 +27,7 @@ export function Stat({
 }) {
   return (
     <div>
-      <p className="text-ink-faint text-label font-mono uppercase">{label}</p>
+      <Label>{label}</Label>
       <p
         className={`tabular mt-2 font-serif text-figure font-semibold ${
           muted ? 'text-ink-muted' : 'text-ink'

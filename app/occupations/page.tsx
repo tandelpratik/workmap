@@ -16,7 +16,8 @@ import {
 import { FigureFrame } from '@/components/layout/figure-frame';
 import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
 import { Stat } from '@/components/data/stat';
-import { Bar } from '@/components/data/bar';
+import { RankedTable } from '@/components/ui/ranked-table';
+import { Label } from '@/components/ui/label';
 
 /**
  * WHAT: which occupations are being advertised.
@@ -100,7 +101,6 @@ export default async function OccupationsPage() {
     if (b.total === null) return -1;
     return b.total - a.total;
   });
-  const max = ranked.reduce((highest, entry) => Math.max(highest, entry.total ?? 0), 0);
 
   const fields: ReleaseField[] = [
     { label: 'Dataset', value: DATASET },
@@ -170,9 +170,7 @@ export default async function OccupationsPage() {
                   )}
 
                   <div className="border-rule-strong mt-6 border-t pt-5">
-                    <p className="text-ink-faint text-label font-mono uppercase">
-                      Reading this table
-                    </p>
+                    <Label>Reading this table</Label>
                     <p className="text-ink-muted mt-3 text-sm leading-relaxed">
                       <strong className="text-ink font-medium">
                         The groups overlap on purpose.
@@ -192,101 +190,41 @@ export default async function OccupationsPage() {
                 }. Counts of advertisements, not of vacancies. Bars are scaled to the largest group.`}
                 source={attribution}
               >
-                <div className="scroll-x">
-                  <table
-                    id={TABLE_ID}
-                    className="w-full min-w-[20rem] border-collapse text-sm"
-                  >
-                    <caption className="sr-only">
-                      Occupation groups by number of online job advertisements
-                      {periodLabel === null ? '' : `, ${periodLabel}`}. Each figure is the
-                      sum of the regions the publisher reports on, added here. Ordered by
-                      number of advertisements.
-                    </caption>
-                    <thead>
-                      <tr className="border-rule-strong border-b">
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label hidden w-8 py-2 pr-3 text-right font-mono font-normal uppercase sm:table-cell"
-                        >
-                          <span className="sr-only">Rank</span>
-                          <span aria-hidden="true">#</span>
-                        </th>
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label py-2 pr-4 text-left font-mono font-normal uppercase"
-                        >
-                          Occupation group
-                        </th>
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label py-2 text-right font-mono font-normal uppercase"
-                        >
-                          Advertisements
-                        </th>
-                        <th scope="col" className="hidden w-28 py-2 pl-4 sm:table-cell">
-                          <span className="sr-only">Relative size</span>
-                        </th>
-                        <th
-                          scope="col"
-                          className="text-ink-faint text-label py-2 pl-4 text-right font-mono font-normal uppercase"
-                        >
-                          On the month before
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ranked.map((entry, index) => {
-                        const change =
-                          entry.total === null || entry.previousTotal === null
-                            ? null
-                            : entry.total - entry.previousTotal;
-                        return (
-                          <tr
-                            key={entry.code}
-                            className="border-rule hover:bg-paper-sunken border-b"
-                          >
-                            <td className="tabular text-ink-faint hidden py-2.5 pr-3 text-right font-mono text-xs sm:table-cell">
-                              {entry.total === null ? '' : index + 1}
-                            </td>
-                            <th
-                              scope="row"
-                              className="text-ink py-2.5 pr-4 text-left font-normal"
-                            >
-                              <a
-                                href={`/occupations/${encodeURIComponent(entry.code)}`}
-                                className="text-ink hover:text-accent underline-offset-4 hover:underline"
-                              >
-                                {occupationLabel(entry)}
-                              </a>
-                            </th>
-                            <td className="text-ink tabular py-2.5 text-right font-mono">
-                              {entry.total === null ? (
-                                <span className="text-ink-faint font-sans text-xs">
-                                  No figure
-                                </span>
-                              ) : (
-                                numberFormat.format(entry.total)
-                              )}
-                            </td>
-                            <td className="hidden py-2.5 pl-4 align-middle sm:table-cell">
-                              <Bar value={entry.total} max={max} />
-                            </td>
-                            <td className="text-ink-muted tabular py-2.5 pl-4 text-right font-mono">
-                              {change === null ? (
-                                <span className="text-ink-faint font-sans text-xs">
-                                  No comparison
-                                </span>
-                              ) : (
-                                signedFormat.format(change)
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <RankedTable
+                  id={TABLE_ID}
+                  minWidth="min-w-[20rem]"
+                  captionHidden
+                  caption={`Occupation groups by number of online job advertisements${
+                    periodLabel === null ? '' : `, ${periodLabel}`
+                  }. Each figure is the sum of the regions the publisher reports on,
+                  added here. Ordered by number of advertisements.`}
+                  rows={ranked}
+                  rowKey={(entry) => entry.code}
+                  heading="Occupation group"
+                  /* The ordinal is the first column to go when the width runs out. */
+                  rank="compact"
+                  name={(entry) => ({
+                    label: occupationLabel(entry),
+                    href: `/occupations/${encodeURIComponent(entry.code)}`,
+                  })}
+                  figure={(entry) => ({ value: entry.total })}
+                  after={[
+                    {
+                      heading: 'On the month before',
+                      align: 'right',
+                      render: (entry) =>
+                        entry.total === null || entry.previousTotal === null ? (
+                          <span className="text-ink-faint font-sans text-xs">
+                            No comparison
+                          </span>
+                        ) : (
+                          <span className="text-ink-muted">
+                            {signedFormat.format(entry.total - entry.previousTotal)}
+                          </span>
+                        ),
+                    },
+                  ]}
+                />
               </FigureFrame>
             </Plate>
 

@@ -11,6 +11,10 @@
  * figure is exactly the fabrication the constitution forbids.
  */
 
+import { cn } from '@/components/ui/cn';
+import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
+import { Label } from '@/components/ui/label';
+
 export interface ReleaseField {
   readonly label: string;
   readonly value: string;
@@ -21,25 +25,19 @@ export function ReleaseStrip({ fields }: { fields: readonly ReleaseField[] }) {
 
   return (
     /*
-      The hairlines between cells are the grid's own gap showing the ground
-      through, so they stay exactly one pixel and land correctly however many
-      columns the viewport gives us.
-
       Bounded on all four sides rather than ruled top and bottom. The cells
       need interior padding, and against an open-ended band that padding reads
       as the first label failing to line up with the margin the rest of the
       page is set to.
     */
-    <dl className="border-rule bg-rule mt-8 grid grid-cols-2 gap-px border sm:grid-cols-4">
+    <dl className={cn(hairlineGrid, 'mt-8 grid-cols-2 sm:grid-cols-4')}>
       {fields.map((field) => (
-        <div key={field.label} className="bg-paper px-4 py-3">
-          <dt className="text-ink-faint text-label font-mono uppercase">
-            {field.label}
-          </dt>
+        <HairlineCell key={field.label}>
+          <Label as="dt">{field.label}</Label>
           <dd className="text-ink mt-1.5 text-sm leading-snug font-medium">
             {field.value}
           </dd>
-        </div>
+        </HairlineCell>
       ))}
     </dl>
   );

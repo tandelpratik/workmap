@@ -61,6 +61,27 @@ Tailwind's breakpoints measure the viewport, not the container. A component
 inside `max-w-column` must not use a `lg:` grid: at that breakpoint it will
 divide seven hundred pixels between the columns it appeared to ask for.
 
+## Framework
+
+Tailwind CSS v4 is the styling engine. On top of it the project follows the
+shadcn/ui model without installing shadcn/ui: components live in `ui/`, are
+owned and edited here, express their variants with `class-variance-authority`,
+and resolve caller overrides with `tailwind-merge`.
+
+The component library itself is deliberately not adopted. Its primitives, Base
+UI since shadcn switched to it in 2026, run React hooks, so every component
+carries `use client` and drags a bundle across the server boundary. This
+product ships no client JavaScript: selection is a link, filtering is a GET
+form, and that is what makes a search shareable, a reload harmless and the back
+button correct. There is no dialog, dropdown or combobox here for a headless
+primitive to earn its keep on. Reach for one when there is.
+
+`tailwind-merge` is configured with this project's theme scales in
+`components/ui/cn.ts` and guarded by `tests/cn.test.ts`. Unconfigured, it reads
+`text-label` as a colour rather than a font size and silently drops
+`text-ink-faint` from the pair that sets nearly every label on the site. Adding
+a custom `--text-*` or `--container-*` token means adding it there too.
+
 ## Primitives
 
 | Component       | Purpose                                                       |
@@ -78,6 +99,11 @@ divide seven hundred pixels between the columns it appeared to ask for.
 | `Colophon`      | Required attribution for every source the page displays       |
 | `Stat`          | One headline figure                                           |
 | `Bar`           | The comparison a column of numerals loses                     |
+| `Label`         | The mono uppercase micro-label, on whichever tag suits        |
+| `TextLink`      | Three tones, two underline behaviours, one selected state     |
+| `Button`        | The submit key, and the link dressed as one                   |
+| `HairlineGrid`  | The instrument band whose dividers are its own gap            |
+| `RankedTable`   | A ranking of named things by one figure                       |
 
 ## Rules
 
@@ -108,6 +134,11 @@ its label. The dot is an index, not the message.
 **Absence is named.** "No figure", "Withheld by the publisher" and "Outside
 this dataset" are different facts. No component may render a dash for all
 three, and none may render an absent value as zero.
+
+**Rankings go through `RankedTable`.** It is where the row header, the ordinal
+heading, the absence label and the `aria-hidden` bar live. Four hand-written
+copies of that table had already drifted apart; each copy is a chance to drop
+one of the obligations above.
 
 **Tables scroll inside their own frame.** Wrap in `.scroll-x` and set a
 `min-w-*` that fits the columns actually shown at that breakpoint. The body

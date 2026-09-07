@@ -1,6 +1,9 @@
 import { changeBetween } from '@/domain/labour-market';
 import { Stat } from '@/components/data/stat';
 import { absenceLabel, levelLabel, regionHref, type RegionFigure } from './region-figure';
+import { Label } from '@/components/ui/label';
+import { link } from '@/components/ui/link';
+import { cn } from '@/components/ui/cn';
 
 /**
  * The selected region's figures, set as the plate's marginalia.
@@ -36,7 +39,7 @@ const monthFormat = new Intl.DateTimeFormat('en-AU', {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-b py-2 last:border-b-0">
-      <dt className="text-ink-faint text-label font-mono uppercase">{label}</dt>
+      <Label as="dt">{label}</Label>
       <dd className="text-ink text-right text-sm">{children}</dd>
     </div>
   );
@@ -67,14 +70,14 @@ export function RegionDetail({
   return (
     <section aria-labelledby="region-detail-heading">
       <div className="flex items-baseline justify-between gap-4">
-        <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
+        <Label>Selected region</Label>
         {/*
           Clearing the selection is a link to the unselected URL, so it works
           the same way selecting did, back button included.
         */}
         <a
           href={regionHref(null, stateCode)}
-          className="text-ink-muted hover:text-accent text-xs underline underline-offset-4"
+          className={cn(link({ tone: 'muted' }), 'text-xs')}
         >
           Clear
         </a>
@@ -159,10 +162,7 @@ export function RegionDetail({
             the question that usually follows, which is what the rest of its
             state looks like.
           */}
-          <a
-            href={regionHref(region.code, drilldown.code)}
-            className="text-ink hover:text-accent underline underline-offset-4"
-          >
+          <a href={regionHref(region.code, drilldown.code)} className={link()}>
             See all of {drilldown.name}
           </a>
         </p>
@@ -182,11 +182,11 @@ export function RegionDetail({
 export function RegionPrompt({ tableId }: { tableId: string }) {
   return (
     <section aria-label="How to read this map">
-      <p className="text-ink-faint text-label font-mono uppercase">Reading the map</p>
+      <Label>Reading the map</Label>
       <div className="text-ink-muted mt-3 space-y-3 text-sm leading-relaxed">
         <p>
           Select any region, on the map or in{' '}
-          <a href={`#${tableId}`} className="text-ink underline underline-offset-4">
+          <a href={`#${tableId}`} className={link()}>
             the table
           </a>
           , for its figures and its change on the month before.
@@ -212,13 +212,13 @@ export function RegionPrompt({ tableId }: { tableId: string }) {
 export function RegionNotFound({ code }: { code: string }) {
   return (
     <section>
-      <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
+      <Label>Selected region</Label>
       <h2 className="text-ink mt-2 font-serif text-2xl font-semibold">Not found</h2>
       <p className="text-ink-muted mt-3 text-sm leading-relaxed">
         Nothing in this release is published under the code{' '}
         <span className="font-mono text-xs">{code}</span>. It may belong to a different
         ASGS edition, or to a level this index does not report on.{' '}
-        <a href={regionHref(null)} className="text-ink underline underline-offset-4">
+        <a href={regionHref(null)} className={link()}>
           Show the whole map
         </a>
         .
@@ -245,10 +245,10 @@ export function RegionElsewhere({
 }) {
   return (
     <section>
-      <p className="text-ink-faint text-label font-mono uppercase">Selected region</p>
+      <Label>Selected region</Label>
       <p className="text-ink-muted mt-3 text-sm leading-relaxed">
         {name} is in {where}, so it is not shown on this map.{' '}
-        <a href={href} className="text-ink underline underline-offset-4">
+        <a href={href} className={link()}>
           Show {name}
         </a>
         .
@@ -278,10 +278,7 @@ export function Breadcrumb({
     <nav aria-label="Breadcrumb" className="mb-4">
       <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-xs">
         <li>
-          <a
-            href={regionHref(regionCode, null)}
-            className="text-ink hover:text-accent underline underline-offset-4"
-          >
+          <a href={regionHref(regionCode, null)} className={link()}>
             Australia
           </a>
         </li>

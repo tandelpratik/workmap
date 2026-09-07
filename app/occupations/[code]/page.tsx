@@ -23,6 +23,8 @@ import { FigureFrame } from '@/components/layout/figure-frame';
 import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
 import { Stat } from '@/components/data/stat';
 import { VacancyTable } from '@/components/vacancy-table';
+import { Label } from '@/components/ui/label';
+import { link } from '@/components/ui/link';
 
 /**
  * One occupation group, everywhere it is advertised.
@@ -88,7 +90,7 @@ export async function generateMetadata({
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-b py-2 last:border-b-0">
-      <dt className="text-ink-faint text-label font-mono uppercase">{label}</dt>
+      <Label as="dt">{label}</Label>
       <dd className="text-ink text-right text-sm">{children}</dd>
     </div>
   );
@@ -201,11 +203,7 @@ export default async function OccupationPage({
           <nav aria-label="Breadcrumb" className="mb-4">
             <ol className="text-ink-muted flex flex-wrap items-center gap-2 text-xs">
               <li>
-                <Link
-                  href="/occupations"
-                  prefetch={false}
-                  className="text-ink hover:text-accent underline underline-offset-4"
-                >
+                <Link href="/occupations" prefetch={false} className={link()}>
                   Occupations
                 </Link>
               </li>
@@ -302,7 +300,7 @@ export default async function OccupationPage({
                   <p className="mt-5 text-sm">
                     <a
                       href={`/map?occupation=${encodeURIComponent(occupation.code)}`}
-                      className="text-ink hover:text-accent underline underline-offset-4"
+                      className={link()}
                     >
                       See this occupation on the map
                     </a>

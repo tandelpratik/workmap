@@ -1,6 +1,8 @@
 import { brand } from '@/config/brand';
 import { findSourceDescriptor } from '@/config/sources';
 import { AdzunaAttribution } from '@/components/adzuna-attribution';
+import { Label } from '@/components/ui/label';
+import { link } from '@/components/ui/link';
 
 /**
  * The foot of every page: what the page was made from.
@@ -41,7 +43,7 @@ export function Colophon({
 
       {descriptors.length === 0 ? null : (
         <>
-          <h2 className="text-ink-faint text-label font-mono uppercase">Sources</h2>
+          <Label as="h2">Sources</Label>
           <dl className="mt-4 space-y-3">
             {descriptors.map((descriptor) => (
               <div
@@ -56,7 +58,7 @@ export function Colophon({
                       href={descriptor.homepageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-accent underline underline-offset-4"
+                      className={link()}
                     >
                       {descriptor.displayName}
                     </a>

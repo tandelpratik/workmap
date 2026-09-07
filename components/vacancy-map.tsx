@@ -1,6 +1,7 @@
 import type { Bin, ChoroplethGeometry } from '@/geography/choropleth';
 import { binFor } from '@/geography/choropleth';
 import { regionHref, type RegionFigure } from './region-figure';
+import { Label } from '@/components/ui/label';
 
 /**
  * Regional vacancy choropleth.
@@ -219,9 +220,7 @@ export function VacancyLegend({
   return (
     <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
       <div className="min-w-0 flex-1 basis-64">
-        <h3 className="text-ink-faint text-label font-mono uppercase">
-          Advertisements per region
-        </h3>
+        <Label as="h3">Advertisements per region</Label>
 
         <div className="border-rule-strong mt-2 flex border" aria-hidden="true">
           {bins.map((bin) => (
