@@ -30,15 +30,23 @@ import { brand } from '@/config/brand';
  * exists, and inventing one here is not this component's business (ADR-0007).
  */
 
-export type Section = 'home' | 'map' | 'occupations' | 'jobs';
+export type Section = 'home' | 'map' | 'locations' | 'occupations' | 'jobs' | 'insights';
 
 // Where, what, and the listings themselves. The order is the reading order:
-// the map is the product's front door and the occupations are what it is a
-// map of.
+// the map is the product's front door, locations and occupations are the two
+// axes it is a map of, and the listings are what sits behind the figures.
+//
+// Locations sits beside the map rather than inside it because they answer the
+// same question in different registers. The map is a picture and is read at a
+// glance; a location page is a place, with its regions, its occupations and
+// its advertisements, which is what a reader wants once the picture has told
+// them where to look.
 const sections: readonly { id: Section; href: string; label: string }[] = [
   { id: 'map', href: '/map', label: 'Map' },
+  { id: 'locations', href: '/locations', label: 'Locations' },
   { id: 'occupations', href: '/occupations', label: 'Occupations' },
   { id: 'jobs', href: '/jobs', label: 'Jobs' },
+  { id: 'insights', href: '/insights', label: 'Insights' },
 ];
 
 export function Masthead({

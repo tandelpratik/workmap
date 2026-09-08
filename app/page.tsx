@@ -7,6 +7,7 @@ import {
   cachedStates,
 } from '@/app/cached-queries';
 import { makeObservation } from '@/domain/labour-market';
+import { toAreaSlug } from '@/domain/geography';
 import { buildChoroplethGeometry, quantileBins } from '@/geography/choropleth';
 import { occupationLabel } from '@/components/occupation-filter';
 import { Masthead } from '@/components/layout/masthead';
@@ -275,7 +276,11 @@ export default async function HomePage({
                   heading="State or territory"
                   name={(figure) => ({
                     label: figure.name,
-                    href: `/map?state=${encodeURIComponent(figure.code)}`,
+                    // Into the state's own page rather than back into the map.
+                    // A reader who clicks a state on a front page is asking
+                    // what is happening there, and the map's answer to that
+                    // was another map.
+                    href: `/locations/${toAreaSlug(figure.name)}`,
                   })}
                   figure={(figure) => ({ value: figure.observation.value })}
                 />
@@ -369,7 +374,16 @@ export default async function HomePage({
           </Note>
         </Notes>
 
-        <Colophon sources={[SOURCE_KEY, 'abs-asgs']} />
+        <Colophon
+          sources={[
+            {
+              key: SOURCE_KEY,
+              dataset: DATASET,
+              ...(periodLabel === null ? {} : { referencePeriod: periodLabel }),
+            },
+            'abs-asgs',
+          ]}
+        />
       </PageBody>
     </>
   );

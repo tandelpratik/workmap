@@ -614,6 +614,16 @@ export async function listOccupationTotals(options: {
   readonly dataset: string;
   readonly edition: string;
   readonly levels: readonly GeographyLevel[];
+  /**
+   * Narrow to the regions inside one state or territory.
+   *
+   * Undefined reads the whole country, which is what the national occupation
+   * ranking wants. Given a state code, the same arithmetic runs over that
+   * state's regions only: still a sum over a partition, since the regions
+   * inside a state cover it exactly once, and still ours to label rather than
+   * a figure the publisher released.
+   */
+  readonly stateCode?: string;
 }): Promise<Result<OccupationTotalsResult, Failure>> {
   const descriptor = findSourceDescriptor(options.sourceKey);
   if (descriptor === undefined) {
@@ -639,6 +649,20 @@ export async function listOccupationTotals(options: {
 
   const levels = options.levels.map((level) => String(level));
 
+  /*
+   * Null means the whole country, and the SQL below tests for it inline rather
+   * than being built two ways. One statement that reads its own filter is
+   * easier to keep correct than two that drift.
+   */
+  const stateCode = options.stateCode ?? null;
+
+  /*
+   * The reference period is deliberately read across the whole dataset rather
+   * than within the state. A state page and the national page must date their
+   * figures identically: taking each state's own latest would let one that
+   * stopped reporting present older figures under a newer month without any
+   * number being wrong.
+   */
   const periods = await database.value.$queryRaw<{ period_start: Date }[]>`
     select distinct m.period_start
     from labour_market_metric m
@@ -699,13 +723,18 @@ export async function listOccupationTotals(options: {
              select count(distinct s2.geography_id)::int
              from labour_market_series s2
              join geography g2 on g2.id = s2.geography_id
+             left join geography parent2 on parent2.id = g2.parent_id
              where s2.source_key = ${options.sourceKey}
                and s2.dataset = ${options.dataset}
                and g2.asgs_edition = ${options.edition}
                and g2.level::text = any(${levels}::text[])
+               and (${stateCode}::text is null or parent2.code = ${stateCode})
            ) as regions_in_scope
     from labour_market_series s
     join geography g on g.id = s.geography_id
+    -- The state a region sits in. IVI reports at GCCSA and SA4, and both hang
+    -- directly off a state, so the parent is the state without a recursion.
+    left join geography parent on parent.id = g.parent_id
     left join labour_market_metric m
       on m.series_id = s.id
       and m.period_start in (${period}, ${previousPeriod})
@@ -715,6 +744,7 @@ export async function listOccupationTotals(options: {
       and s.source_occupation_code <> ''
       and g.asgs_edition = ${options.edition}
       and g.level::text = any(${levels}::text[])
+      and (${stateCode}::text is null or parent.code = ${stateCode})
     group by s.source_occupation_code
     order by total desc nulls last
   `;

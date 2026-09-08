@@ -6,6 +6,7 @@ import {
   listOccupationTotals,
   listRegionTotals,
 } from '@/db/repositories/labour-market';
+import { listByLevel } from '@/db/repositories/geography';
 import { isProductionEligible } from '@/domain/source';
 
 /**
@@ -661,6 +662,180 @@ withDatabase('region totals respect the aggregate licence gate (ADR-0009)', () =
     const withFigures = new Set(result.value.regions.map((region) => region.code));
     for (const region of result.value.withoutData) {
       expect(withFigures.has(region.code)).toBe(false);
+    }
+  });
+});
+
+withDatabase('occupation totals scoped to one state', () => {
+  const BASE = {
+    sourceKey: 'jsa-ivi',
+    dataset: 'Internet Vacancy Index',
+    edition: 'ASGS2026',
+    levels: ['GCCSA', 'SA4'] as const,
+  };
+
+  /*
+   * The property that makes a state page trustworthy.
+   *
+   * The regions the index reports partition Australia exactly once, so the
+   * eight states must add back to the national figure. If they did not, either
+   * a region is being counted twice, or one belongs to no state, and the state
+   * pages would be quietly wrong in a way no single page could reveal.
+   */
+  it('reconciles to the national figure when every state is added back', async () => {
+    const national = await listOccupationTotals(BASE);
+    expect(national.ok).toBe(true);
+    if (!national.ok || national.value.occupations.length === 0) return;
+
+    const nationalTotal =
+      national.value.occupations.find((entry) => entry.code === '0')?.total ?? null;
+    expect(nationalTotal).not.toBeNull();
+
+    const states = await listByLevel('ASGS2026', 'STATE');
+    expect(states.ok).toBe(true);
+    if (!states.ok) return;
+
+    let summed = 0;
+    let regions = 0;
+
+    for (const state of states.value) {
+      const scoped = await listOccupationTotals({ ...BASE, stateCode: state.code });
+      expect(scoped.ok, state.name).toBe(true);
+      if (!scoped.ok) continue;
+
+      const all = scoped.value.occupations.find((entry) => entry.code === '0');
+      summed += all?.total ?? 0;
+      regions += scoped.value.regionsInScope;
+    }
+
+    expect(summed).toBe(nationalTotal);
+    expect(regions).toBe(national.value.regionsInScope);
+  });
+
+  it('dates a state the same way it dates the country', async () => {
+    // A state page and the national page must state the same reference period.
+    // Reading each state's own latest would let one that stopped reporting show
+    // older figures under a newer month without any number being wrong.
+    const national = await listOccupationTotals(BASE);
+    const queensland = await listOccupationTotals({ ...BASE, stateCode: '3' });
+    expect(national.ok && queensland.ok).toBe(true);
+    if (!national.ok || !queensland.ok) return;
+
+    expect(queensland.value.period?.toISOString() ?? null).toBe(
+      national.value.period?.toISOString() ?? null,
+    );
+    expect(queensland.value.previousPeriod?.toISOString() ?? null).toBe(
+      national.value.previousPeriod?.toISOString() ?? null,
+    );
+  });
+
+  it('reports an area the dataset covers nothing for as out of scope', async () => {
+    // "Other Territories" is a real ASGS area that JSA publishes no figures
+    // for. Zero regions in scope is what stops a page being generated for it.
+    const other = await listOccupationTotals({ ...BASE, stateCode: '9' });
+    expect(other.ok).toBe(true);
+    if (!other.ok) return;
+    expect(other.value.regionsInScope).toBe(0);
+  });
+
+  it('narrows the ranking rather than reordering the national one', async () => {
+    const queensland = await listOccupationTotals({ ...BASE, stateCode: '3' });
+    const national = await listOccupationTotals(BASE);
+    expect(queensland.ok && national.ok).toBe(true);
+    if (!queensland.ok || !national.ok) return;
+    if (queensland.value.occupations.length === 0) return;
+
+    // Every scoped figure is a part of its national counterpart, so none may
+    // exceed it. A state larger than the country is the signature of a join
+    // that has multiplied rows.
+    const nationalByCode = new Map(
+      national.value.occupations.map((entry) => [entry.code, entry.total ?? 0]),
+    );
+    for (const entry of queensland.value.occupations) {
+      expect(entry.total ?? 0, entry.code).toBeLessThanOrEqual(
+        nationalByCode.get(entry.code) ?? 0,
+      );
+    }
+  });
+});
+
+withDatabase('the two ways of asking for a state figure agree', () => {
+  const BASE = {
+    sourceKey: 'jsa-ivi',
+    dataset: 'Internet Vacancy Index',
+    edition: 'ASGS2026',
+    levels: ['GCCSA', 'SA4'] as const,
+  };
+
+  /*
+   * The product computes a state's figure for one occupation two different
+   * ways, on two different pages.
+   *
+   *   - a location page runs the state-scoped aggregate in SQL;
+   *   - an occupation page reads every region for that occupation and sums the
+   *     ones inside each state in the application.
+   *
+   * They are meant to be the same number and a reader will see both. If they
+   * ever diverge, one page is wrong and neither would look wrong, which is the
+   * worst shape a data bug can take.
+   *
+   * Each state is read once and every sampled occupation checked against that
+   * one read. Querying per occupation instead was 44 round trips to another
+   * region and timed out, without making the property any truer.
+   */
+  it('gives the same figure from SQL and from summing regions', async () => {
+    const states = await listByLevel('ASGS2026', 'STATE');
+    const national = await listOccupationTotals(BASE);
+    expect(states.ok && national.ok).toBe(true);
+    if (!states.ok || !national.ok || national.value.occupations.length === 0) return;
+
+    const scopedByState = new Map<string, Map<string, number | null>>();
+    for (const state of states.value) {
+      const scoped = await listOccupationTotals({ ...BASE, stateCode: state.code });
+      expect(scoped.ok, state.name).toBe(true);
+      if (!scoped.ok) continue;
+      scopedByState.set(
+        state.code,
+        new Map(scoped.value.occupations.map((entry) => [entry.code, entry.total])),
+      );
+    }
+
+    const sample = national.value.occupations
+      .filter((entry) => entry.total !== null)
+      .slice(0, 3);
+
+    for (const occupation of sample) {
+      const regional = await listRegionTotals({
+        ...BASE,
+        occupationCode: occupation.code,
+      });
+      expect(regional.ok, occupation.code).toBe(true);
+      if (!regional.ok) continue;
+
+      let summedAcrossStates = 0;
+
+      for (const state of states.value) {
+        const fromSql = scopedByState.get(state.code)?.get(occupation.code) ?? null;
+
+        const reporting = regional.value.regions.filter(
+          (region) =>
+            region.stateCode === state.code && region.observation.value !== null,
+        );
+        const fromRegions =
+          reporting.length === 0
+            ? null
+            : reporting.reduce(
+                (running, region) => running + (region.observation.value ?? 0),
+                0,
+              );
+
+        expect(fromSql, `${occupation.code} in ${state.name}`).toBe(fromRegions);
+        summedAcrossStates += fromRegions ?? 0;
+      }
+
+      // And both agree with the national figure, so neither is consistently
+      // wrong in the same direction.
+      expect(summedAcrossStates, occupation.code).toBe(occupation.total);
     }
   });
 });

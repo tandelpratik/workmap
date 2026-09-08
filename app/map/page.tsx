@@ -467,7 +467,16 @@ export default async function MapPage({
           </section>
         )}
 
-        <Colophon sources={[SOURCE_KEY, 'abs-asgs']} />
+        <Colophon
+          sources={[
+            {
+              key: SOURCE_KEY,
+              dataset: DATASET,
+              ...(periodLabel === null ? {} : { referencePeriod: periodLabel }),
+            },
+            'abs-asgs',
+          ]}
+        />
       </PageBody>
     </>
   );
