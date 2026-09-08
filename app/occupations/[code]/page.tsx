@@ -6,8 +6,11 @@ import {
   cachedOccupations,
   cachedOccupationTotals,
   cachedRegionTotals,
+  cachedStates,
 } from '@/app/cached-queries';
 import { occupationLabel } from '@/components/occupation-filter';
+import { toAreaSlug } from '@/domain/geography';
+import { RankedTable } from '@/components/ui/ranked-table';
 import { Masthead } from '@/components/layout/masthead';
 import { Colophon } from '@/components/layout/colophon';
 import {
@@ -45,6 +48,7 @@ const EDITION = 'ASGS2026';
 const DATASET = 'Internet Vacancy Index';
 const SOURCE_KEY = 'jsa-ivi';
 const TABLE_ID = 'regions-for-occupation';
+const STATE_TABLE_ID = 'states-for-occupation';
 
 const numberFormat = new Intl.NumberFormat('en-AU');
 const signedFormat = new Intl.NumberFormat('en-AU', { signDisplay: 'always' });
@@ -108,7 +112,7 @@ export default async function OccupationPage({
   // asked for while the vocabulary is being read rather than after it. Three
   // round trips to another region become one, and a code the release does not
   // carry simply returns nothing, which is the answer this page wants anyway.
-  const [occupation, totals, across] = await Promise.all([
+  const [occupation, totals, across, states] = await Promise.all([
     findOccupation(raw),
     cachedRegionTotals({
       sourceKey: SOURCE_KEY,
@@ -123,6 +127,7 @@ export default async function OccupationPage({
       edition: EDITION,
       levels: ['GCCSA', 'SA4'],
     }),
+    cachedStates(EDITION, 'STATE'),
   ]);
 
   // A code the release does not carry is a missing page, not an empty one.
@@ -173,6 +178,40 @@ export default async function OccupationPage({
     change === null || summary?.previousTotal === null || summary?.previousTotal === 0
       ? null
       : (change / (summary?.previousTotal ?? 1)) * 100;
+
+  /*
+   * The same regions, rolled up to their states.
+   *
+   * The fifty-row table below answers where precisely; this answers where
+   * broadly, which is the question most readers arrive with. It is the same
+   * arithmetic the location pages do in the other direction, so the two agree
+   * by construction rather than by coincidence: a state's figure for this
+   * occupation is the sum of the regions the publisher reports inside it.
+   *
+   * Both halves of the count are kept. A state totalled from nine of its eleven
+   * regions is not the same figure as one totalled from all eleven.
+   */
+  const stateRows = (states.ok ? states.value : [])
+    .map((area) => {
+      const inside = regions.filter((region) => region.stateCode === area.code);
+      const missing = withoutData.filter((region) => region.stateCode === area.code);
+      const reporting = inside.filter((region) => region.observation.value !== null);
+      const total = reporting.reduce(
+        (running, region) => running + (region.observation.value ?? 0),
+        0,
+      );
+      return {
+        code: area.code,
+        name: area.name,
+        slug: toAreaSlug(area.name),
+        total: reporting.length === 0 ? null : total,
+        reporting: reporting.length,
+        inScope: inside.length + missing.length,
+      };
+    })
+    // An area the release covers no regions for is out of scope, not empty.
+    .filter((row) => row.inScope > 0)
+    .sort((a, b) => (b.total ?? 0) - (a.total ?? 0));
 
   const busiest = [...regions]
     .filter((region) => region.observation.value !== null)
@@ -308,7 +347,75 @@ export default async function OccupationPage({
                       where the same figures are shaded by region
                     </span>
                   </p>
+
+                  {/*
+                    A text search, and labelled as one. Listings carry no
+                    occupation classification: mapping them is blocked on an
+                    open licence question, and an unmapped listing stays
+                    unmapped rather than being guessed into a plausible code.
+                    So this searches the words, which is a different and weaker
+                    thing than "advertisements in this group", and the wording
+                    has to say so or the page claims a mapping that does not
+                    exist.
+                  */}
+                  {occupation.name === null ? null : (
+                    <p className="mt-4 text-sm">
+                      <a
+                        href={`/jobs?q=${encodeURIComponent(occupation.name.toLowerCase())}`}
+                        className={link()}
+                      >
+                        Search advertisements for these words
+                      </a>
+                      <span className="text-ink-muted block text-xs">
+                        a keyword search, not a classification: listings are not mapped to
+                        occupation codes
+                      </span>
+                    </p>
+                  )}
                 </div>
+              }
+              below={
+                stateRows.length === 0 ? undefined : (
+                  <div className="mt-4">
+                    <FigureFrame
+                      title={`${label} by state and territory`}
+                      subtitle={`${
+                        periodLabel ?? 'Reference period not stated'
+                      }. Regions summed into the states they sit in, computed here rather than published as state figures.`}
+                    >
+                      <RankedTable
+                        id={STATE_TABLE_ID}
+                        captionHidden
+                        caption={`Online job advertisements for ${label} by state and territory${
+                          periodLabel === null ? '' : `, ${periodLabel}`
+                        }, ordered by number of advertisements.`}
+                        rows={stateRows}
+                        rowKey={(row) => row.code}
+                        heading="State or territory"
+                        rank="compact"
+                        name={(row) => ({
+                          label: row.name,
+                          href: `/locations/${row.slug}`,
+                        })}
+                        figure={(row) => ({
+                          value: row.total,
+                          absence: 'Not reported',
+                        })}
+                        after={[
+                          {
+                            heading: 'Regions',
+                            align: 'right',
+                            compact: true,
+                            render: (row) =>
+                              row.reporting === row.inScope
+                                ? String(row.inScope)
+                                : `${String(row.reporting)} of ${String(row.inScope)}`,
+                          },
+                        ]}
+                      />
+                    </FigureFrame>
+                  </div>
+                )
               }
             >
               <FigureFrame
@@ -349,7 +456,15 @@ export default async function OccupationPage({
           </>
         )}
 
-        <Colophon sources={[SOURCE_KEY]} />
+        <Colophon
+          sources={[
+            {
+              key: SOURCE_KEY,
+              dataset: DATASET,
+              ...(periodLabel === null ? {} : { referencePeriod: periodLabel }),
+            },
+          ]}
+        />
       </PageBody>
     </>
   );
