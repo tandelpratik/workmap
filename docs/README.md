@@ -18,6 +18,7 @@ The product constitution and milestone specifications live in `.claude/`:
 | [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md)                     | Per-source compliance status, and what each licence permits                          |
 | [compliance/DIRECT_SOURCE_FEASIBILITY.md](compliance/DIRECT_SOURCE_FEASIBILITY.md) | Direct employer and government sources: measured access, and what their terms permit |
 | [milestones/](milestones/)                                                         | One record per completed milestone                                                   |
+| [BACKLOG.md](BACKLOG.md)                                                           | Deferred work, what each item waits on, and what it blocks in turn                   |
 
 ## Reading order for a new contributor
 

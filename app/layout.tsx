@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Sans, IBM_Plex_Mono, Source_Serif_4 } from 'next/font/google';
 import { brand } from '@/config/brand';
+import { SiteFooter } from '@/components/layout/site-footer';
 import './globals.css';
 
 /**
@@ -68,7 +69,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang={brand.locale}
       className={`${plexSans.variable} ${plexMono.variable} ${sourceSerif.variable}`}
     >
-      <body className="min-h-dvh">
+      {/*
+        A flex column so the footer sits at the foot of a short page rather than
+        halfway up it. The main region grows; the footer takes its own height.
+      */}
+      <body className="flex min-h-dvh flex-col">
         <a
           href="#main"
           className="focus:bg-paper-raised focus:text-ink focus:border-rule-heavy sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:border focus:px-3 focus:py-2 focus:text-sm"
@@ -76,6 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
