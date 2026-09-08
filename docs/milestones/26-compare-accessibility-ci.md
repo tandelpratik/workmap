@@ -90,11 +90,17 @@ publishing source stores its required attribution, every source with established
 rights names a linkable licence, every live listing source states what may be
 reproduced from an advertisement.
 
-**`source-health.yml`** on a schedule at 21:00 UTC, after both ingestion
-schedules have had their chance. It also runs the data quality checks, and that
-is the point of putting them there as well as on push: **corruption arrives with
-an import, not with a commit**, so a gate that only fires when somebody changes
-code would miss the thing it exists to catch.
+**`source-health.yml`** weekly, on Monday, after both ingestion schedules have
+had their chance that day. Weekly rather than daily is a trade against how fast
+a stopped crawler needs finding: listings are retired after fourteen days
+without being seen, so a weekly check gets two chances to notice before the
+corpus begins emptying itself, and a daily one mostly repeats itself six more
+times. It runs on demand from the Actions tab when something looks wrong.
+
+It also runs the data quality checks, and that is the point of putting them
+there as well as on push: **corruption arrives with an import, not with a
+commit**, so a gate that only fires when somebody changes code would miss the
+thing it exists to catch.
 
 Failure is the notification. A red run on the default branch is visible without
 anything else being configured, and this is deliberately not wired to an

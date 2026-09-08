@@ -5,9 +5,14 @@
 # stale. `npm run source:health` reads those records; this makes something
 # actually run it.
 #
-# It fires after both ingestion schedules have had their chance: Adzuna at 19:00
-# UTC on Vercel Cron, Queensland at 16:00 UTC here. Checking at 21:00 means a
-# missed run is reported the same day rather than the next one.
+# Weekly, on Monday, after both ingestion schedules have had their chance that
+# day: Adzuna at 19:00 UTC on Vercel Cron, Queensland at 16:00 UTC here.
+#
+# Weekly rather than daily is a deliberate trade against how fast a stopped
+# crawler needs finding. Listings are retired after fourteen days without being
+# seen, so a weekly check gets two chances to notice before the corpus begins
+# emptying itself, and a daily one mostly reports the same thing six more times.
+# Run it on demand from the Actions tab whenever something looks wrong.
 #
 # The job fails when a source needs attention, which is the notification: a red
 # run on the default branch is visible without anything else being configured,
@@ -17,7 +22,7 @@ name: Source health
 
 on:
   schedule:
-    - cron: '0 21 * * *'
+    - cron: '0 21 * * 1'
   workflow_dispatch:
 
 permissions:
