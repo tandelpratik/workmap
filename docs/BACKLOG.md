@@ -74,6 +74,19 @@ blocked on an open licence question, ANZSCO against OSCA, recorded in the source
 register. Until it resolves, an unmapped listing stays unmapped rather than
 being guessed into a plausible code.
 
+## Known limits
+
+**`/api/jobs` has no rate limit.** It is a public read endpoint over the
+database, fronted only by its own `s-maxage=300`, which does mean a CDN absorbs
+repeats of the same query.
+
+An in-memory limiter on a serverless platform limits one instance rather than a
+caller, so it would be theatre, and the constitution forbids introducing Redis
+without evidence it is required. This is currently handled by the platform and
+the cache header. It becomes worth revisiting if the health or quality checks
+ever show the endpoint being hammered, or if the deployment moves somewhere with
+no edge in front of it.
+
 ## Deferred by choice
 
 **`/locations/[state]/[occupation]`.** The data supports it and the page would

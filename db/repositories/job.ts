@@ -360,14 +360,17 @@ export async function listJobCategories(): Promise<Result<JobCategory[], Failure
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const rows = await database.value.job.findMany({
+  // groupBy for the same reason as listIndexedSources: Prisma's `distinct` is
+  // applied in the application, so the findMany form transfers every listing's
+  // category to return the handful of distinct ones. Grouping by both columns
+  // keeps the label, which a bare distinct on the tag would have discarded.
+  const rows = await database.value.job.groupBy({
+    by: ['sourceCategoryTag', 'sourceCategoryLabel'],
     where: {
       status: 'ACTIVE',
       sourceCategoryTag: { not: null },
       ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
     },
-    select: { sourceCategoryTag: true, sourceCategoryLabel: true },
-    distinct: ['sourceCategoryTag'],
   });
 
   return ok(
@@ -400,14 +403,25 @@ export async function listIndexedSources(): Promise<Result<string[], Failure>> {
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const rows = await database.value.job.findMany({
+  /*
+   * groupBy rather than findMany with distinct.
+   *
+   * Prisma applies `distinct` in the application, so the findMany form asks the
+   * database for every matching row's source key and throws almost all of them
+   * away locally: 2,713 strings across the wire to learn that there are two
+   * sources. groupBy compiles to a real GROUP BY and returns the two.
+   *
+   * The queries themselves are around a millisecond either way, so this is not
+   * about time. It is about not paying to transfer a thousandfold more rows
+   * than the answer needs, on a free tier that meters exactly that.
+   */
+  const rows = await database.value.job.groupBy({
+    by: ['sourceKey'],
     where: {
       status: 'ACTIVE',
       isCanonical: true,
       ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
     },
-    select: { sourceKey: true },
-    distinct: ['sourceKey'],
   });
 
   return ok(
