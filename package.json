@@ -31,7 +31,10 @@
     "adzuna:ingest": "tsx scripts/ingest-adzuna.ts",
     "adzuna:purge": "tsx scripts/purge-adzuna.ts",
     "qld:ingest": "tsx scripts/ingest-smartjobs-qld.ts",
-    "jobs:dedupe": "tsx scripts/dedupe-jobs.ts"
+    "jobs:dedupe": "tsx scripts/dedupe-jobs.ts",
+    "jobs:redact": "tsx scripts/redact-stored-listings.ts",
+    "data:check": "tsx scripts/check-data-quality.ts",
+    "source:health": "tsx scripts/check-source-health.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

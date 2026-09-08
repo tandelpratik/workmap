@@ -8,12 +8,19 @@ The product name is configuration, not identity. See
 
 ## Status
 
-Australian geography loaded (ASGS Edition 4). No product features yet and no
-labour market data. Milestone 04 of 35.
+Two surfaces are live. The regional vacancy map reads the Jobs and Skills
+Australia Internet Vacancy Index over ASGS Edition 4 geography; job search reads
+listings from Adzuna and Queensland Smart Jobs. Both render on the server and
+ship neither a map library nor a search runtime to the browser.
 
-JSA is the designated market intelligence source. No authorized job listing
-provider is active, so the product ships without job listings until one is.
+Four sources are verified and active, and one is verified as prohibited. Adzuna
+is licensed to supply listings and barred from supplying aggregates, which is a
+structural division rather than a note: every published figure comes from JSA.
 See the [source register](docs/compliance/SOURCE_REGISTER.md).
+
+The site is not indexed. `robots: { index: false, follow: false }` stays set
+until the legal pages, canonical URLs and a registered domain exist, because a
+site that cannot answer for itself should not be inviting readers.
 
 ## Requirements
 
@@ -34,20 +41,23 @@ The app runs at http://localhost:3000. Health is at `/api/health`.
 
 ## Commands
 
-| Command               | Purpose                                                        |
-| --------------------- | -------------------------------------------------------------- |
-| `npm run dev`         | Development server                                             |
-| `npm run build`       | Production build                                               |
-| `npm run start`       | Serve the production build                                     |
-| `npm run check`       | Format check, lint, typecheck and tests. Run before committing |
-| `npm run test`        | Tests once                                                     |
-| `npm run test:watch`  | Tests in watch mode                                            |
-| `npm run lint`        | ESLint, including architectural import boundaries              |
-| `npm run typecheck`   | TypeScript, no emit                                            |
-| `npm run format`      | Rewrite with Prettier                                          |
-| `npm run db:generate` | Regenerate the Prisma client                                   |
-| `npm run db:migrate`  | Create and apply a migration locally                           |
-| `npm run db:deploy`   | Apply migrations in a deployed environment                     |
+| Command                 | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `npm run dev`           | Development server                                             |
+| `npm run build`         | Production build                                               |
+| `npm run start`         | Serve the production build                                     |
+| `npm run check`         | Format check, lint, typecheck and tests. Run before committing |
+| `npm run test`          | Tests once                                                     |
+| `npm run test:watch`    | Tests in watch mode                                            |
+| `npm run lint`          | ESLint, including architectural import boundaries              |
+| `npm run typecheck`     | TypeScript, no emit                                            |
+| `npm run format`        | Rewrite with Prettier                                          |
+| `npm run db:generate`   | Regenerate the Prisma client                                   |
+| `npm run db:migrate`    | Create and apply a migration locally                           |
+| `npm run db:deploy`     | Apply migrations in a deployed environment                     |
+| `npm run data:check`    | Data quality checks. Read only, and exits non-zero on failure  |
+| `npm run jobs:redact`   | Sweep stored listings for contact details. Add `-- --apply`    |
+| `npm run source:health` | Whether each live source is still running                      |
 
 ## Environment
 

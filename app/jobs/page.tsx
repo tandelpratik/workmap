@@ -1,10 +1,16 @@
 import type { Metadata } from 'next';
 import { getAdzunaCredentials } from '@/config/env';
-import { lastRetrievedAt, searchJobs } from '@/db/repositories/job';
+import { findSourceDescriptor } from '@/config/sources';
+import {
+  lastVerifiedBySource,
+  listIndexedSources,
+  searchJobs,
+} from '@/db/repositories/job';
 import { JobList } from '@/components/job-list';
 import { SponsorshipKey } from '@/components/sponsorship-badge';
 import { JobSearchForm } from '@/components/job-search-form';
 import { sponsorshipSignals } from '@/domain/sponsorship';
+import { employmentTypes } from '@/domain/job';
 import { Masthead } from '@/components/layout/masthead';
 import { Colophon } from '@/components/layout/colophon';
 import { Dateline, Lede, PageBody, PageTitle } from '@/components/layout/plate';
@@ -30,6 +36,15 @@ import { link } from '@/components/ui/link';
 export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 20;
+
+/**
+ * The posting windows offered, in days.
+ *
+ * A closed vocabulary rather than a free number, so `posted=99999` cannot be
+ * turned into an unbounded query, and so the control and the parser cannot
+ * offer different choices.
+ */
+const POSTED_WINDOWS = [3, 7, 14, 30] as const;
 
 export const metadata: Metadata = {
   title: 'Job advertisements',
@@ -61,20 +76,31 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-function pageHref(params: {
+/** Every filter the page understands, as it appears in the address. */
+interface Filters {
   q?: string | undefined;
   where?: string | undefined;
   sponsorship?: string | undefined;
-  page: number;
-}): string {
+  type?: string | undefined;
+  source?: string | undefined;
+  posted?: string | undefined;
+}
+
+/**
+ * The address for a given page of the current search.
+ *
+ * Every filter is carried, and the list is written once. Dropping one would
+ * quietly widen the result set on page two, so a reader who filtered would find
+ * listings that do not match without being told the filter had gone. That
+ * happened once with sponsorship alone; with six filters, rebuilding the query
+ * by hand at each call site would be a matter of time.
+ */
+function hrefFor(filters: Filters, page = 1): string {
   const search = new URLSearchParams();
-  if (params.q) search.set('q', params.q);
-  if (params.where) search.set('where', params.where);
-  // Carried through paging. Dropping it would quietly widen the result set on
-  // page two, so a reader filtering for sponsorship would find listings that
-  // do not match without being told the filter had gone.
-  if (params.sponsorship) search.set('sponsorship', params.sponsorship);
-  if (params.page > 1) search.set('page', String(params.page));
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== '') search.set(key, value);
+  }
+  if (page > 1) search.set('page', String(page));
   const query = search.toString();
   return query === '' ? '/jobs' : `/jobs?${query}`;
 }
@@ -94,6 +120,22 @@ export default async function JobsPage({
   const sponsorship = sponsorshipSignals.find(
     (signal) => signal === requestedSponsorship,
   );
+  // Bounded the same way, for the same reason: a query string is external
+  // input, and an unrecognised value widens the search rather than erroring.
+  const requestedType = first(params['type']);
+  const employmentType = employmentTypes.find((value) => value === requestedType);
+
+  const requestedSource = first(params['source']);
+  const source =
+    requestedSource !== undefined && findSourceDescriptor(requestedSource) !== undefined
+      ? requestedSource
+      : undefined;
+
+  const requestedPosted = first(params['posted']);
+  const postedWithinDays = POSTED_WINDOWS.find(
+    (days) => String(days) === requestedPosted,
+  );
+
   const requestedPage = Number(first(params['page']) ?? '1');
   const page = Number.isFinite(requestedPage)
     ? Math.max(1, Math.trunc(requestedPage))
@@ -103,13 +145,31 @@ export default async function JobsPage({
     ...(text ? { text } : {}),
     ...(location ? { location } : {}),
     ...(sponsorship ? { sponsorship } : {}),
+    ...(employmentType ? { employmentType } : {}),
+    ...(source ? { source } : {}),
+    ...(postedWithinDays === undefined ? {} : { postedWithinDays }),
     page,
     pageSize: PAGE_SIZE,
   });
 
-  const freshness = await lastRetrievedAt('adzuna');
+  /*
+   * What the reader actually asked for, rebuilt from the values that survived
+   * validation rather than from the raw query string. An address carrying
+   * `type=banana` therefore loses it on the next page rather than carrying a
+   * parameter the search ignored.
+   */
+  const filters: Filters = {
+    ...(text === undefined ? {} : { q: text }),
+    ...(location === undefined ? {} : { where: location }),
+    ...(sponsorship === undefined ? {} : { sponsorship }),
+    ...(employmentType === undefined ? {} : { type: employmentType }),
+    ...(source === undefined ? {} : { source }),
+    ...(postedWithinDays === undefined ? {} : { posted: String(postedWithinDays) }),
+  };
+  const activeFilters = Object.keys(filters).length;
+
   const credentialsConfigured = getAdzunaCredentials() !== null;
-  const hasQuery = text !== undefined || location !== undefined;
+  const hasQuery = activeFilters > 0;
 
   // Only the sources that supplied a listing on this page. Adzuna's terms bind
   // "each displayed advert", so the obligation follows what is displayed.
@@ -117,9 +177,40 @@ export default async function JobsPage({
     ? [...new Set(result.value.jobs.map((job) => job.sourceKey))]
     : [];
 
+  /*
+   * Freshness, per source that is actually on the page.
+   *
+   * This used to be one figure taken from Adzuna and printed above whatever
+   * happened to be displayed, which told a reader something untrue whenever a
+   * Queensland listing was among them. The two sources are crawled on different
+   * schedules by different schedulers, so there is no single honest number, and
+   * the fix is to stop pretending there is one.
+   */
+  // Run together: the freshness of what is displayed, and the vocabulary the
+  // source filter should offer. Two unrelated answers, one wait.
+  const [verified, indexed] = await Promise.all([
+    lastVerifiedBySource(shownSources),
+    listIndexedSources(),
+  ]);
+  const indexedSources = indexed.ok ? indexed.value : [];
+
   const pages = result.ok
     ? Math.max(1, Math.ceil(result.value.total / result.value.pageSize))
     : 1;
+
+  const freshnessFields: ReleaseField[] =
+    verified.ok && shownSources.length > 0
+      ? shownSources.flatMap((key) => {
+          const at = verified.value.get(key);
+          if (at === undefined) return [];
+          return [
+            {
+              label: `${findSourceDescriptor(key)?.displayName ?? key} verified`,
+              value: dateFormat.format(at),
+            },
+          ];
+        })
+      : [];
 
   const fields: ReleaseField[] = result.ok
     ? [
@@ -130,9 +221,7 @@ export default async function JobsPage({
           }`,
         },
         { label: 'Showing', value: `Page ${String(page)} of ${String(pages)}` },
-        ...(freshness.ok && freshness.value !== null
-          ? [{ label: 'Last retrieved', value: dateFormat.format(freshness.value) }]
-          : []),
+        ...freshnessFields,
         { label: 'Basis', value: 'As published by the source' },
       ]
     : [];
@@ -151,7 +240,25 @@ export default async function JobsPage({
           </Lede>
         </header>
 
-        <JobSearchForm text={text} location={location} sponsorship={sponsorship} />
+        <JobSearchForm
+          text={text}
+          location={location}
+          sponsorship={sponsorship}
+          employmentType={employmentType}
+          source={source}
+          postedWithin={
+            postedWithinDays === undefined ? undefined : String(postedWithinDays)
+          }
+          sources={indexedSources}
+        />
+
+        {activeFilters === 0 ? null : (
+          <p className="print-hide mt-3 text-sm">
+            <a href="/jobs" className={link()}>
+              Clear {activeFilters === 1 ? 'filter' : 'all filters'}
+            </a>
+          </p>
+        )}
 
         {!result.ok ? (
           <Notice title="Search is unavailable">
@@ -216,15 +323,7 @@ export default async function JobsPage({
               aria-label="Pagination"
             >
               {page > 1 ? (
-                <a
-                  href={pageHref({
-                    q: text,
-                    where: location,
-                    sponsorship,
-                    page: page - 1,
-                  })}
-                  className={link()}
-                >
+                <a href={hrefFor(filters, page - 1)} className={link()}>
                   Previous
                 </a>
               ) : (
@@ -234,15 +333,7 @@ export default async function JobsPage({
                 Page {page} of {pages}
               </span>
               {page * result.value.pageSize < result.value.total ? (
-                <a
-                  href={pageHref({
-                    q: text,
-                    where: location,
-                    sponsorship,
-                    page: page + 1,
-                  })}
-                  className={link()}
-                >
+                <a href={hrefFor(filters, page + 1)} className={link()}>
                   Next
                 </a>
               ) : (
