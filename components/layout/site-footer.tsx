@@ -31,6 +31,7 @@ const explore: readonly FooterLink[] = [
   { href: '/occupations', label: 'Occupations' },
   { href: '/jobs', label: 'Jobs' },
   { href: '/insights', label: 'Insights' },
+  { href: '/compare', label: 'Compare' },
 ];
 
 const data: readonly FooterLink[] = [
@@ -41,7 +42,13 @@ const data: readonly FooterLink[] = [
 function Column({ title, links }: { title: string; links: readonly FooterLink[] }) {
   return (
     <div>
-      <Label as="h3">{title}</Label>
+      {/*
+        h2, not h3. The footer is a top-level region of every page, so its
+        column headings sit directly under the page's h1. As h3 they made any
+        page whose content had no h2 jump a level, which the not-found page did:
+        h1 straight to h3, on the page a reader most often arrives at lost.
+      */}
+      <Label as="h2">{title}</Label>
       <ul className="mt-3 space-y-2">
         {links.map((item) => (
           <li key={item.href}>

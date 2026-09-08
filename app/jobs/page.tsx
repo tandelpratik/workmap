@@ -314,32 +314,47 @@ export default async function JobsPage({
           </Notice>
         ) : (
           <>
-            <ReleaseStrip fields={fields} />
+            {/*
+              The results are a region with a heading, which they were not.
+              Job titles are h3, and with no h2 above them the page jumped from
+              h1 to h3: a screen reader user navigating by heading level lands
+              on the first advertisement having been told nothing about what
+              they are in. The heading is hidden because the release strip
+              directly under it already says the same thing in the visual
+              hierarchy, and repeating it on screen would be furniture.
+            */}
+            <section aria-labelledby="results-heading">
+              <h2 id="results-heading" className="sr-only">
+                Matching advertisements
+              </h2>
 
-            <JobList jobs={result.value.jobs} />
+              <ReleaseStrip fields={fields} />
 
-            <nav
-              className="print-hide mt-8 flex items-center justify-between text-sm"
-              aria-label="Pagination"
-            >
-              {page > 1 ? (
-                <a href={hrefFor(filters, page - 1)} className={link()}>
-                  Previous
-                </a>
-              ) : (
-                <span className="text-ink-faint">Previous</span>
-              )}
-              <span className="text-ink-muted tabular">
-                Page {page} of {pages}
-              </span>
-              {page * result.value.pageSize < result.value.total ? (
-                <a href={hrefFor(filters, page + 1)} className={link()}>
-                  Next
-                </a>
-              ) : (
-                <span className="text-ink-faint">Next</span>
-              )}
-            </nav>
+              <JobList jobs={result.value.jobs} />
+
+              <nav
+                className="print-hide mt-8 flex items-center justify-between text-sm"
+                aria-label="Pagination"
+              >
+                {page > 1 ? (
+                  <a href={hrefFor(filters, page - 1)} className={link()}>
+                    Previous
+                  </a>
+                ) : (
+                  <span className="text-ink-faint">Previous</span>
+                )}
+                <span className="text-ink-muted tabular">
+                  Page {page} of {pages}
+                </span>
+                {page * result.value.pageSize < result.value.total ? (
+                  <a href={hrefFor(filters, page + 1)} className={link()}>
+                    Next
+                  </a>
+                ) : (
+                  <span className="text-ink-faint">Next</span>
+                )}
+              </nav>
+            </section>
 
             {/*
               What the sponsorship labels mean, shown once rather than repeated

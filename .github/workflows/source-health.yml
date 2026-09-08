@@ -1,0 +1,63 @@
+# Whether the crawlers are still running.
+#
+# Ingestion has recorded runs since milestone 05 and nothing read them back, so
+# a stopped crawler's first symptom was a reader noticing the listings had gone
+# stale. `npm run source:health` reads those records; this makes something
+# actually run it.
+#
+# It fires after both ingestion schedules have had their chance: Adzuna at 19:00
+# UTC on Vercel Cron, Queensland at 16:00 UTC here. Checking at 21:00 means a
+# missed run is reported the same day rather than the next one.
+#
+# The job fails when a source needs attention, which is the notification: a red
+# run on the default branch is visible without anything else being configured,
+# and this is deliberately not wired to an alerting service the project does not
+# have. When one exists, the step to add is a notify-on-failure, not a rewrite.
+name: Source health
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Read only. It touches no listing and writes no row, so it is safe to
+      # point at production and there is nothing to undo if it is interrupted.
+      - name: Check every live source
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_ENV: production
+          LOG_LEVEL: info
+        run: npm run source:health
+
+      # Data quality runs here too rather than only on push. Corruption arrives
+      # with an import, not with a commit, so a gate that only fires when
+      # somebody changes code would miss the thing it exists to catch.
+      - name: Check data quality
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_ENV: production
+          LOG_LEVEL: info
+        run: npm run data:check

@@ -1,0 +1,84 @@
+# The gate.
+#
+# Everything here can be run locally with one command each, and that is the
+# point: this file schedules them rather than defining them, so a check never
+# exists only in CI where nobody can reproduce it.
+#
+# The split is by what each check needs. Format, lint, types and tests need
+# nothing but the repository. The data quality and accessibility checks need a
+# database, because the first reads stored rows and the second walks pages that
+# render from them, so both are skipped when the secret is absent rather than
+# reporting a pass they have not earned. A fork's pull request gets no secrets
+# and gets the first half honestly labelled.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APP_ENV: preview
+      LOG_LEVEL: warn
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Format, lint including the architectural import boundaries, TypeScript,
+      # and the test suite. The one command a contributor is asked to run before
+      # committing, run again here so the asking is not the enforcement.
+      - name: Format, lint, types and tests
+        run: npm run check
+
+      # Compliance and integrity. The checks needing no database run either way
+      # and cover the ones that matter most for a deployment: every publishing
+      # source stores its required attribution, every source with established
+      # rights names a linkable licence, every live listing source states what
+      # may be reproduced from an advertisement, and the freshness thresholds
+      # are ordered.
+      - name: Data quality
+        run: npm run data:check
+
+      - name: Build
+        run: npm run build
+
+      # Accessibility is checked against the built server rather than the dev
+      # one, because the built output is what readers get. It needs the database
+      # for the same reason the pages do: a route that 404s for want of data
+      # cannot be audited for how it reads.
+      - name: Accessibility
+        if: env.DATABASE_URL != ''
+        run: |
+          npm run start -- --port 3000 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/; then break; fi
+            sleep 1
+          done
+          npm run a11y:check -- --base=http://localhost:3000
+
+      - name: Note what was skipped
+        if: env.DATABASE_URL == ''
+        run: |
+          echo "::notice::No DATABASE_URL. The stored-data half of the data quality"\
+               "checks reported as skipped, and the accessibility check did not run."

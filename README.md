@@ -58,6 +58,7 @@ The app runs at http://localhost:3000. Health is at `/api/health`.
 | `npm run data:check`    | Data quality checks. Read only, and exits non-zero on failure  |
 | `npm run jobs:redact`   | Sweep stored listings for contact details. Add `-- --apply`    |
 | `npm run source:health` | Whether each live source is still running                      |
+| `npm run a11y:check`    | Structural accessibility, against a running server             |
 
 ## Environment
 

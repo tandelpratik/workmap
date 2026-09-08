@@ -34,7 +34,8 @@
     "jobs:dedupe": "tsx scripts/dedupe-jobs.ts",
     "jobs:redact": "tsx scripts/redact-stored-listings.ts",
     "data:check": "tsx scripts/check-data-quality.ts",
-    "source:health": "tsx scripts/check-source-health.ts"
+    "source:health": "tsx scripts/check-source-health.ts",
+    "a11y:check": "tsx scripts/check-accessibility.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
