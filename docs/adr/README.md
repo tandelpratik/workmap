@@ -22,6 +22,8 @@ decision does not.
 | [0008](0008-validation-errors-observability.md)             | Validation boundaries, error taxonomy and free-tier observability | Accepted |
 | [0009](0009-source-activation-and-synthetic-containment.md) | Source activation states and synthetic data containment           | Accepted |
 | [0010](0010-labour-market-retention-window.md)              | A two-period retention window for labour market history           | Accepted |
+| [0011](0011-field-level-content-rights.md)                  | Field-level content rights, defaulting closed                     | Accepted |
+| [0012](0012-derived-lifecycle-states.md)                    | Listing lifecycle derived from timestamps, not stored             | Accepted |
 
 ## Status values
 
@@ -31,7 +33,9 @@ decision does not.
 
 A record may also be **amended** by a later one. An amendment extends or narrows
 a decision without reversing it, and both records stay in force. Where the two
-overlap, the later record wins. ADR-0001 and ADR-0002 are amended by ADR-0009, and ADR-0005 by ADR-0010.
+overlap, the later record wins. ADR-0001 and ADR-0002 are amended by ADR-0009, and ADR-0005 by ADR-0010 and
+ADR-0012. ADR-0009 is amended by ADR-0011, which narrows its per-source gate to a
+per-field one for job advertisements.
 
 ## Relationship to the constitution
 

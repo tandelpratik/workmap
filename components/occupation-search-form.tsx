@@ -16,7 +16,7 @@ import { FieldLabel } from '@/components/ui/label';
  * market, they have mistyped, and the page says so in those terms.
  */
 
-const control = 'text-ink bg-paper mt-1 block h-8 w-full text-base outline-none';
+const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
 
 export function OccupationSearchForm({ query }: { query: string | undefined }) {
   return (

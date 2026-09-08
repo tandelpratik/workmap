@@ -16,7 +16,7 @@ import type { Choice } from '@/components/compare-form';
  * be describing a dataset that does not exist.
  */
 
-const control = 'text-ink bg-paper mt-1 block h-8 w-full text-base outline-none';
+const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
 
 export function ExploreForm({
   occupations,

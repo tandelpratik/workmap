@@ -16,7 +16,7 @@ import { FieldLabel } from '@/components/ui/label';
  * back anywhere.
  */
 
-const control = 'text-ink bg-paper mt-1 block h-8 w-full text-base outline-none';
+const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
 
 export interface Choice {
   readonly value: string;

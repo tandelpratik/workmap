@@ -30,48 +30,64 @@ The product constitution and milestone specifications live in `.claude/`:
 
 ## Project status
 
-Two surfaces are live. **Jobs** is a working search over ingested
-advertisements from Adzuna and Queensland Smart Jobs, 2,713 of them, each
-carrying what its advertisement says about visa sponsorship, quoted from the
-advertisement rather than characterised. **Map** draws online job advertisements by region from the July
-2026 JSA IVI release: 50 areas, the eight capitals at GCCSA and the rest of the
-country at SA4, with a table of the same figures beside it. Selecting a region,
-on the map or in the table, opens a panel with its exact figure, its change on
-the month before and its rank. Selection is a URL, so it is shareable and needs
-no JavaScript.
+Ten reader-facing surfaces, all rendered on the server.
 
-The map drills down: selecting a region offers its state, which redraws it from
-the detail tier with finer boundaries, a breadcrumb back to the country, and
-the capital city dissolved into one shape from the SA4s the ABS says belong to
-it. Shading stays on the national bands in both views, so a colour means one
-thing everywhere.
+**Map** draws online job advertisements by region from the July 2026 JSA IVI
+release: 50 areas, the eight capitals at GCCSA and the rest of the country at
+SA4, with a table of the same figures beside it. It drills into a state from a
+finer boundary tier, filters by occupation, and keeps every selection in the
+URL, so a view is shareable and needs no JavaScript.
 
-The map also filters by occupation: 57 groups as the publisher published them,
-from all occupations down to ICT professionals or farm workers. State, region
-and occupation compose, so `/map?state=1&region=1GSYD&occupation=26` is a fully
-specified question and a shareable link.
+**Locations** gives each state a page rather than another map: its figure and how
+it moved, its share of the country, the occupations advertised in it, and the
+regions inside it carrying the publisher's own figures.
 
-**Occupations** ranks those groups and gives each one a page: its figure, its
-change on the month before, its rank, where it is most advertised, and the full
-regional breakdown. Headline figures there are sums of the regions the
-publisher reports on, added by us and labelled as such, because JSA publishes
-this release by region rather than nationally.
+**Occupations** ranks the 57 groups, filters them, shows the month's largest
+movements among the finest groups the release carries, and gives each group a
+page with its regional and state breakdown.
+
+**Jobs** searches ingested advertisements from Adzuna and Queensland Smart Jobs,
+each carrying what it says about visa sponsorship, quoted rather than
+characterised, and where it is in its life. Filters cover keyword, location,
+employment type, source, posting date and sponsorship, and each one exists
+because the stored data supports it.
+
+**Insights** answers what each place advertises more of than the country does.
+**Compare** puts two places or two occupations side by side and spends its space
+on how their mixes differ rather than on which is larger. **Explore** answers the
+question the product is named for: pick a kind of work and see where it is
+advertised, and where it is unusually concentrated.
+
+**Methodology** sets out how every figure is made and what it cannot say.
+**Data and licensing** is generated from the source registry, so it cannot
+describe a permission the software does not hold. Both derived datasets are
+downloadable as CSV or JSON with the licence written inside the file.
+
+### Held back
 
 Labour market history is retained at two reference periods
-([ADR-0010](adr/0010-labour-market-retention-window.md)). Milestones 06 and 07,
-history and trend, therefore begin by widening that window and re-importing.
-A period control waits on the same thing. Milestone 11 is half done: the profiles are built, and
-resolving occupation codes to a classification is blocked on an open licence
-question (ANZSCO against OSCA) recorded in the source register.
+([ADR-0010](adr/0010-labour-market-retention-window.md)), so the product shows a
+month and its change on the month before and calls it a comparison rather than a
+trend. Widening that window and re-importing is what history and trend begin
+with.
+
+Resolving occupation codes to a classification is blocked on an open licence
+question, ANZSCO against OSCA, recorded in the source register. Until it
+resolves, listings are not mapped to occupation codes and nothing pretends
+otherwise.
+
+The site is not indexed, and the remaining legal pages are unwritten, both
+waiting on brand identity. See [BACKLOG.md](BACKLOG.md) for what each item is
+blocked on.
 
 **Source position:** Adzuna carries job listings and is verified for exactly
 that. Its terms bar publishing aggregate figures without written consent, so
-counts, averages and the heatmap stay on JSA IVI, which is CC BY 4.0. Queensland
-Smart Jobs went live on 2026-09-01 and is the one listing source licensed for
-both republication and aggregation, though its listings are Queensland
-Government vacancies and never a picture of the Queensland labour market. ABS
-ASGS supplies geography. A development-only synthetic source exists for the pipeline
-and can never run in production. See
+counts, averages, the map and every download stay on JSA IVI, which is CC BY 4.0.
+Queensland Smart Jobs is the one listing source licensed for both republication
+and aggregation, though its listings are Queensland Government vacancies and
+never a picture of the Queensland labour market. ABS ASGS supplies geography. A
+development-only synthetic source exists for the pipeline and can never run in
+production. See
 [ADR-0009](adr/0009-source-activation-and-synthetic-containment.md) and the
 [source register](compliance/SOURCE_REGISTER.md).
 

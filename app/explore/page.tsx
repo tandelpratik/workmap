@@ -256,7 +256,10 @@ export default async function ExplorePage({
 
   return (
     <>
-      <Masthead release={periodLabel === null ? null : `IVI · ${periodLabel}`} />
+      <Masthead
+        current="explore"
+        release={periodLabel === null ? null : `IVI · ${periodLabel}`}
+      />
 
       <PageBody>
         <header>

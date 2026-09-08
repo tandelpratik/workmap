@@ -173,4 +173,6 @@ A milestone is incomplete if:
 
 ## Current source state
 
-JSA is the active live MVP source. Adzuna is pending because current onboarding requires organization/website details that are not currently available. Never fabricate or bypass. SyntheticJobSource is development-only and must be excluded from production/public data.
+JSA IVI is the active live source for every published figure. Adzuna and Queensland Smart Jobs are both active and verified for job listings; Adzuna's terms reserve aggregate use, so no count, average or trend may be drawn from it and the market intelligence layer stays on JSA. Never fabricate or bypass. The synthetic source is development-only and must be excluded from production/public data.
+
+The source register is the authority on this and carries the evidence: docs/compliance/SOURCE_REGISTER.md. The machine-readable position is config/sources.ts, which /data-and-licensing renders directly.

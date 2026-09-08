@@ -114,6 +114,39 @@ function check(route: string, raw: string): Finding[] {
     }
   }
 
+  /*
+   * A page that appears in the section rail marks itself there.
+   *
+   * `aria-current="page"` is how a screen reader user learns where they are in
+   * a navigation they cannot see at a glance, and it is a prop each page passes
+   * for itself, so forgetting it is silent. The explore page shipped without it
+   * and nothing noticed until someone read the rail markup.
+   *
+   * Only the path is compared. A route with query state is the same section as
+   * the route without it.
+   */
+  const path = route.split('?')[0] ?? route;
+
+  /*
+   * Scoped to the rail itself, not to the page.
+   *
+   * The first version looked for any link to this path anywhere in the
+   * document, which flagged the methodology and licensing pages because they
+   * appear in the footer. The footer is a different navigation and marking the
+   * current page there is not the same obligation.
+   */
+  const rail = /<nav[^>]*aria-label="Sections"[\s\S]*?<\/nav>/.exec(html)?.[0];
+  if (rail !== undefined && path !== '/') {
+    const railLinks = [...rail.matchAll(/<a\s([^>]*href="([^"]+)"[^>]*)>/g)];
+    const selfLinks = railLinks.filter((match) => match[2] === path);
+    if (
+      selfLinks.length > 0 &&
+      !selfLinks.some((match) => (match[1] ?? '').includes('aria-current'))
+    ) {
+      add('is in the section rail and does not mark itself aria-current');
+    }
+  }
+
   const htmlTag = /<html([^>]*)>/.exec(html)?.[1] ?? '';
   if (!htmlTag.includes('lang=')) add('html element has no lang');
 

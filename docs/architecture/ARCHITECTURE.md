@@ -45,7 +45,7 @@ constitution disagree, the constitution wins.
 | `db/`           | Prisma schema, repositories               | domain, types                |
 | `integrations/` | Provider clients, DTOs, mappers           | domain, types, lib           |
 | `ingestion/`    | Import orchestration, runs, quarantine    | domain, db, integrations     |
-| `analytics/`    | Aggregation and summary refresh           | domain, db                   |
+| `analytics/`    | Aggregation, data quality, source health  | domain, db, config           |
 | `geography/`    | Registry, geometry manifest, projection   | domain, db                   |
 | `search/`       | Query building, ranking                   | domain, db                   |
 | `skills/`       | Deterministic extraction, matching        | domain, db                   |
@@ -220,9 +220,29 @@ authorized access.
 
 ## Current status
 
-Two surfaces are live: job search over Adzuna and Queensland Smart Jobs
-listings, and the regional vacancy map over JSA IVI. Both render on the server
-and ship neither a map library nor a search runtime to the browser. Each listing
-carries what its advertisement says about visa sponsorship, quoted rather than
-characterised (milestone 17a). How the system reached this shape is recorded in
-[milestones/](../milestones/).
+Ten surfaces, all rendered on the server, shipping neither a map library nor a
+search runtime to the browser.
+
+| Surface                               | Answers                                               |
+| ------------------------------------- | ----------------------------------------------------- |
+| `/`                                   | What is happening, and where the rest of this is      |
+| `/map`                                | Where, as a picture, with a table of the same figures |
+| `/locations`, `/locations/[state]`    | Where, as places with regions and occupations         |
+| `/occupations`, `/occupations/[code]` | What, and which groups moved this month               |
+| `/jobs`                               | The advertisements behind the figures                 |
+| `/insights`                           | What each place advertises more of than the country   |
+| `/compare`                            | Two places or two occupations, side by side           |
+| `/explore`                            | Where should I look, for one kind of work             |
+| `/methodology`                        | How every figure is made, and what it cannot say      |
+| `/data-and-licensing`                 | Where each came from, generated from the registry     |
+| `/api/datasets/[slug]`                | The derived figures as files, licence inside          |
+
+Four commands answer the questions nobody was asking often enough: `data:check`
+for integrity, `source:health` for whether the crawlers are running,
+`a11y:check` for structure, and `jobs:redact` for contact details in the back
+catalogue. Two workflows run them.
+
+Each listing carries what its advertisement says about visa sponsorship, quoted
+rather than characterised (milestone 17a), and where it is in its life, derived
+from dates rather than stored (milestone 21). How the system reached this shape
+is recorded in [milestones/](../milestones/).

@@ -13,8 +13,12 @@ import { FieldLabel } from '@/components/ui/label';
  *
  * One instrument bar rather than six stacked bordered strips, built on the
  * shared hairline grid so its seams match the occupation filter and the
- * release strip exactly. Every control is at least a 44px target, because on a
- * phone this is the first thing a thumb meets.
+ * release strip exactly.
+ *
+ * Every control is 44 pixels tall, which is the claim this comment used to make
+ * while the inputs were 32. Thirty-two clears WCAG 2.2 AA, whose minimum is 24,
+ * so nothing was failing; it was simply not what the file said, and on a phone
+ * this bar is the first thing a thumb meets.
  *
  * **Every filter here is one the stored data actually supports**, which is a
  * rule rather than an observation. Two were considered and rejected against the
@@ -41,7 +45,7 @@ import { FieldLabel } from '@/components/ui/label';
  * control is what makes a browser paint the select's option list itself, and
  * it gets the night edition wrong. See the note in globals.css.
  */
-const control = 'text-ink bg-paper mt-1 block h-8 w-full text-base outline-none';
+const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
 
 /** How recently an advertisement was posted, by the employer's own date. */
 const POSTED_CHOICES = [
