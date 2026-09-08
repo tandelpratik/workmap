@@ -1,6 +1,7 @@
 import type { Prisma } from '@/db/generated/client/client';
 import { getDatabase } from '@/db/client';
 import { getAdzunaCredentials } from '@/config/env';
+import { lifecycle } from '@/config/lifecycle';
 import { findSourceDescriptor } from '@/config/sources';
 import type { GeographyLevel } from '@/domain/geography';
 import {
@@ -19,6 +20,7 @@ import { ADZUNA_SOURCE_KEY, mapSearchResponse } from '@/integrations/adzuna/mapp
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import { logger } from '@/lib/logger';
+import { withoutPersonalInformation } from '@/domain/personal-information';
 import { sponsorshipFieldsFor } from './sponsorship';
 import {
   australianStateCode,
@@ -42,7 +44,7 @@ import {
  */
 
 const DEFAULT_MAX_REQUESTS = 5;
-const DEFAULT_EXPIRE_AFTER_DAYS = 14;
+const DEFAULT_EXPIRE_AFTER_DAYS = lifecycle.expireAfterDays;
 const DEFAULT_EDITION = 'ASGS2026';
 const DATASET = 'Job advertisements';
 
@@ -281,9 +283,23 @@ function rowFor(job: NormalizedJob, caches: Caches, contentHash: string, now: Da
 async function writePage(
   database: Database,
   caches: Caches,
-  jobs: readonly NormalizedJob[],
+  incoming: readonly NormalizedJob[],
 ): Promise<PageCounts> {
-  if (jobs.length === 0) return { created: 0, updated: 0, unchanged: 0 };
+  if (incoming.length === 0) return { created: 0, updated: 0, unchanged: 0 };
+
+  // Contact details are removed here, before the hash is taken, so the hash
+  // covers the text that will actually be stored and a re-run of an unchanged
+  // advertisement still reads as unchanged.
+  const sanitised = incoming.map((job) => withoutPersonalInformation(job));
+  const jobs = sanitised.map((result) => result.job);
+  const affected = sanitised.filter((result) => result.redactions.length > 0);
+  if (affected.length > 0) {
+    logger.info('Removed contact details from listings before storing', {
+      sourceKey: ADZUNA_SOURCE_KEY,
+      listings: affected.length,
+      removals: affected.reduce((total, result) => total + result.redactions.length, 0),
+    });
+  }
 
   const now = new Date();
   const hashes = new Map(jobs.map((job) => [job.sourceId, contentHashOf(job)]));

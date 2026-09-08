@@ -1,8 +1,7 @@
 import { brand } from '@/config/brand';
 import { findSourceDescriptor } from '@/config/sources';
-import { AdzunaAttribution } from '@/components/adzuna-attribution';
+import { DataAttribution, type SourceCitation } from '@/components/data/data-attribution';
 import { Label } from '@/components/ui/label';
-import { link } from '@/components/ui/link';
 
 /**
  * The foot of every page: what the page was made from.
@@ -15,23 +14,43 @@ import { link } from '@/components/ui/link';
  * and letting the registry supply the wording removes the class of mistake:
  * the licence text lives beside the licence status, in one place, verbatim.
  *
- * Adzuna is the exception that stays special-cased. Its terms mandate a
- * specific label with a logo and two links rather than a sentence, so the
- * component that satisfies them renders in place of the stored text.
+ * Each entry is rendered by `DataAttribution`, which owns the licence link and
+ * the Adzuna special case. This component's remaining job is the frame around
+ * them and the independence statement, which belongs on every page rather than
+ * on one page a reader has to find.
  */
+
+/**
+ * Independence, stated wherever the data appears.
+ *
+ * This site draws on Commonwealth and Queensland Government material and says
+ * so on every page. Saying whose material it is without saying that they had no
+ * part in this leaves the reader to assume the obvious wrong thing, and the
+ * assumption gets more plausible the more official the figures look.
+ */
+const INDEPENDENCE =
+  `${brand.productName} is an independent project. It is not affiliated with, ` +
+  'endorsed by, or sponsored by Jobs and Skills Australia, the Australian ' +
+  'Bureau of Statistics, the State of Queensland, or any other organisation ' +
+  'whose data it draws on.';
 
 export function Colophon({
   sources,
   children,
 }: {
-  /** Registry keys for every source whose data appears on this page. */
-  sources: readonly string[];
+  /**
+   * Every source whose data appears on this page, as a registry key or as a
+   * citation naming the dataset and period the page is actually showing.
+   */
+  sources: readonly (string | SourceCitation)[];
   /** Anything the page must say for itself, above the attributions. */
   children?: React.ReactNode;
 }) {
-  const descriptors = sources
-    .map((key) => findSourceDescriptor(key))
-    .filter((descriptor) => descriptor !== undefined);
+  const citations = sources
+    .map((source): SourceCitation =>
+      typeof source === 'string' ? { key: source } : source,
+    )
+    .filter((citation) => findSourceDescriptor(citation.key) !== undefined);
 
   return (
     <footer className="border-rule-strong mt-16 border-t pt-6">
@@ -41,43 +60,22 @@ export function Colophon({
         </div>
       )}
 
-      {descriptors.length === 0 ? null : (
+      {citations.length === 0 ? null : (
         <>
           <Label as="h2">Sources</Label>
-          <dl className="mt-4 space-y-3">
-            {descriptors.map((descriptor) => (
-              <div
-                key={descriptor.key}
-                className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-[13rem_minmax(0,1fr)]"
-              >
-                <dt className="text-ink text-xs font-medium">
-                  {descriptor.homepageUrl === undefined ? (
-                    descriptor.displayName
-                  ) : (
-                    <a
-                      href={descriptor.homepageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={link()}
-                    >
-                      {descriptor.displayName}
-                    </a>
-                  )}
-                </dt>
-                <dd className="text-ink-faint text-xs leading-relaxed">
-                  {descriptor.key === 'adzuna' ? (
-                    <AdzunaAttribution />
-                  ) : (
-                    (descriptor.attributionText ?? descriptor.displayName)
-                  )}
-                </dd>
-              </div>
+          <dl className="mt-4 space-y-4">
+            {citations.map((citation) => (
+              <DataAttribution key={citation.key} citation={citation} />
             ))}
           </dl>
         </>
       )}
 
-      <p className="text-ink-faint border-rule mt-8 border-t pt-4 text-xs">
+      <p className="text-ink-faint border-rule max-w-measure mt-8 border-t pt-4 text-xs leading-relaxed">
+        {INDEPENDENCE}
+      </p>
+
+      <p className="text-ink-faint mt-3 text-xs">
         {brand.productName}. {brand.tagline}
       </p>
     </footer>

@@ -1,5 +1,6 @@
 import type { Prisma } from '@/db/generated/client/client';
 import { getDatabase } from '@/db/client';
+import { lifecycle } from '@/config/lifecycle';
 import type { GeographyLevel } from '@/domain/geography';
 import {
   contentHashOf,
@@ -23,6 +24,7 @@ import type {
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import { logger } from '@/lib/logger';
+import { withoutPersonalInformation } from '@/domain/personal-information';
 import { sponsorshipFieldsFor } from './sponsorship';
 import { reapStaleRuns } from './stale-runs';
 import {
@@ -54,8 +56,8 @@ import {
  */
 
 const DEFAULT_MAX_REQUESTS = 40;
-const DEFAULT_REFRESH_AFTER_DAYS = 7;
-const DEFAULT_EXPIRE_AFTER_DAYS = 14;
+const DEFAULT_REFRESH_AFTER_DAYS = lifecycle.refreshAfterDays;
+const DEFAULT_EXPIRE_AFTER_DAYS = lifecycle.expireAfterDays;
 const DEFAULT_EDITION = 'ASGS2026';
 const DATASET = 'Job advertisements';
 
@@ -327,10 +329,30 @@ interface WriteCounts {
 async function writeJobs(
   database: Database,
   caches: Caches,
-  jobs: readonly NormalizedJob[],
+  incoming: readonly NormalizedJob[],
   unknownRegions: Set<string>,
 ): Promise<WriteCounts> {
-  if (jobs.length === 0) return { created: 0, updated: 0, unchanged: 0 };
+  if (incoming.length === 0) return { created: 0, updated: 0, unchanged: 0 };
+
+  /*
+   * Contact details out before anything is stored.
+   *
+   * This source matters most for it: Queensland advertisements carry a named
+   * contact officer with a direct number, and unlike Adzuna the description
+   * held here is the whole advertisement rather than an excerpt. Removing it
+   * before the hash is taken keeps an unchanged advertisement looking unchanged
+   * on the next crawl.
+   */
+  const sanitised = incoming.map((job) => withoutPersonalInformation(job));
+  const jobs = sanitised.map((result) => result.job);
+  const affected = sanitised.filter((result) => result.redactions.length > 0);
+  if (affected.length > 0) {
+    logger.info('Removed contact details from listings before storing', {
+      sourceKey: SOURCE_KEY,
+      listings: affected.length,
+      removals: affected.reduce((total, result) => total + result.redactions.length, 0),
+    });
+  }
 
   const now = new Date();
   const hashes = new Map(jobs.map((job) => [job.sourceId, contentHashOf(job)]));

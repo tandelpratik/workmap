@@ -1,10 +1,14 @@
 import { getDatabase } from '../client';
 import { isSyntheticAllowed } from '@/config/env';
+import { findSourceDescriptor } from '@/config/sources';
+import { mayRepublishField } from '@/domain/source';
+import { isStateAbbreviation } from '@/domain/geography';
 import { failure, type Failure } from '@/lib/errors';
 import { err, ok, type Result } from '@/lib/result';
 import type {
   EmploymentType,
   JobListing,
+  JobStatus,
   Salary,
   SalaryBasis,
   SalaryPeriod,
@@ -43,6 +47,23 @@ export interface JobSearchQuery {
    * it does not assert that anyone is eligible for anything.
    */
   readonly sponsorship?: SponsorshipSignal;
+  /**
+   * Restrict to one source.
+   *
+   * A provenance filter, not a quality one. The two live sources are not
+   * interchangeable: one is an aggregator's index of advertisements and the
+   * other is a state government's own board, and a reader deciding how much
+   * weight to give a listing may reasonably want only one of them.
+   */
+  readonly source?: string;
+  /**
+   * Restrict to advertisements posted within this many days.
+   *
+   * Measured from the employer's posting date, which every stored listing
+   * carries, and never from when this site discovered it. A crawl backfilling a
+   * corpus would otherwise make the whole of it look freshly posted.
+   */
+  readonly postedWithinDays?: number;
   readonly page?: number;
   readonly pageSize?: number;
 }
@@ -75,6 +96,9 @@ interface JobRow {
   sourceCategoryLabel: string | null;
   applyUrl: string;
   postedAt: Date | null;
+  lastVerifiedAt: Date | null;
+  firstSeenAt: Date;
+  status: string;
   retrievedAt: Date;
   sourceKey: string;
   company: { name: string } | null;
@@ -137,7 +161,23 @@ function parseEvidence(value: unknown): readonly SponsorshipEvidence[] {
   return out;
 }
 
+/**
+ * Whether this source's rights matrix permits reproducing advertisement text.
+ *
+ * Decided here rather than in a component, for the same reason the synthetic
+ * and expiry rules are decided here: a rule enforced at one boundary is a rule,
+ * and a rule enforced at each call site is a habit. An unknown source key
+ * yields no descriptor and therefore no permission, which is the direction that
+ * fails safely.
+ */
+function mayShowDescription(sourceKey: string): boolean {
+  const descriptor = findSourceDescriptor(sourceKey);
+  return descriptor !== undefined && mayRepublishField(descriptor, 'description');
+}
+
 function toDomain(row: JobRow): JobListing {
+  const descriptionPermitted = mayShowDescription(row.sourceKey);
+
   return {
     id: row.id,
     title: row.title,
@@ -151,14 +191,22 @@ function toDomain(row: JobRow): JobListing {
     companyName: row.company?.name ?? null,
     locationLabel: row.location?.rawText ?? null,
     stateCode: row.location?.stateCode ?? null,
-    description: row.description,
+    description: descriptionPermitted ? row.description : null,
     descriptionIsExcerpt: row.descriptionIsExcerpt,
+    // Only withheld when there was something to withhold. A source we may not
+    // quote and an advertisement with no text produce the same empty space, and
+    // saying "withheld" over the second would be a claim about a listing that
+    // never had a description.
+    descriptionWithheld: !descriptionPermitted && row.description !== null,
     employmentType: row.employmentType as EmploymentType | null,
     contractTypeLabel: contractLabel(row.sourceContractType),
     salary: toSalary(row),
     categoryLabel: row.sourceCategoryLabel,
     applyUrl: row.applyUrl,
     postedAt: row.postedAt,
+    lastVerifiedAt: row.lastVerifiedAt,
+    firstSeenAt: row.firstSeenAt,
+    status: row.status as JobStatus,
     sourceKey: row.sourceKey,
     retrievedAt: row.retrievedAt,
   };
@@ -181,6 +229,9 @@ const jobSelect = {
   sourceCategoryLabel: true,
   applyUrl: true,
   postedAt: true,
+  lastVerifiedAt: true,
+  firstSeenAt: true,
+  status: true,
   retrievedAt: true,
   sourceKey: true,
   company: { select: { name: true } },
@@ -215,17 +266,38 @@ export async function searchJobs(
     ...(query.category ? { sourceCategoryTag: query.category } : {}),
     ...(query.employmentType ? { employmentType: query.employmentType } : {}),
     ...(query.sponsorship ? { sponsorshipSignal: query.sponsorship } : {}),
-    ...(location
-      ? {
-          location: {
-            is: {
-              OR: [
-                { rawText: { contains: location, mode: 'insensitive' as const } },
-                { stateCode: { equals: location.toUpperCase() } },
-              ],
-            },
+    ...(query.source ? { sourceKey: query.source } : {}),
+    ...(query.postedWithinDays === undefined
+      ? {}
+      : {
+          postedAt: {
+            gte: new Date(Date.now() - query.postedWithinDays * 24 * 60 * 60 * 1000),
           },
-        }
+        }),
+    /*
+     * A location term is one of two questions, and answering the wrong one is
+     * how "NT" came to return Queensland listings.
+     *
+     * A state abbreviation is matched against the resolved state and nothing
+     * else. Two letters are a substring of a great many Australian place
+     * names: "NT" sits inside Central, Mount and Sunshine, so a text match
+     * for the Northern Territory returned Central West Qld. Anything else is a
+     * place name, which is exactly what a substring match is for, and it keeps
+     * matching the state code as well so "Queensland" still works.
+     */
+    ...(location
+      ? isStateAbbreviation(location)
+        ? { location: { is: { stateCode: { equals: location.trim().toUpperCase() } } } }
+        : {
+            location: {
+              is: {
+                OR: [
+                  { rawText: { contains: location, mode: 'insensitive' as const } },
+                  { stateCode: { equals: location.toUpperCase() } },
+                ],
+              },
+            },
+          }
       : {}),
     ...(text
       ? {
@@ -312,18 +384,78 @@ export async function listJobCategories(): Promise<Result<JobCategory[], Failure
   );
 }
 
-/** Most recent retrieval, so the UI can state how fresh the index is. */
-export async function lastRetrievedAt(
-  sourceKey: string,
-): Promise<Result<Date | null, Failure>> {
+/**
+ * Which sources currently hold listings.
+ *
+ * Deliberately without counts, for the same reason the category list is: a list
+ * of sources is a filter vocabulary, and a list of sources with a number beside
+ * each is a statistic about advertisement volumes by provider, which the Adzuna
+ * terms do not permit us to publish.
+ *
+ * Read so the source filter can offer only what is actually there. A control
+ * listing a source holding nothing is a control with a setting that always
+ * returns nothing.
+ */
+export async function listIndexedSources(): Promise<Result<string[], Failure>> {
   const database = getDatabase();
   if (!database.ok) return database;
 
-  const row = await database.value.job.findFirst({
-    where: { sourceKey, status: 'ACTIVE' },
-    select: { retrievedAt: true },
-    orderBy: { retrievedAt: 'desc' },
+  const rows = await database.value.job.findMany({
+    where: {
+      status: 'ACTIVE',
+      isCanonical: true,
+      ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
+    },
+    select: { sourceKey: true },
+    distinct: ['sourceKey'],
   });
 
-  return ok(row?.retrievedAt ?? null);
+  return ok(
+    rows
+      .map((row) => row.sourceKey)
+      .sort((a, b) =>
+        (findSourceDescriptor(a)?.displayName ?? a).localeCompare(
+          findSourceDescriptor(b)?.displayName ?? b,
+        ),
+      ),
+  );
+}
+
+/**
+ * When each source last confirmed its listings were still live.
+ *
+ * Keyed by source rather than reduced to one figure, because one figure was the
+ * bug. The jobs page took Adzuna's most recent retrieval and printed it above a
+ * page that might be showing Queensland listings crawled a week apart, which
+ * told a reader something about freshness that was not true of what they were
+ * looking at.
+ *
+ * `lastVerifiedAt` rather than `retrievedAt`: verified means the source
+ * confirmed the advertisement, retrieved means this record was written. Only
+ * the first is a statement about the job (ADR-0002).
+ */
+export async function lastVerifiedBySource(
+  sourceKeys: readonly string[],
+): Promise<Result<ReadonlyMap<string, Date>, Failure>> {
+  const database = getDatabase();
+  if (!database.ok) return database;
+  if (sourceKeys.length === 0) return ok(new Map());
+
+  const rows = await database.value.job.groupBy({
+    by: ['sourceKey'],
+    where: {
+      sourceKey: { in: [...sourceKeys] },
+      status: 'ACTIVE',
+      ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
+    },
+    _max: { lastVerifiedAt: true },
+  });
+
+  const freshness = new Map<string, Date>();
+  for (const row of rows) {
+    const verified = row._max.lastVerifiedAt;
+    if (verified !== null) freshness.set(row.sourceKey, verified);
+  }
+
+  return ok(freshness);
 }

@@ -123,12 +123,38 @@ export interface JobListing {
   readonly stateCode: string | null;
   readonly description: string | null;
   readonly descriptionIsExcerpt: boolean;
+  /**
+   * Whether the description is absent because this source's rights matrix
+   * refuses it, rather than because the advertisement had none.
+   *
+   * The two must not be collapsed. "The employer wrote no description" and "we
+   * are not satisfied we may reproduce what the employer wrote" are different
+   * facts about the same empty space, and only one of them is about the
+   * employer (ADR-0002).
+   */
+  readonly descriptionWithheld: boolean;
   readonly employmentType: EmploymentType | null;
   readonly contractTypeLabel: string | null;
   readonly salary: Salary | null;
   readonly categoryLabel: string | null;
   readonly applyUrl: string;
   readonly postedAt: Date | null;
+  /**
+   * When the source last confirmed this advertisement was still live.
+   *
+   * Distinct from `postedAt`, which is the employer's date, and from
+   * `retrievedAt`, which is when this record was last written. A reader
+   * deciding whether to spend an afternoon on an application wants the middle
+   * one, and it was the one the product was not showing.
+   */
+  readonly lastVerifiedAt: Date | null;
+  /**
+   * When this listing was first discovered, and what ingestion decided about
+   * it. Carried so the reader-facing lifecycle state can be derived rather
+   * than stored; see domain/lifecycle.ts for why it is not a column.
+   */
+  readonly firstSeenAt: Date;
+  readonly status: JobStatus;
   /**
    * What this advertisement said about visa sponsorship, and the words that
    * said it. Carried on the listing because it is only ever shown beside the

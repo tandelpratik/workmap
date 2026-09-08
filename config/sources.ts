@@ -28,8 +28,32 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
       'Based on Jobs and Skills Australia data. Internet Vacancy Index, ' +
       '© Commonwealth of Australia, licensed under CC BY 4.0. Figures have been ' +
       'aggregated and reformatted for display.',
-    termsUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    // No termsUrl. For this source the deed below is the whole instrument, and
+    // no separate terms document was located and read. An unverified URL here
+    // would be worse than none: it would look like evidence.
     homepageUrl: 'https://www.jobsandskills.gov.au/data/internet-vacancy-index',
+    licence: {
+      name: 'CC BY 4.0',
+      url: 'https://creativecommons.org/licenses/by/4.0/',
+      holder: '© Commonwealth of Australia',
+    },
+    rights: {
+      status: 'ESTABLISHED',
+      commercialUse: 'PERMITTED',
+      redistribution: 'PERMITTED',
+      adaptation: 'PERMITTED',
+      exclusions: [
+        'Third-party content',
+        'The Commonwealth Coat of Arms',
+        'Trade marks',
+        'All images and photographs',
+      ],
+      lastVerified: '2026-08-28',
+    },
+    retrieval: {
+      method: 'FILE_DOWNLOAD',
+      frequency: 'Monthly, on publication of the release',
+    },
     // CC BY 4.0 permits adaptation, which is what aggregation is.
     permitsDerivedAggregates: true,
     notes:
@@ -59,9 +83,25 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
       'Geography Standard (ASGS) Edition 4, July 2026 to June 2031. ' +
       '© Commonwealth of Australia, administered by the ABS, licensed under ' +
       'CC BY 4.0. Boundaries have been simplified for display.',
-    termsUrl: 'https://creativecommons.org/licenses/by/4.0/',
     homepageUrl:
       'https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-4-july-2026-june-2031/access-and-downloads/digital-boundary-files',
+    licence: {
+      name: 'CC BY 4.0',
+      url: 'https://creativecommons.org/licenses/by/4.0/',
+      holder: '© Commonwealth of Australia, administered by the ABS',
+    },
+    rights: {
+      status: 'ESTABLISHED',
+      commercialUse: 'PERMITTED',
+      redistribution: 'PERMITTED',
+      adaptation: 'PERMITTED',
+      exclusions: ['The Commonwealth Coat of Arms', 'The ABS logo', 'Trade marks'],
+      lastVerified: '2026-08-28',
+    },
+    retrieval: {
+      method: 'FILE_DOWNLOAD',
+      frequency: 'Once per ASGS edition, roughly every five years',
+    },
     // CC BY 4.0, same reasoning as jsa-ivi.
     permitsDerivedAggregates: true,
     notes:
@@ -79,6 +119,18 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     activation: 'PENDING',
     complianceStatus: 'UNVERIFIED',
     attributionRequired: true,
+    // No licence block: nothing has been read, so there is nothing to record.
+    // An empty rights block would be a claim in itself, and the claim would be
+    // false.
+    rights: {
+      status: 'NEEDS_VERIFICATION',
+      commercialUse: 'UNVERIFIED',
+      redistribution: 'UNVERIFIED',
+      adaptation: 'UNVERIFIED',
+      exclusions: [],
+      lastVerified: null,
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     // Unverified, so the aggregate gate is closed regardless of this value.
     permitsDerivedAggregates: false,
     notes:
@@ -101,6 +153,54 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     attributionText: 'Jobs by Adzuna',
     termsUrl: 'https://developer.adzuna.com/docs/terms_of_service',
     homepageUrl: 'https://www.adzuna.com.au/',
+    // Not a public licence. The grant is a contract, and naming it as one keeps
+    // an attribution line from implying this material is openly licensed the
+    // way the two government datasets are.
+    licence: {
+      name: 'Adzuna API terms of service',
+      url: 'https://developer.adzuna.com/docs/terms_of_service',
+      holder: 'Adzuna',
+    },
+    rights: {
+      status: 'ESTABLISHED',
+      // Permitted, but only for the closed list of uses their terms enumerate.
+      commercialUse: 'PERMITTED',
+      // Publishing the ad listings is the permitted use, subject to the label.
+      redistribution: 'PERMITTED',
+      // Aggregation is named and refused without written consent, and every
+      // other use falls outside the enumerated list.
+      adaptation: 'PROHIBITED',
+      exclusions: [
+        'Aggregate figures of any kind, including vacancy counts and average salaries',
+        'The Adzuna name and logo, usable only as the mandatory advert label requires',
+        'Advertisement text beyond the excerpt the API returns',
+      ],
+      lastVerified: '2026-08-29',
+    },
+    retrieval: { method: 'API', frequency: 'Daily' },
+    /*
+     * What may be reproduced from one of their adverts.
+     *
+     * The permitted use is publishing the ad listing, which is the factual
+     * metadata plus the excerpt their API returns, so those are marked
+     * permitted and nothing else is. The three withheld entries are decisions
+     * rather than open questions: an employer logo is that employer's trade
+     * mark and not Adzuna's to sublicense, a named contact is personal
+     * information this product has no reason to republish, and application
+     * instructions are unnecessary when every listing links to the advert.
+     */
+    jobContentRights: {
+      title: 'PERMITTED',
+      employer: 'PERMITTED',
+      location: 'PERMITTED',
+      salary: 'PERMITTED',
+      employmentType: 'PERMITTED',
+      postedAt: 'PERMITTED',
+      description: 'PERMITTED',
+      contactDetails: 'WITHHELD',
+      logo: 'WITHHELD',
+      applicationInstructions: 'WITHHELD',
+    },
     // The documented default allowance. The tightest of the four bounds is the
     // per-minute one, and it is what the client's limiter enforces; the daily,
     // weekly and monthly budgets are enforced by how often ingestion runs.
@@ -142,8 +242,49 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     attributionText:
       'Based on Smart Jobs and Careers data. © The State of Queensland, ' +
       'licensed under CC BY 3.0 AU. Listings have been reformatted for display.',
-    termsUrl: 'https://creativecommons.org/licenses/by/3.0/au/',
     homepageUrl: 'https://smartjobs.qld.gov.au/',
+    licence: {
+      name: 'CC BY 3.0 AU',
+      url: 'https://creativecommons.org/licenses/by/3.0/au/',
+      holder: '© The State of Queensland',
+    },
+    rights: {
+      status: 'ESTABLISHED',
+      commercialUse: 'PERMITTED',
+      redistribution: 'PERMITTED',
+      adaptation: 'PERMITTED',
+      exclusions: [
+        'Material within an individual advertisement noted as carrying third-party rights',
+        'Queensland Government logos and trade marks',
+      ],
+      lastVerified: '2026-08-31',
+    },
+    retrieval: { method: 'CRAWL', frequency: 'Daily, paced at 1.5 seconds a request' },
+    /*
+     * The licence is declared by each page in its own AGLS metadata and covers
+     * the advertisement, so the factual fields and the description are all
+     * within the grant.
+     *
+     * The withheld three are not licence questions. Queensland advertisements
+     * routinely name a contact officer with a direct telephone number, which is
+     * personal information the product has no reason to republish, and the
+     * "unless otherwise noted" clause is exactly the kind of caveat that would
+     * cover an embedded logo. Applying is done on the portal, so instructions
+     * reproduced here would go stale while the original stays correct.
+     */
+    jobContentRights: {
+      title: 'PERMITTED',
+      employer: 'PERMITTED',
+      location: 'PERMITTED',
+      salary: 'PERMITTED',
+      employmentType: 'PERMITTED',
+      postedAt: 'PERMITTED',
+      closingDate: 'PERMITTED',
+      description: 'PERMITTED',
+      contactDetails: 'WITHHELD',
+      logo: 'WITHHELD',
+      applicationInstructions: 'WITHHELD',
+    },
     // CC BY permits adaptation, which is what aggregation is.
     permitsDerivedAggregates: true,
     notes:
@@ -172,6 +313,17 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     attributionRequired: true,
     termsUrl: 'https://www.wa.gov.au/terms-of-use',
     homepageUrl: 'https://search.jobs.wa.gov.au/',
+    // A completed verification with a negative answer, which is why every
+    // permission is PROHIBITED rather than UNVERIFIED. The terms were read.
+    rights: {
+      status: 'REFUSED',
+      commercialUse: 'PROHIBITED',
+      redistribution: 'PROHIBITED',
+      adaptation: 'PROHIBITED',
+      exclusions: ['The entire site, absent written permission from the State'],
+      lastVerified: '2026-08-31',
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     permitsDerivedAggregates: false,
     notes:
       'Prohibited for this product. Read 2026-08-31: wa.gov.au/copyright redirects ' +
@@ -196,6 +348,19 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     complianceStatus: 'RESTRICTED',
     attributionRequired: true,
     homepageUrl: 'https://www.myworkdayjobs.com/',
+    // Every set of employer terms that could be located refuses republication,
+    // so those two are PROHIBITED on evidence. Adaptation was never separately
+    // addressed by any of them, so it stays an open question rather than being
+    // inferred from the refusal beside it.
+    rights: {
+      status: 'NEEDS_VERIFICATION',
+      commercialUse: 'PROHIBITED',
+      redistribution: 'PROHIBITED',
+      adaptation: 'UNVERIFIED',
+      exclusions: ['Every tenant, until that employer gives written permission'],
+      lastVerified: '2026-08-31',
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     permitsDerivedAggregates: false,
     notes:
       'Employer-hosted listings, one tenant per employer. Technically proven ' +
@@ -220,6 +385,18 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     complianceStatus: 'UNVERIFIED',
     attributionRequired: true,
     homepageUrl: 'https://www.pageuppeople.com/',
+    // lastVerified is null because the terms were never reached, not because
+    // nobody looked. The date of the attempt is in the notes; this field means
+    // "when was the position established", and it has not been.
+    rights: {
+      status: 'NEEDS_VERIFICATION',
+      commercialUse: 'UNVERIFIED',
+      redistribution: 'UNVERIFIED',
+      adaptation: 'UNVERIFIED',
+      exclusions: [],
+      lastVerified: null,
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     permitsDerivedAggregates: false,
     notes:
       'Blocked at the platform edge. Checked 2026-08-31: eight of eight Australian ' +
@@ -240,6 +417,19 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     complianceStatus: 'UNVERIFIED',
     attributionRequired: true,
     homepageUrl: 'https://iworkfor.nsw.gov.au/',
+    // nsw.gov.au material is CC BY 4.0. That statement covers nsw.gov.au and
+    // not this host, so nothing is recorded as permitted here. Inheriting a
+    // publisher's general policy onto a specific site is the exact assumption
+    // this register exists to prevent.
+    rights: {
+      status: 'NEEDS_VERIFICATION',
+      commercialUse: 'UNVERIFIED',
+      redistribution: 'UNVERIFIED',
+      adaptation: 'UNVERIFIED',
+      exclusions: [],
+      lastVerified: null,
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     permitsDerivedAggregates: false,
     notes:
       'Checked 2026-08-31. Serves no data without JavaScript: the homepage is a ' +
@@ -261,6 +451,15 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     complianceStatus: 'UNVERIFIED',
     attributionRequired: true,
     homepageUrl: 'https://www.careers.vic.gov.au/',
+    rights: {
+      status: 'NEEDS_VERIFICATION',
+      commercialUse: 'UNVERIFIED',
+      redistribution: 'UNVERIFIED',
+      adaptation: 'UNVERIFIED',
+      exclusions: [],
+      lastVerified: null,
+    },
+    retrieval: { method: 'NONE', frequency: 'Not retrieved' },
     permitsDerivedAggregates: false,
     notes:
       'Not yet mapped. Checked 2026-08-31: a Drupal site whose robots.txt disallows ' +
@@ -276,6 +475,31 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
     activation: 'DEVELOPMENT_ONLY',
     complianceStatus: 'UNVERIFIED',
     attributionRequired: false,
+    // This project generated the fixtures, so it holds the rights outright.
+    // That is not a route into production: every other gate still refuses this
+    // source there, and these permissions exist so development behaves the same
+    // way production would rather than falling into a special case.
+    rights: {
+      status: 'ESTABLISHED',
+      commercialUse: 'PERMITTED',
+      redistribution: 'PERMITTED',
+      adaptation: 'PERMITTED',
+      exclusions: [],
+      lastVerified: null,
+    },
+    retrieval: { method: 'NONE', frequency: 'Generated on demand' },
+    jobContentRights: {
+      title: 'PERMITTED',
+      employer: 'PERMITTED',
+      location: 'PERMITTED',
+      salary: 'PERMITTED',
+      employmentType: 'PERMITTED',
+      postedAt: 'PERMITTED',
+      description: 'PERMITTED',
+      contactDetails: 'WITHHELD',
+      logo: 'WITHHELD',
+      applicationInstructions: 'WITHHELD',
+    },
     // Never eligible in production, so never a basis for a published figure.
     permitsDerivedAggregates: false,
     notes:
