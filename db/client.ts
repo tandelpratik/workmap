@@ -24,11 +24,6 @@ declare global {
 }
 
 let client: PrismaClient | undefined;
-
-export function isDatabaseConfigured(): boolean {
-  return Boolean(tryGetEnv()?.DATABASE_URL);
-}
-
 /**
  * Returns the Prisma client, or a NOT_CONFIGURED failure when no database is
  * configured. Callers must handle the failure rather than assume a connection,

@@ -7,10 +7,7 @@ import type { GeographyLevel } from '@/domain/geography';
 import { canPublishDerivedAggregates, ineligibilityReason } from '@/domain/source';
 import {
   makeObservation,
-  type MetricBasis,
   type Observation,
-  type PeriodGranularity,
-  type SeriesDefinition,
   type ValueState,
 } from '@/domain/labour-market';
 
@@ -22,90 +19,6 @@ import {
  * value and its state cannot become inconsistent on the way out of the
  * database any more than on the way in.
  */
-
-export interface StoredSeries {
-  readonly id: string;
-  readonly seriesKey: string;
-  readonly definition: SeriesDefinition;
-  /** Null until the reference resolves; the source's own labels persist. */
-  readonly geographyId: string | null;
-  readonly occupationId: string | null;
-}
-
-interface SeriesRow {
-  id: string;
-  seriesKey: string;
-  sourceKey: string;
-  dataset: string;
-  measure: string;
-  unit: string;
-  basis: string;
-  granularity: string;
-  geographyId: string | null;
-  occupationId: string | null;
-  sourceGeographyCode: string | null;
-  sourceGeographyName: string | null;
-  sourceOccupationCode: string | null;
-  sourceOccupationName: string | null;
-}
-
-function toDomain(row: SeriesRow): StoredSeries {
-  return {
-    id: row.id,
-    seriesKey: row.seriesKey,
-    geographyId: row.geographyId,
-    occupationId: row.occupationId,
-    definition: {
-      sourceKey: row.sourceKey,
-      dataset: row.dataset,
-      measure: row.measure,
-      unit: row.unit,
-      basis: row.basis as MetricBasis,
-      granularity: row.granularity as PeriodGranularity,
-      geography: { code: row.sourceGeographyCode, name: row.sourceGeographyName },
-      occupation: { code: row.sourceOccupationCode, name: row.sourceOccupationName },
-      // Qualifiers live in the series key rather than a column of their own.
-      // Reconstructing them is milestone 07's problem, when something needs to
-      // filter on one; nothing reads them today, and inventing a parse of the
-      // key here would be a second source of truth.
-      qualifiers: {},
-    },
-  };
-}
-
-const seriesSelect = {
-  id: true,
-  seriesKey: true,
-  sourceKey: true,
-  dataset: true,
-  measure: true,
-  unit: true,
-  basis: true,
-  granularity: true,
-  geographyId: true,
-  occupationId: true,
-  sourceGeographyCode: true,
-  sourceGeographyName: true,
-  sourceOccupationCode: true,
-  sourceOccupationName: true,
-} as const;
-
-export async function findSeriesByKey(
-  seriesKey: string,
-): Promise<Result<StoredSeries, Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  const row = await database.value.labourMarketSeries.findUnique({
-    where: { seriesKey },
-    select: seriesSelect,
-  });
-
-  if (!row) {
-    return err(failure('NOT_FOUND', `No series with key "${seriesKey}".`));
-  }
-  return ok(toDomain(row));
-}
 
 export async function countSeries(
   sourceKey: string,
@@ -120,60 +33,6 @@ export async function countSeries(
     }),
   );
 }
-
-export async function listObservations(
-  seriesKey: string,
-): Promise<Result<Observation[], Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  const series = await database.value.labourMarketSeries.findUnique({
-    where: { seriesKey },
-    select: { id: true },
-  });
-  if (!series) {
-    return err(failure('NOT_FOUND', `No series with key "${seriesKey}".`));
-  }
-
-  const rows = await database.value.labourMarketMetric.findMany({
-    where: { seriesId: series.id },
-    select: { periodStart: true, value: true, valueState: true },
-    orderBy: { periodStart: 'asc' },
-  });
-
-  return ok(
-    rows.map((row) =>
-      makeObservation(
-        row.periodStart,
-        row.valueState as ValueState,
-        row.value === null ? null : Number(row.value.toString()),
-      ),
-    ),
-  );
-}
-
-/**
- * Most recent reference period held for a dataset.
- *
- * Null when nothing is loaded, which is a different answer from zero and is
- * what the UI needs to distinguish "no data yet" from "no advertisements".
- */
-export async function latestPeriod(
-  sourceKey: string,
-  dataset: string,
-): Promise<Result<Date | null, Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  const row = await database.value.labourMarketMetric.findFirst({
-    where: { series: { sourceKey, dataset } },
-    select: { periodStart: true },
-    orderBy: { periodStart: 'desc' },
-  });
-
-  return ok(row?.periodStart ?? null);
-}
-
 export interface UnresolvedDimension {
   readonly code: string | null;
   readonly name: string | null;

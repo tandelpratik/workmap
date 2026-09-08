@@ -15,7 +15,7 @@ constitution disagree, the constitution wins.
   ├── ABS ASGS   ACTIVE ──▶ ingestion/geography    boundaries, CC BY 4.0
   ├── Adzuna     ACTIVE ──▶ integrations/adzuna    listings only, no aggregates
   ├── QLD        ACTIVE ──▶ integrations/smartjobs-qld   listings + aggregates
-  └── Synthetic     DEV ──▶ integrations/synthetic never in production
+  └── Synthetic     DEV ──▶ no adapter built; the containment is real
                                   │
                                   ▼
                             ingestion/            validate ▸ map ▸ upsert
@@ -25,8 +25,8 @@ constitution disagree, the constitution wins.
                                   │
               ┌───────────────────┼───────────────────┐
               ▼                   ▼                   ▼
-           search/            analytics/          geography/
-              │                   │                   │
+                          analytics/          geography/
+                                  │                   │
               └───────────────────┼───────────────────┘
                                   ▼
                                 api/               contracts + provenance
@@ -47,13 +47,22 @@ constitution disagree, the constitution wins.
 | `ingestion/`    | Import orchestration, runs, quarantine    | domain, db, integrations     |
 | `analytics/`    | Aggregation, data quality, source health  | domain, db, config           |
 | `geography/`    | Registry, geometry manifest, projection   | domain, db                   |
-| `search/`       | Query building, ranking                   | domain, db                   |
-| `skills/`       | Deterministic extraction, matching        | domain, db                   |
-| `salary/`       | Distribution, suppression thresholds      | domain, db                   |
+| `skills/`       | A boundary; nothing built yet             | domain, db                   |
 | `lib/`          | Framework-neutral utilities               | types                        |
 | `types/`        | Shared type declarations                  | nothing                      |
 | `tests/`        | Unit, integration, contract tests         | anything                     |
 | `scripts/`      | Offline build tasks (geometry, data prep) | anything                     |
+
+Search lives in `db/repositories/job.ts` rather than in a module of its own. A
+`search/` directory existed for a while describing full-text search with trigram
+fallback and keyset pagination; none of it was built, the query is `ILIKE`
+matching with offset paging, and an empty boundary claiming otherwise misled
+about where search actually was. `salary/` was removed on evidence: nine of
+2,713 listings state a salary.
+
+The synthetic source has a descriptor, an environment flag and a repository
+filter, and no adapter. The containment described below is real and enforced;
+what it contains has never been built.
 
 ### The dependency rule
 

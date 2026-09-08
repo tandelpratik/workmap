@@ -1,6 +1,7 @@
 import { findSourceDescriptor } from '@/config/sources';
 import { lifecycle } from '@/config/lifecycle';
 import { lifecycleLabel, lifecycleOf } from '@/domain/lifecycle';
+import { salaryIsEstimated } from '@/domain/job';
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
 import { SponsorshipBadge } from './sponsorship-badge';
 import { JobsworthLabel } from './adzuna-attribution';
@@ -118,7 +119,7 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
             {salary === null ? null : (
               <p className="tabular text-ink mt-2 text-sm font-medium">
                 {salary}
-                {job.salary?.basis === 'SOURCE_ESTIMATED' ? (
+                {salaryIsEstimated(job.salary) ? (
                   <>
                     <span className="text-ink-faint font-normal"> · </span>
                     <JobsworthLabel />

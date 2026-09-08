@@ -150,11 +150,6 @@ export interface SourceDimension {
 }
 
 export const unstatedDimension: SourceDimension = { code: null, name: null };
-
-export function dimensionIsStated(dimension: SourceDimension): boolean {
-  return dimension.code !== null || dimension.name !== null;
-}
-
 /**
  * What a series measures, for whom, where, on what basis.
  *

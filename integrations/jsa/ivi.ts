@@ -2,7 +2,6 @@ import {
   buildSeriesKey,
   makeObservation,
   metricLanguageViolations,
-  slug,
   startOfPeriod,
   formatPeriod,
   type Observation,
@@ -755,9 +754,4 @@ export function parseIviWorkbook(
   }));
 
   return ok({ series, observations, duplicatesDropped, problems, sheets });
-}
-
-/** Series key prefix for this dataset, for diagnostics and repository queries. */
-export function iviSeriesKeyPrefix(dataset = IVI_DATASET): string {
-  return `${slug(JSA_SOURCE_KEY)}|${slug(dataset)}|`;
 }

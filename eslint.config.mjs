@@ -31,7 +31,7 @@ const boundaries = [
   {
     name: 'integrations',
     files: ['integrations/**/*.ts'],
-    forbid: ['@/app/*', '@/components/*', '@/analytics/*', '@/search/*'],
+    forbid: ['@/app/*', '@/components/*', '@/analytics/*'],
     reason:
       'integrations/ translates one provider into domain contracts. It must not reach ' +
       'into the web layer or analytics.',

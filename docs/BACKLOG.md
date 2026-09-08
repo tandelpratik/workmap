@@ -87,6 +87,21 @@ the cache header. It becomes worth revisiting if the health or quality checks
 ever show the endpoint being hammered, or if the deployment moves somewhere with
 no edge in front of it.
 
+## Decided against
+
+**Salary analytics.** Nine of 2,713 listings state a salary, and those nine are
+all yearly figures. There is no distribution to compute and a filter on it would
+hide 99.7 per cent of the index. The `salary/` boundary was removed rather than
+left standing as a promise. Revisit only if a source starts supplying salaries at
+a rate that makes a statistic mean something.
+
+**A `search/` module.** It described full-text search with trigram fallback and
+keyset pagination, none of which was built. Search is `ILIKE` matching with
+offset paging in `db/repositories/job.ts`, which is adequate for a corpus of this
+size (ADR-0004 says each step waits for a measurement). The empty directory was
+removed because it misled about where search actually lives, not because better
+search is off the table.
+
 ## Deferred by choice
 
 **`/locations/[state]/[occupation]`.** The data supports it and the page would

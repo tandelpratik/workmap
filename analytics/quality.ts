@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@/db/generated/client/client';
 import { getDatabase } from '@/db/client';
+import { listUnresolvedGeographies } from '@/db/repositories/labour-market';
 import { lifecycle } from '@/config/lifecycle';
 import { findSourceDescriptor, sourceDescriptors } from '@/config/sources';
 import { containsPersonalInformation } from '@/domain/personal-information';
@@ -152,23 +153,44 @@ async function missingnessIsModelled(db: Database): Promise<CheckResult[]> {
   ];
 }
 
-/** Every series that names a geography resolves to one that exists. */
-async function geographyResolves(db: Database): Promise<CheckResult[]> {
-  const unresolved = await db.labourMarketSeries.findMany({
-    where: { geographyId: null, sourceGeographyCode: { not: null } },
-    select: { seriesKey: true },
-    take: MAX_EXAMPLES,
-  });
-  const unresolvedCount = await db.labourMarketSeries.count({
-    where: { geographyId: null, sourceGeographyCode: { not: null } },
-  });
+/**
+ * Every series that names a geography resolves to one that exists.
+ *
+ * Asked through the repository rather than with a query of its own. The two were
+ * the same question written twice, and the repository's answer is the better
+ * one: it names the codes that did not resolve and how many series each is
+ * holding up, which is what an operator needs and what a bare count is not.
+ */
+async function geographyResolves(): Promise<CheckResult[]> {
+  const watched = sourceDescriptors.filter(
+    (descriptor) =>
+      isProductionEligible(descriptor) && descriptor.kind === 'MARKET_INDICATOR',
+  );
+
+  let failures = 0;
+  const examples: string[] = [];
+
+  for (const descriptor of watched) {
+    const unresolved = await listUnresolvedGeographies(descriptor.key);
+    if (!unresolved.ok) continue;
+    for (const dimension of unresolved.value) {
+      failures += dimension.seriesCount;
+      if (examples.length < MAX_EXAMPLES) {
+        examples.push(
+          `${descriptor.key}: ${dimension.code ?? dimension.name ?? 'unnamed'} (${String(
+            dimension.seriesCount,
+          )} series)`,
+        );
+      }
+    }
+  }
 
   return [
     fail(
       'geography.series-resolved',
       'Every series naming a region resolves to a real ASGS area',
-      unresolvedCount,
-      unresolved.map((row) => row.seriesKey),
+      failures,
+      examples,
       'An unresolved series keeps the publisher code and can be relinked without ' +
         're-importing, so this is a backlog item rather than corruption.',
     ),

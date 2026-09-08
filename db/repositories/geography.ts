@@ -107,19 +107,6 @@ export async function findByCode(
 
   return ok(toDomain(row));
 }
-
-/** Editions currently loaded, newest first by code count. */
-export async function listEditions(): Promise<Result<string[], Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  const rows = await database.value.geography.groupBy({
-    by: ['asgsEdition'],
-  });
-
-  return ok(rows.map((row) => row.asgsEdition).sort());
-}
-
 export async function countByEdition(edition: string): Promise<Result<number, Failure>> {
   const database = getDatabase();
   if (!database.ok) return database;

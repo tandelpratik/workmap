@@ -36,21 +36,6 @@ export function parentLevelOf(level: GeographyLevel): GeographyLevel | null {
       return 'STATE';
   }
 }
-
-/**
- * Whether two levels describe overlapping ground.
- *
- * GCCSA and SA4 both partition a state, so a figure at one level and a figure
- * at the other may cover the same vacancy. Summing across them double counts.
- * Callers that aggregate must consult this rather than assume levels are
- * disjoint.
- */
-export function levelsOverlap(a: GeographyLevel, b: GeographyLevel): boolean {
-  if (a === b) return false;
-  const pair = new Set([a, b]);
-  return pair.has('GCCSA') && pair.has('SA4');
-}
-
 export interface GeographyArea {
   readonly id: string;
   readonly code: string;

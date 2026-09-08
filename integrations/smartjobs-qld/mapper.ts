@@ -1,5 +1,4 @@
 import type { EmploymentType, NormalizedJob } from '@/domain/job';
-import { findRegion } from './regions';
 import type { SmartJobsJobDetail, SmartJobsSearchRow } from './types';
 
 /**
@@ -107,11 +106,4 @@ export function toNormalizedJob(
     postedAt: toDate(detail.datePosted),
     category: null,
   };
-}
-
-/** Regions this listing names that the adapter does not recognise. */
-export function unknownRegionsFor(job: {
-  readonly localities: readonly string[];
-}): readonly string[] {
-  return job.localities.filter((name) => findRegion(name) === undefined);
 }

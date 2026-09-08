@@ -222,12 +222,6 @@ export function tryGetEnv(): Env | null {
   cached = inspection.env;
   return cached;
 }
-
-/** Test seam. Not for application use. */
-export function resetEnvCache(): void {
-  cached = undefined;
-}
-
 /**
  * Whether synthetic sources may be used in this process.
  *

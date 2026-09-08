@@ -3,8 +3,8 @@ import { isSyntheticAllowed } from '@/config/env';
 import { findSourceDescriptor } from '@/config/sources';
 import { mayRepublishField } from '@/domain/source';
 import { isStateAbbreviation } from '@/domain/geography';
-import { failure, type Failure } from '@/lib/errors';
-import { err, ok, type Result } from '@/lib/result';
+import type { Failure } from '@/lib/errors';
+import { ok, type Result } from '@/lib/result';
 import type {
   EmploymentType,
   JobListing,
@@ -327,66 +327,10 @@ export async function searchJobs(
 
   return ok({ jobs: rows.map(toDomain), total, page, pageSize });
 }
-
-export async function findJobById(id: string): Promise<Result<JobListing, Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  const row = await database.value.job.findFirst({
-    where: {
-      id,
-      ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
-    },
-    select: jobSelect,
-  });
-
-  if (!row) return err(failure('NOT_FOUND', 'No such listing.'));
-  return ok(toDomain(row));
-}
-
 export interface JobCategory {
   readonly tag: string;
   readonly label: string;
 }
-
-/**
- * The category vocabulary present in the index, for the filter control.
- *
- * Deliberately without counts. A list of categories is a filter; a list of
- * categories with a number beside each is a statistic about advertisement
- * volumes, which the Adzuna terms do not permit us to publish.
- */
-export async function listJobCategories(): Promise<Result<JobCategory[], Failure>> {
-  const database = getDatabase();
-  if (!database.ok) return database;
-
-  // groupBy for the same reason as listIndexedSources: Prisma's `distinct` is
-  // applied in the application, so the findMany form transfers every listing's
-  // category to return the handful of distinct ones. Grouping by both columns
-  // keeps the label, which a bare distinct on the tag would have discarded.
-  const rows = await database.value.job.groupBy({
-    by: ['sourceCategoryTag', 'sourceCategoryLabel'],
-    where: {
-      status: 'ACTIVE',
-      sourceCategoryTag: { not: null },
-      ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
-    },
-  });
-
-  return ok(
-    rows
-      .filter(
-        (row): row is { sourceCategoryTag: string; sourceCategoryLabel: string | null } =>
-          Boolean(row.sourceCategoryTag),
-      )
-      .map((row) => ({
-        tag: row.sourceCategoryTag,
-        label: row.sourceCategoryLabel ?? row.sourceCategoryTag,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-  );
-}
-
 /**
  * Which sources currently hold listings.
  *

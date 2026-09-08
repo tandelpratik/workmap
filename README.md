@@ -91,15 +91,14 @@ integrations/  one directory per external provider
 ingestion/     import orchestration
 analytics/     aggregation and summary refresh
 geography/     geography registry
-search/        query building and ranking
-skills/        extraction and matching
-salary/        normalisation and distribution
+skills/        a boundary; nothing built yet
 lib/           framework-neutral utilities
 tests/         unit and contract tests
 scripts/       offline build tasks
 ```
 
-Each directory has a README stating its boundary.
+Each directory has a README stating its boundary. Search lives in
+`db/repositories/job.ts` rather than a module of its own.
 
 ## Documentation
 
