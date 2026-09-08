@@ -40,6 +40,8 @@ const ROUTES = [
   '/insights',
   '/compare',
   '/compare?placeA=queensland&placeB=victoria',
+  '/explore',
+  '/explore?occupation=26',
   '/methodology',
   '/data-and-licensing',
   '/this-route-does-not-exist',

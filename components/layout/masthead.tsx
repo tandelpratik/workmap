@@ -30,7 +30,8 @@ import { brand } from '@/config/brand';
  * exists, and inventing one here is not this component's business (ADR-0007).
  */
 
-export type Section = 'home' | 'map' | 'locations' | 'occupations' | 'jobs' | 'insights';
+export type Section =
+  'home' | 'map' | 'locations' | 'occupations' | 'jobs' | 'insights' | 'explore';
 
 // Where, what, and the listings themselves. The order is the reading order:
 // the map is the product's front door, locations and occupations are the two
@@ -47,6 +48,11 @@ const sections: readonly { id: Section; href: string; label: string }[] = [
   { id: 'occupations', href: '/occupations', label: 'Occupations' },
   { id: 'jobs', href: '/jobs', label: 'Jobs' },
   { id: 'insights', href: '/insights', label: 'Insights' },
+  // The product's own question, so it earns a place in the rail rather than
+  // sitting in the footer with the other tools. Compare stays in the footer: it
+  // is something a reader reaches for after arriving somewhere, and it is linked
+  // from the pages where that happens.
+  { id: 'explore', href: '/explore', label: 'Where to look' },
 ];
 
 export function Masthead({

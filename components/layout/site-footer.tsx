@@ -32,6 +32,7 @@ const explore: readonly FooterLink[] = [
   { href: '/jobs', label: 'Jobs' },
   { href: '/insights', label: 'Insights' },
   { href: '/compare', label: 'Compare' },
+  { href: '/explore', label: 'Where should I look' },
 ];
 
 const data: readonly FooterLink[] = [

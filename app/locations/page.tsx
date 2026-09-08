@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { cachedOccupationTotals, cachedStates } from '@/app/cached-queries';
 import { toAreaSlug } from '@/domain/geography';
 import { Masthead } from '@/components/layout/masthead';
@@ -14,6 +15,8 @@ import {
 import { FigureFrame } from '@/components/layout/figure-frame';
 import { ReleaseStrip, type ReleaseField } from '@/components/data/release-strip';
 import { RankedTable } from '@/components/ui/ranked-table';
+import { Label } from '@/components/ui/label';
+import { link } from '@/components/ui/link';
 
 /**
  * WHERE, at the coarsest useful grain: every state and territory, ranked.
@@ -249,6 +252,36 @@ export default async function LocationsPage() {
             </FigureFrame>
           </section>
         )}
+
+        <section className="border-rule-strong mt-12 border-t pt-5">
+          <Label as="h2">Take the figures with you</Label>
+          <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+            This table as a file, with its licence, its reference period and what was
+            calculated here written inside it rather than left behind on this page.
+          </p>
+          <p className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+               A file, not a page: the handler answers with
+               Content-Disposition: attachment, and next/link would try to
+               navigate to it and prefetch it. */}
+            <a href="/api/datasets/advertisements-by-state?format=csv" className={link()}>
+              Download CSV
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+               A file, not a page: the handler answers with
+               Content-Disposition: attachment, and next/link would try to
+               navigate to it and prefetch it. */}
+            <a
+              href="/api/datasets/advertisements-by-state?format=json"
+              className={link()}
+            >
+              Download JSON
+            </a>
+            <Link href="/data-and-licensing" prefetch={false} className={link()}>
+              What you may do with it
+            </Link>
+          </p>
+        </section>
 
         <Notes>
           <Note>

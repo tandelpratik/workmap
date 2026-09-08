@@ -19,6 +19,7 @@ import { RankedTable } from '@/components/ui/ranked-table';
 import { VacancyLegend, VacancyMap } from '@/components/vacancy-map';
 import type { RegionFigure } from '@/components/region-figure';
 import { link } from '@/components/ui/link';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/components/ui/cn';
 
 /**
@@ -321,7 +322,33 @@ export default async function HomePage({
                 />
               </FigureFrame>
 
+              {/*
+                The question the product is named for, offered before the
+                figures rather than after them. A reader who arrives knowing what
+                work they do does not want to be taught the index first; they
+                want to be asked what they do and told where it is advertised.
+              */}
               <div className="border-rule-heavy mt-12 border-t-2 pt-5">
+                <h2 className="text-ink font-serif text-2xl font-semibold">
+                  Where should I look?
+                </h2>
+                <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+                  Choose a kind of work and see which states advertise the most of it, and
+                  which are unusually oriented towards it. Advertising activity, not a
+                  recommendation about where to live.
+                </p>
+                <p className="mt-4">
+                  <Link
+                    href="/explore"
+                    prefetch={false}
+                    className="text-paper-raised bg-ink hover:bg-accent inline-flex min-h-11 items-center px-5 text-sm font-medium transition-colors"
+                  >
+                    Find where the work is
+                  </Link>
+                </p>
+              </div>
+
+              <div className="border-rule-strong mt-10 border-t pt-5">
                 <h2 className="text-ink font-serif text-2xl font-semibold">
                   The advertisements themselves
                 </h2>
@@ -332,15 +359,57 @@ export default async function HomePage({
                   advertisement says about visa sponsorship.
                 </p>
                 <p className="mt-4">
-                  <Link
-                    href="/jobs"
-                    prefetch={false}
-                    className="text-paper-raised bg-ink hover:bg-accent inline-flex min-h-11 items-center px-5 text-sm font-medium transition-colors"
-                  >
+                  <Link href="/jobs" prefetch={false} className={cn(link(), 'text-sm')}>
                     Search advertisements
                   </Link>
                 </p>
               </div>
+
+              {/*
+                The rest of the product, named rather than left to the rail. The
+                site grew five surfaces during this upgrade and the front page
+                still pointed at the three it launched with, so a reader landing
+                here had no way to learn that the others existed.
+              */}
+              <nav aria-label="More" className="border-rule-strong mt-10 border-t pt-5">
+                <Label as="h2">Also here</Label>
+                <ul className="mt-4 space-y-3">
+                  {[
+                    {
+                      href: '/locations',
+                      title: 'States and territories',
+                      blurb:
+                        'Each one in full: its figure, its regions, and what it advertises.',
+                    },
+                    {
+                      href: '/insights',
+                      title: 'What each place advertises more of',
+                      blurb: 'Where a state is unlike the country, rather than larger.',
+                    },
+                    {
+                      href: '/compare',
+                      title: 'Compare',
+                      blurb: 'Two states or two occupation groups, side by side.',
+                    },
+                    {
+                      href: '/methodology',
+                      title: 'Methodology',
+                      blurb: 'What these figures count, and what they cannot tell you.',
+                    },
+                  ].map((item) => (
+                    <li key={item.href}>
+                      <Link href={item.href} prefetch={false} className="group block">
+                        <span className="text-ink group-hover:text-accent text-sm font-medium underline-offset-4 group-hover:underline">
+                          {item.title}
+                        </span>
+                        <span className="text-ink-muted block text-sm leading-snug">
+                          {item.blurb}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </div>
           </section>
         ) : (

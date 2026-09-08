@@ -432,6 +432,41 @@ export default async function OccupationsPage({
               </FigureFrame>
             </Plate>
 
+            <section className="border-rule-strong mt-12 border-t pt-5">
+              <Label as="h2">Take the figures with you</Label>
+              <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+                Every group as a file, with its licence, its reference period and what was
+                calculated here written inside it. The file marks which rows are the
+                finest grain, because a copy separated from this page has no other way to
+                know which ones must not be added together.
+              </p>
+              <p className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+                   A file, not a page: the handler answers with
+                   Content-Disposition: attachment, and next/link would try to
+                   navigate to it and prefetch it. */}
+                <a
+                  href="/api/datasets/advertisements-by-occupation?format=csv"
+                  className={link()}
+                >
+                  Download CSV
+                </a>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+                   A file, not a page: the handler answers with
+                   Content-Disposition: attachment, and next/link would try to
+                   navigate to it and prefetch it. */}
+                <a
+                  href="/api/datasets/advertisements-by-occupation?format=json"
+                  className={link()}
+                >
+                  Download JSON
+                </a>
+                <Link href="/data-and-licensing" prefetch={false} className={link()}>
+                  What you may do with it
+                </Link>
+              </p>
+            </section>
+
             <Notes>
               <Note>
                 Each figure is the sum of the regions the publisher reports on, added
