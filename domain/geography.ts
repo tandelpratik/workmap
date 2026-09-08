@@ -83,6 +83,91 @@ export function isMappable(area: Pick<GeographyArea, 'hasGeometry'>): boolean {
   return area.hasGeometry;
 }
 
+/**
+ * An area's name as a URL segment: "New South Wales" becomes "new-south-wales".
+ *
+ * Derived from the published name rather than held in a table of hand-written
+ * slugs. A table would be a second list of Australian states to keep in step
+ * with the ABS registry, and the ASGS is the thing that decides what these
+ * areas are called; a rename between editions should move the address rather
+ * than leave a slug pointing at a name nobody uses.
+ *
+ * Addresses are matched by comparing slugs rather than by reversing one, so
+ * this only ever has to be consistent with itself.
+ */
+export function toAreaSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      // Strip diacritics before the character filter, so an accented name folds
+      // to its base letters instead of losing them.
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  );
+}
+
+/** The area whose name yields this slug, or null. Case and spacing tolerant. */
+export function findAreaBySlug<T extends Pick<GeographyArea, 'name'>>(
+  areas: readonly T[],
+  slug: string,
+): T | null {
+  const wanted = toAreaSlug(slug);
+  return areas.find((area) => toAreaSlug(area.name) === wanted) ?? null;
+}
+
+/**
+ * The conventional abbreviation for a state or territory: "Queensland" is
+ * "QLD".
+ *
+ * A fact about Australian geography rather than about any one importer, which
+ * is why it lives here. Ingestion uses it to give a job location the state code
+ * a reader expects, and the pages use it to ask for that state's listings; both
+ * have to agree, and a second copy of this table would be the way they stop.
+ *
+ * Only the eight states and territories are listed. Other Territories has no
+ * conventional abbreviation and no listings, and inventing one would put a
+ * label on a page that no reader would recognise.
+ */
+const stateAbbreviations: Readonly<Record<string, string>> = {
+  'new south wales': 'NSW',
+  victoria: 'VIC',
+  queensland: 'QLD',
+  'south australia': 'SA',
+  'western australia': 'WA',
+  tasmania: 'TAS',
+  'northern territory': 'NT',
+  'australian capital territory': 'ACT',
+};
+
+export function stateAbbreviation(name: string): string | null {
+  const normalised = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return stateAbbreviations[normalised] ?? null;
+}
+
+/** Every abbreviation, for recognising one in a search term. */
+export const australianStateAbbreviations: readonly string[] =
+  Object.values(stateAbbreviations);
+
+/**
+ * Whether a search term is a state abbreviation rather than a place name.
+ *
+ * The distinction decides how a location search is run, and it is not
+ * cosmetic. "NT" as a substring appears inside Central, Mount, Sunshine, and a
+ * good fraction of Australian place names, so matching it as text returns
+ * Queensland listings for the Northern Territory. Recognised abbreviations are
+ * matched against the resolved state instead, which is the question the reader
+ * was actually asking.
+ */
+export function isStateAbbreviation(value: string): boolean {
+  const normalised = value.trim().toUpperCase();
+  return australianStateAbbreviations.includes(normalised);
+}
+
 export interface HierarchyProblem {
   readonly code: string;
   readonly level: GeographyLevel;

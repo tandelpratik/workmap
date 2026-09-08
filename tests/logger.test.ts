@@ -41,6 +41,41 @@ describe('log redaction (ADR-0008)', () => {
     expect(output['occupation']).toBe('Business Analyst');
   });
 
+  /*
+   * Both directions, because the `pass` branch is tuned and a later edit could
+   * loosen it too far or tighten it back to matching any word containing
+   * "pass". The second list is not cosmetic: a data quality report logging
+   * `passed` came back redacted, which is what prompted the lookahead.
+   */
+  it('redacts every form of a passphrase or passcode', () => {
+    const output = redact({
+      password: 'a',
+      passwd: 'b',
+      passphrase: 'c',
+      passcode: 'd',
+      passkey: 'e',
+      userPass: 'f',
+    }) as Record<string, unknown>;
+
+    for (const key of Object.keys(output)) {
+      expect(output[key], `${key} should be redacted`).toBe('[redacted]');
+    }
+  });
+
+  it('leaves ordinary words that merely contain "pass" alone', () => {
+    const output = redact({
+      passed: 14,
+      passes: 3,
+      bypassed: false,
+      passenger: 'name',
+    }) as Record<string, unknown>;
+
+    expect(output['passed']).toBe(14);
+    expect(output['passes']).toBe(3);
+    expect(output['bypassed']).toBe(false);
+    expect(output['passenger']).toBe('name');
+  });
+
   it('redacts inside nested structures', () => {
     const output = redact({
       run: { source: 'jsa-ivi', config: { secret: 'value' } },

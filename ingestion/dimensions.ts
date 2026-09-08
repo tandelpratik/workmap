@@ -1,4 +1,4 @@
-import type { GeographyLevel } from '@/domain/geography';
+import { stateAbbreviation, type GeographyLevel } from '@/domain/geography';
 import type { SourceDimension } from '@/domain/labour-market';
 
 /**
@@ -60,24 +60,15 @@ const stateAliases: Readonly<Record<string, string>> = {
 /**
  * The conventional abbreviation for a state or territory.
  *
- * The inverse of stateAliases, and used for a job location's state code, which
- * readers expect as "NSW" rather than as the ASGS numeric code. The ASGS link
- * is held separately, on the location's geography reference.
+ * The table itself lives in the domain, because which letters stand for
+ * Queensland is a fact about Australian geography rather than about this
+ * importer, and the pages need the same answer when they ask for a state's
+ * listings. What stays here is the alias resolution: turning whatever a
+ * provider wrote into a registry name is an ingestion concern.
  */
-const stateCodesByName: Readonly<Record<string, string>> = {
-  'new south wales': 'NSW',
-  victoria: 'VIC',
-  queensland: 'QLD',
-  'south australia': 'SA',
-  'western australia': 'WA',
-  tasmania: 'TAS',
-  'northern territory': 'NT',
-  'australian capital territory': 'ACT',
-};
-
 export function australianStateCode(name: string): string | null {
   const normalised = normaliseName(name);
-  return stateCodesByName[stateAliases[normalised] ?? normalised] ?? null;
+  return stateAbbreviation(stateAliases[normalised] ?? normalised);
 }
 
 export function normaliseCode(code: string): string {

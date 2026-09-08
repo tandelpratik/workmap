@@ -22,9 +22,22 @@ const levelRank: Record<LogLevel, number> = {
 
 const REDACTED = '[redacted]';
 
-/** Field names whose values are never logged, matched case-insensitively. */
+/**
+ * Field names whose values are never logged, matched case-insensitively.
+ *
+ * Matched as substrings, so `operationsSecret` and `adzunaAppId` are caught
+ * without listing every prefix anyone might use.
+ *
+ * The `pass` branch ends at a lookahead rather than running open, and that is
+ * the one piece of tuning here. Left open it matched any word containing
+ * "pass": a data quality report logging `{ passed: 14, failed: 1 }` came back
+ * reading `{"passed":"[redacted]"}`, which is how this was found. Over-redaction
+ * is the safe direction and it is not free, because an operator who cannot read
+ * the log cannot use it. The alternation keeps every form that is actually a
+ * credential and stops at `passed`, `passes` and `bypassed`.
+ */
 const sensitiveKeyPattern =
-  /(pass(word)?|secret|token|api[-_]?key|credential|authorization|auth|cookie|session|dsn|connection[-_]?string|database[-_]?url|app[-_]?id)/i;
+  /(pass(word|wd|phrase|code|key)?(?![a-z])|secret|token|api[-_]?key|credential|authorization|auth|cookie|session|dsn|connection[-_]?string|database[-_]?url|app[-_]?id)/i;
 
 /** A URL carrying inline credentials, for example postgres://user:pw@host/db. */
 const credentialUrlPattern = /\b[a-z][a-z0-9+.-]*:\/\/[^\s/@]+:[^\s/@]+@/gi;
