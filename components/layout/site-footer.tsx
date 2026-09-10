@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { brand } from '@/config/brand';
+import { legal } from '@/config/legal';
 import { Label } from '@/components/ui/label';
 
 /**
@@ -17,7 +18,10 @@ import { Label } from '@/components/ui/label';
  *
  * Columns that would be empty are absent rather than present and stubbed. There
  * is no Legal column yet because there are no legal pages yet, and a heading
- * over a "coming soon" is worse than no heading.
+ * over a "coming soon" is worse than no heading. The legal position itself does
+ * not wait for that page: it is set out below the columns, on every page,
+ * because the product's name makes it something a reader has to meet rather
+ * than go looking for.
  */
 
 interface FooterLink {
@@ -25,11 +29,14 @@ interface FooterLink {
   readonly label: string;
 }
 
+// Job search leads, because it is the product. The rest is the supporting
+// labour market layer, in the order it is read: the map, then the two axes it
+// is a map of, then the tools that compare them.
 const explore: readonly FooterLink[] = [
+  { href: '/jobs', label: 'Jobs' },
   { href: '/map', label: 'Map' },
   { href: '/locations', label: 'Locations' },
   { href: '/occupations', label: 'Occupations' },
-  { href: '/jobs', label: 'Jobs' },
   { href: '/insights', label: 'Insights' },
   { href: '/compare', label: 'Compare' },
   { href: '/explore', label: 'Where should I look' },
@@ -85,13 +92,35 @@ export function SiteFooter() {
           <Column title="Data" links={data} />
         </div>
 
-        <div className="border-rule mt-10 border-t pt-5">
+        {/*
+          The legal position, on every page because the root layout renders this
+          footer on every page.
+
+          The first paragraph is set a step stronger than the rest of the fine
+          print. It is the statement the product is required to carry, and fine
+          print that recedes into the ground is fine print nobody reads. The
+          strings themselves come from config/legal.ts verbatim: this component
+          decides where they sit, never how they are worded.
+        */}
+        <div className="border-rule mt-10 space-y-3 border-t pt-5">
+          <p className="text-ink-muted max-w-measure text-sm leading-relaxed">
+            {legal.disclaimer}{' '}
+            <a
+              href={legal.officialVisaInformation.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-4"
+            >
+              {legal.officialVisaInformation.label}
+            </a>{' '}
+            publishes the official information on visas and sponsorship.
+          </p>
           <p className="text-ink-faint max-w-measure text-xs leading-relaxed">
-            {brand.productName} is an independent project. It is not affiliated with,
-            endorsed by, or sponsored by Jobs and Skills Australia, the Australian Bureau
-            of Statistics, the State of Queensland, or any other organisation whose data
-            it draws on. Figures count job advertisements, which are not the same as
-            vacancies.
+            {legal.notGovernment}
+          </p>
+          <p className="text-ink-faint max-w-measure text-xs leading-relaxed">
+            {legal.notAffiliatedWithSources} Where this site carries labour market
+            figures, they count job advertisements, which are not the same as vacancies.
           </p>
         </div>
       </div>

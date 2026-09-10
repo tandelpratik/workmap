@@ -25,6 +25,16 @@ import { cn } from '@/components/ui/cn';
 /**
  * The front page.
  *
+ * Interim. The product is a regional job search and this page is still the
+ * labour market section front it was built as, with search promoted to the top
+ * of it and the figures framed as the supporting layer they now are. Rebuilding
+ * it around search is its own piece of work and depends on the regional
+ * classification landing first: a search-led front page with nothing to filter
+ * by would be a mock, not a milestone.
+ *
+ * What follows describes that section front, which is still what the body of
+ * the page is.
+ *
  * A section front, in the sense a newspaper means it: the name of the
  * publication, the current release, and the two questions the product answers
  * shown with real figures rather than described. It routes, and it proves the
@@ -219,17 +229,48 @@ export default async function HomePage({
 
       <PageBody>
         <header>
-          <Dateline>
-            Australian labour market
-            {periodLabel === null ? '' : ` · ${periodLabel}`}
-          </Dateline>
+          <Dateline>Job advertisements and the labour market behind them</Dateline>
           <h1 className="text-ink text-display mt-3 max-w-3xl font-serif font-semibold text-balance">
             {brand.tagline}
           </h1>
           <p className="text-ink-muted max-w-measure mt-5 text-lg leading-relaxed text-pretty">
-            {brand.description} Every figure on this site is traceable to the release it
-            came from, and nothing is shown that a source did not publish.
+            {brand.description}
           </p>
+
+          <p className="mt-6">
+            <Link
+              href="/jobs"
+              prefetch={false}
+              className="text-paper-raised bg-ink hover:bg-accent inline-flex min-h-11 items-center px-5 text-sm font-medium transition-colors"
+            >
+              Search job advertisements
+            </Link>
+          </p>
+
+          {/*
+            What the search does not do yet, said here rather than discovered on
+            the results page.
+
+            Nothing in the index is classified against the official regional
+            definition, so nothing on this site is labelled regional. Naming the
+            product for a filter it does not yet apply and staying quiet about
+            it would be the one kind of dishonesty this product cannot afford.
+            Delete this note when the classification lands, not before.
+          */}
+          <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">
+            Search currently covers advertisements from across Australia. Classifying
+            every listing against the official regional definition is the next piece of
+            work, and until it is done nothing here is described as regional.
+          </p>
+
+          <div className="border-rule-strong mt-10 border-t pt-6">
+            <p className="text-ink-muted max-w-measure text-sm leading-relaxed">
+              Below is the labour market layer that sits behind the advertisements: where
+              employment demand is concentrated, and what is being advertised. Every
+              figure is traceable to the release it came from, and nothing is shown that a
+              source did not publish.
+            </p>
+          </div>
 
           <ReleaseStrip fields={fields} />
         </header>

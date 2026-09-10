@@ -31,6 +31,17 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
+  /*
+   * The base every relative metadata URL resolves against.
+   *
+   * Built from the configured domain rather than written out, so the rename
+   * that changes the domain changes this too (ADR-0007), and omitted entirely
+   * while no domain is assigned. Next throws a build error on a relative
+   * metadata URL with no base, so the guard is real: a deployment with no
+   * domain must keep working, and it does, because nothing here is relative
+   * until a social image exists.
+   */
+  ...(brand.domain === null ? {} : { metadataBase: new URL(`https://${brand.domain}`) }),
   title: {
     default: `${brand.productName}: ${brand.tagline}`,
     template: `%s | ${brand.productName}`,
@@ -44,6 +55,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: brand.social.title,
     description: brand.social.description,
+    siteName: brand.productName,
     type: 'website',
     locale: brand.locale.replace('-', '_'),
     ...(brand.social.imagePath ? { images: [brand.social.imagePath] } : {}),

@@ -58,10 +58,31 @@ describe('brand configuration', () => {
   });
 
   it('leaves unassigned values null rather than inventing them', () => {
-    // A placeholder domain or contact address would be fabricated data in a
-    // product whose constitution forbids exactly that.
-    expect(brand.domain).toBeNull();
+    // A placeholder contact address or legal name would be fabricated data in a
+    // product whose constitution forbids exactly that. Both appear in legal
+    // text, where a wrong value is worse than an absent one.
     expect(brand.contactEmail).toBeNull();
+    expect(brand.legalName).toBeNull();
+  });
+
+  it('states the domain as a bare host, or not at all', () => {
+    /*
+     * The domain stopped being null when one was registered, so the guard has
+     * to change shape rather than disappear. What it protects is the same
+     * thing: that the value is a real assignment and not a stand-in. A
+     * placeholder host would be fabricated data, and a value carrying a
+     * protocol or a path would silently break the metadata base built from it.
+     */
+    if (brand.domain === null) return;
+
+    expect(brand.domain).not.toMatch(/^https?:/);
+    expect(brand.domain).not.toContain('/');
+    expect(brand.domain).toMatch(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/);
+
+    const placeholders = ['example', 'localhost', 'test', 'tbd', 'changeme'];
+    for (const placeholder of placeholders) {
+      expect(brand.domain.toLowerCase()).not.toContain(placeholder);
+    }
   });
 });
 

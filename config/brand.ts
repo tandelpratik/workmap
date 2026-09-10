@@ -55,26 +55,36 @@ const brandSchema = z.object({
 export type BrandConfig = z.infer<typeof brandSchema>;
 
 export const brand: BrandConfig = brandSchema.parse({
-  productName: 'WorkMap',
-  shortName: 'WorkMap',
-  tagline: 'See where the work is.',
+  productName: 'Regional Sponsor',
+  shortName: 'Regional Sponsor',
+  tagline: 'Regional Australian jobs, in one search.',
   description:
-    'Australian job market intelligence: labour market demand by occupation, ' +
-    'geography and skill, drawn from published sources.',
+    'One search across current job advertisements in regional Australia, with ' +
+    'what each advertisement says about visa sponsorship quoted from the ' +
+    'advertisement itself.',
 
+  // Still unassigned, and therefore null rather than invented. A placeholder
+  // would be fabricated data in a product whose constitution forbids exactly
+  // that, and both of these appear in legal text where a wrong value is worse
+  // than an absent one.
   legalName: null,
-  domain: null,
+  // Registered and held by the operator. Bare host, no protocol and no path:
+  // the metadata layer builds URLs from it.
+  domain: 'regionalsponsor.com.au',
   contactEmail: null,
 
   social: {
-    title: 'WorkMap',
+    title: 'Regional Sponsor',
     description:
-      'Where employment demand is concentrated across Australia, by occupation, ' +
-      'region and skill.',
+      'Search job advertisements across regional Australia in one place, and ' +
+      'read exactly what each one says about visa sponsorship.',
     imagePath: null,
   },
 
   assets: {
+    // Deliberately unchanged by the rename. The mark is a map sheet with one
+    // cell picked out, which is the subject rather than the name, so it
+    // survives a rebrand by design (see the asset's own note).
     logoPath: null,
     faviconPath: '/icon.svg',
   },

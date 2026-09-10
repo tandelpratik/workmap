@@ -33,25 +33,28 @@ import { brand } from '@/config/brand';
 export type Section =
   'home' | 'map' | 'locations' | 'occupations' | 'jobs' | 'insights' | 'explore';
 
-// Where, what, and the listings themselves. The order is the reading order:
-// the map is the product's front door, locations and occupations are the two
-// axes it is a map of, and the listings are what sits behind the figures.
+// Job search leads. It is what the product is for, and a rail that opened on
+// the map told a reader the labour market figures were the point and the
+// advertisements were a footnote, which is the wrong way round.
+//
+// Everything after it is the supporting layer, in its own reading order: the
+// map is the picture, locations and occupations are the two axes it is a map
+// of, and "where to look" is the question a reader brings to them.
 //
 // Locations sits beside the map rather than inside it because they answer the
 // same question in different registers. The map is a picture and is read at a
 // glance; a location page is a place, with its regions, its occupations and
 // its advertisements, which is what a reader wants once the picture has told
 // them where to look.
+//
+// Compare stays in the footer: it is something a reader reaches for after
+// arriving somewhere, and it is linked from the pages where that happens.
 const sections: readonly { id: Section; href: string; label: string }[] = [
+  { id: 'jobs', href: '/jobs', label: 'Jobs' },
   { id: 'map', href: '/map', label: 'Map' },
   { id: 'locations', href: '/locations', label: 'Locations' },
   { id: 'occupations', href: '/occupations', label: 'Occupations' },
-  { id: 'jobs', href: '/jobs', label: 'Jobs' },
   { id: 'insights', href: '/insights', label: 'Insights' },
-  // The product's own question, so it earns a place in the rail rather than
-  // sitting in the footer with the other tools. Compare stays in the footer: it
-  // is something a reader reaches for after arriving somewhere, and it is linked
-  // from the pages where that happens.
   { id: 'explore', href: '/explore', label: 'Where to look' },
 ];
 
