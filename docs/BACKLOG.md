@@ -7,6 +7,35 @@ blocked, what unblocks it, and what it blocks in turn.
 Items leave this file by being done, or by being recorded as decided against.
 Nothing is deleted quietly.
 
+## The 637 listings that cannot be placed
+
+The regional classification settles **2,076 of 2,713 listings, 76.5%**. What is
+left is not a gap to be closed with better data; it is mostly listings that
+genuinely have no single place. See
+[milestone 21](milestones/21-regional-classification.md).
+
+| Remaining                                                                                                | Listings |
+| -------------------------------------------------------------------------------------------------------- | -------: |
+| Queensland advertisements whose named regions disagree, or name a region holding postcodes on both sides |     ~616 |
+| Adzuna listings with no coordinates                                                                      |       21 |
+
+**Do not close this with a threshold.** Eight Queensland statistical areas are
+mixed, two of them on the strength of one mesh block out of 3,339 and five out
+of 2,567. Those look like rounding error and are not: sweeping them up would
+declare a region uniform that the instrument does not, and cross a statutory
+line on a reader's behalf.
+
+Two things would legitimately reduce it:
+
+1. **A finer location from the Queensland source.** Advertisements sometimes name
+   a town in their text. Reading one is a different problem from reading a region
+   and needs its own gazetteer and licence question.
+2. **ASGS Edition 4 Non-ABS Structures**, when released. Postal areas are
+   currently taken from Edition 3 while everything else is Edition 4.
+
+Until then 637 listings are labelled as not placeable, which is the correct
+answer and satisfies the requirement to label uncertain locations separately.
+
 ## Blocked on brand identity
 
 `config/brand.ts` keeps `legalName`, `domain` and `contactEmail` as `null`
@@ -14,11 +43,11 @@ rather than inventing them (ADR-0007). A placeholder domain or contact address
 would be fabricated data in a product whose constitution forbids exactly that,
 so these stay null until the values exist and the work that needs them waits.
 
-| Needed             | Blocks                                                                              |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| Contact email      | `/report`, `/contact`, `/methodology#corrections`, the contact clause of `/privacy` |
-| Legal display name | Copyright line, `/terms`, the operator identity in `/privacy`                       |
-| Registered domain  | `metadataBase`, canonical URLs, sitemap, Open Graph, indexation                     |
+| Needed                | Blocks                                                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contact email         | `/report`, `/contact`, `/methodology#corrections`, the contact clause of `/privacy`                                                                                      |
+| Legal display name    | Copyright line, `/terms`, the operator identity in `/privacy`                                                                                                            |
+| ~~Registered domain~~ | Supplied 2026-09-10 (`regionalsponsor.com.au`). `metadataBase` is now set; canonical URLs, sitemap and indexation are unblocked but gated on the regional classification |
 
 ### The legal pages
 

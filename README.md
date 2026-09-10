@@ -1,26 +1,57 @@
-# Job Market Intelligence Platform
+# Regional Job Search
 
-An atlas of Australian labour market demand: where work is concentrated, which
-occupations are sought, which skills are asked for, and how that changes.
+One search across current job advertisements in regional Australia, reporting
+what each advertisement says about visa sponsorship, quoted from the
+advertisement itself. Labour market maps and statistics sit behind it as
+supporting context.
 
 The product name is configuration, not identity. See
-[ADR-0007](docs/adr/0007-brand-configuration.md).
+[ADR-0007](docs/adr/0007-brand-configuration.md); the published name lives only
+in `config/brand.ts` and a test enforces that.
+
+## What this is not
+
+It reports wording published by third parties and links to the original. It does
+not advise anyone about their own migration position, does not assess
+eligibility or prospects, does not recommend a visa subclass, and never
+describes an employer as a sponsor. That boundary is the product's basis for
+existing, it is stated verbatim in `config/legal.ts`, and `tests/legal.test.ts`
+fails the build on a phrase that crosses it.
 
 ## Status
 
-Two surfaces are live. The regional vacancy map reads the Jobs and Skills
-Australia Internet Vacancy Index over ASGS Edition 4 geography; job search reads
-listings from Adzuna and Queensland Smart Jobs. Both render on the server and
-ship neither a map library nor a search runtime to the browser.
+Mid-pivot. The product was built as a national labour market atlas and is being
+turned into a regional job discovery platform. The identity, the legal footing
+and the navigation have moved.
+
+The regional classification is live and verified against the instrument that
+defines a designated regional area (LIN 22/022, CC BY 4.0). Listings are placed
+by postcode where a source publishes coordinates, by region where it publishes
+only a region and every postcode in that region agrees, and by state where the
+instrument leaves no postcode in that state unlisted. **2,076 of 2,713 listings
+are settled, 76.5%**; the rest are advertisements with no single place, and are
+labelled as such rather than guessed.
+
+Nothing in the interface says "regional" yet: the classification is in the
+database and no page reads it. That is the next milestone, along with removing
+`robots: noindex`.
+
+Two surfaces are live. Job search reads listings from Adzuna and Queensland
+Smart Jobs; the vacancy map reads the Jobs and Skills Australia Internet Vacancy
+Index over ASGS Edition 4 geography. Both render on the server and ship neither
+a map library nor a search runtime to the browser.
 
 Four sources are verified and active, and one is verified as prohibited. Adzuna
 is licensed to supply listings and barred from supplying aggregates, which is a
-structural division rather than a note: every published figure comes from JSA.
-See the [source register](docs/compliance/SOURCE_REGISTER.md).
+structural division rather than a note: every published figure comes from JSA,
+and no corpus-wide listing count is published anywhere. See the
+[source register](docs/compliance/SOURCE_REGISTER.md).
 
 The site is not indexed. `robots: { index: false, follow: false }` stays set
-until the legal pages, canonical URLs and a registered domain exist, because a
-site that cannot answer for itself should not be inviting readers.
+until the legal pages, canonical URLs and the regional classification exist,
+because a site that cannot answer for itself should not be inviting readers. The
+tagline names a filter the search does not yet apply, and indexing before it
+does would publish a claim the data cannot support.
 
 ## Requirements
 
@@ -41,24 +72,27 @@ The app runs at http://localhost:3000. Health is at `/api/health`.
 
 ## Commands
 
-| Command                 | Purpose                                                        |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run dev`           | Development server                                             |
-| `npm run build`         | Production build                                               |
-| `npm run start`         | Serve the production build                                     |
-| `npm run check`         | Format check, lint, typecheck and tests. Run before committing |
-| `npm run test`          | Tests once                                                     |
-| `npm run test:watch`    | Tests in watch mode                                            |
-| `npm run lint`          | ESLint, including architectural import boundaries              |
-| `npm run typecheck`     | TypeScript, no emit                                            |
-| `npm run format`        | Rewrite with Prettier                                          |
-| `npm run db:generate`   | Regenerate the Prisma client                                   |
-| `npm run db:migrate`    | Create and apply a migration locally                           |
-| `npm run db:deploy`     | Apply migrations in a deployed environment                     |
-| `npm run data:check`    | Data quality checks. Read only, and exits non-zero on failure  |
-| `npm run jobs:redact`   | Sweep stored listings for contact details. Add `-- --apply`    |
-| `npm run source:health` | Whether each live source is still running                      |
-| `npm run a11y:check`    | Structural accessibility, against a running server             |
+| Command                          | Purpose                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `npm run dev`                    | Development server                                                          |
+| `npm run build`                  | Production build                                                            |
+| `npm run start`                  | Serve the production build                                                  |
+| `npm run check`                  | Format check, lint, typecheck and tests. Run before committing              |
+| `npm run test`                   | Tests once                                                                  |
+| `npm run test:watch`             | Tests in watch mode                                                         |
+| `npm run lint`                   | ESLint, including architectural import boundaries                           |
+| `npm run typecheck`              | TypeScript, no emit                                                         |
+| `npm run format`                 | Rewrite with Prettier                                                       |
+| `npm run db:generate`            | Regenerate the Prisma client                                                |
+| `npm run db:migrate`             | Create and apply a migration locally                                        |
+| `npm run db:deploy`              | Apply migrations in a deployed environment                                  |
+| `npm run postcodes:resolve`      | Places published coordinates in an ABS postal area. Dry run by default      |
+| `npm run regional:classify`      | Places stored locations against the regional instrument. Dry run by default |
+| `npm run regional:build-regions` | Rebuilds the statistical-area postcode artefact from ABS allocation files   |
+| `npm run data:check`             | Data quality checks. Read only, and exits non-zero on failure               |
+| `npm run jobs:redact`            | Sweep stored listings for contact details. Add `-- --apply`                 |
+| `npm run source:health`          | Whether each live source is still running                                   |
+| `npm run a11y:check`             | Structural accessibility, against a running server                          |
 
 ## Environment
 
@@ -84,7 +118,7 @@ enforced by lint rather than convention.
 ```text
 app/           routes, pages, API handlers
 components/    presentation
-config/        brand, environment
+config/        brand, legal position, environment
 domain/        entities, ports, rules
 db/            Prisma schema and repositories
 integrations/  one directory per external provider

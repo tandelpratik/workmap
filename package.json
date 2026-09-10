@@ -1,8 +1,8 @@
 {
-  "name": "job-market-intelligence",
+  "name": "regional-job-search",
   "version": "0.1.0",
   "private": true,
-  "description": "Australian job market intelligence platform",
+  "description": "Regional Australian job search, reporting what each advertisement says about visa sponsorship",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -33,6 +33,9 @@
     "qld:ingest": "tsx scripts/ingest-smartjobs-qld.ts",
     "jobs:dedupe": "tsx scripts/dedupe-jobs.ts",
     "jobs:redact": "tsx scripts/redact-stored-listings.ts",
+    "regional:build-regions": "tsx --max-old-space-size=8192 scripts/build-region-postcodes.ts",
+    "postcodes:resolve": "tsx scripts/resolve-postcodes.ts",
+    "regional:classify": "tsx scripts/classify-regional.ts",
     "data:check": "tsx scripts/check-data-quality.ts",
     "source:health": "tsx scripts/check-source-health.ts",
     "a11y:check": "tsx scripts/check-accessibility.ts"

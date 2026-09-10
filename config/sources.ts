@@ -113,6 +113,70 @@ export const sourceDescriptors: readonly SourceDescriptor[] = [
       'edition JSA IVI reports against is still open; see the source register.',
   },
   {
+    key: 'legislation-regional-areas',
+    displayName: 'Federal Register of Legislation',
+    // It classifies postcodes into published categories. It is not a boundary
+    // set, supplies no geometry, and populates no row in the geography
+    // registry, which is why this is a CLASSIFICATION rather than a GEOGRAPHY.
+    kind: 'CLASSIFICATION',
+    activation: 'ACTIVE',
+    complianceStatus: 'VERIFIED',
+    attributionRequired: true,
+    /*
+     * The register mandates one of two sentences and specifies which applies.
+     * This is the "modified" form, because the product parses the instrument's
+     * ranges into a lookup table rather than reproducing the document, and the
+     * date is the date of download as the wording requires. Stored verbatim:
+     * the UI renders this and must not paraphrase a licence requirement.
+     */
+    attributionText:
+      'Based on content from the Federal Register of Legislation at ' +
+      '10 September 2026. For the latest information on Australian Government ' +
+      'legislation please go to https://www.legislation.gov.au.',
+    termsUrl: 'https://www.legislation.gov.au/terms-of-use',
+    homepageUrl: 'https://www.legislation.gov.au/F2022L00231/latest/text',
+    licence: {
+      name: 'CC BY 4.0',
+      url: 'https://creativecommons.org/licenses/by/4.0/',
+      holder: '© Commonwealth of Australia',
+    },
+    rights: {
+      status: 'ESTABLISHED',
+      commercialUse: 'PERMITTED',
+      redistribution: 'PERMITTED',
+      adaptation: 'PERMITTED',
+      exclusions: [
+        'The Commonwealth Coat of Arms',
+        'Material identified on the register as third-party copyright',
+      ],
+      lastVerified: '2026-09-10',
+    },
+    retrieval: {
+      method: 'FILE_DOWNLOAD',
+      frequency: 'Once per instrument, re-checked when the register records an amendment',
+    },
+    // CC BY 4.0 permits adaptation. Nothing aggregates a postcode table in
+    // practice, but the flag records what the licence says rather than what
+    // this product happens to do with it.
+    permitsDerivedAggregates: true,
+    notes:
+      'Migration (Designated regional areas for certain skilled and temporary ' +
+      'graduate visas) Instrument (LIN 22/022) 2022, F2022L00231. The definition ' +
+      'of a designated regional area, expressed entirely in postcodes. Verified ' +
+      '2026-09-10 against legislation.gov.au/terms-of-use: all content except the ' +
+      'Commonwealth Coat of Arms is CC BY 4.0, which permits commercial use, ' +
+      'redistribution and adaptation with the mandated attribution sentence above. ' +
+      'The register was checked the same day and shows one version, in force since ' +
+      '5 March 2022, unamended, with no amendments pending. The tables are ' +
+      'transcribed in config/regional-areas.ts, which carries a SHA-256 of the ' +
+      'document as downloaded so a re-publication under the same identifier is ' +
+      'detectable. Used as a geographic definition only: it answers which ' +
+      'postcodes are regional and is never used to say anything about a visa, a ' +
+      'subclass, an application or a person. The immi.homeaffairs.gov.au summary ' +
+      'of the same list returns 403 to automated requests and was not used; the ' +
+      'instrument itself is the authority in any case.',
+  },
+  {
     key: 'anzsco',
     displayName: 'Australian Bureau of Statistics',
     kind: 'CLASSIFICATION',

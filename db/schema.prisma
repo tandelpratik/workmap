@@ -119,6 +119,79 @@ enum SponsorshipSignal {
   @@map("sponsorship_signal")
 }
 
+/// How a location's postcode was arrived at.
+///
+/// The two are not interchangeable and must never be shown as one. A postcode
+/// the provider published is the provider's own statement. A postcode derived
+/// by locating the provider's coordinates inside a boundary is our inference
+/// from their coordinates, and it inherits every limitation of the boundary set
+/// that placed it. Same column, different standing, so the difference is
+/// recorded rather than lost (ADR-0002).
+///
+/// Null means no postcode, which is its own answer and not a third kind.
+enum PostcodeSource {
+  /// The source published it.
+  PUBLISHED
+  /// Derived by locating the source's own coordinates inside a boundary.
+  DERIVED_FROM_COORDINATES
+
+  @@map("postcode_source")
+}
+
+/// Whether a place is within a designated regional area.
+///
+/// The authority is one legislative instrument, LIN 22/022, which is expressed
+/// entirely in postcodes. This records the answer it gives, never an opinion
+/// about what counts as regional.
+///
+/// UNKNOWN is a third answer, not a shading of NOT_REGIONAL. "This place is not
+/// in a designated regional area" is a statement about the place; "we could not
+/// place this advertisement" is a statement about our data, and collapsing the
+/// second into the first would drop real regional listings out of a regional
+/// search without anybody noticing.
+enum RegionalStatus {
+  REGIONAL
+  NOT_REGIONAL
+  UNKNOWN
+
+  @@map("regional_status")
+}
+
+/// Which of the instrument's two categories a place falls in.
+///
+/// Null whenever the status is not REGIONAL, and also where the state settled
+/// the question without a postcode, because both categories occur inside those
+/// states and naming one would be a guess.
+enum RegionalCategory {
+  /// s3(1): a specified designated city or major regional centre.
+  CITY_OR_MAJOR_CENTRE
+  /// s3(2): a specified regional centre or other regional area.
+  REGIONAL_CENTRE_OR_OTHER
+
+  @@map("regional_category")
+}
+
+/// What the classification was read from.
+///
+/// Stored and published, not kept internal. A place settled by its postcode was
+/// looked up in the instrument; one settled by its state was decided by the fact
+/// that the instrument leaves no postcode in that state unlisted. Both are
+/// exact, and a reader is entitled to know which they are looking at.
+enum RegionalBasis {
+  POSTCODE
+  /// Every region the listing names falls the same side of the instrument.
+  ///
+  /// Weaker than a postcode and stronger than a state. Some sources publish a
+  /// region rather than a place, and a region settles a listing only when every
+  /// postcode inside it agrees. Where a region holds postcodes on both sides,
+  /// as the Brisbane areas do, it settles nothing and the answer stays unknown.
+  REGION
+  STATE
+  NONE
+
+  @@map("regional_basis")
+}
+
 enum JobStatus {
   ACTIVE
   EXPIRED
@@ -379,7 +452,21 @@ model Location {
   suburb    String?
   city      String?
   stateCode String? @map("state_code")
-  postcode  String?
+
+  /// Four digits, or null. Never a guess: see `postcodeSource` for where it
+  /// came from, which is the difference between a fact the source published and
+  /// an inference we drew from the coordinates it published.
+  postcode       String?
+  postcodeSource PostcodeSource? @map("postcode_source")
+
+  /// Which boundary set placed the coordinates, when one did. For example
+  /// "ABS Postal Areas 2021 (ASGS Edition 3, GDA2020)".
+  ///
+  /// Recorded per row rather than assumed, for the same reason the instrument
+  /// identifier is: postal areas are re-released, they approximate Australia
+  /// Post postcodes rather than reproducing them, and a row must be able to say
+  /// which vintage of that approximation placed it.
+  postcodeReference String? @map("postcode_reference")
 
   /// Null when the raw text could not be resolved to an official geography.
   /// Unresolved is recorded as unresolved, never guessed to a parent.
@@ -389,6 +476,27 @@ model Location {
   latitude  Decimal? @db.Decimal(9, 6)
   longitude Decimal? @db.Decimal(9, 6)
 
+  /// Whether this place is within a designated regional area, and how that was
+  /// decided. Derived from `postcode` and `state_code` against the instrument
+  /// transcribed in config/regional-areas.ts.
+  ///
+  /// The defaults are the safe direction, for the same reason `is_synthetic`
+  /// defaults false: a write path that forgets to classify leaves the place
+  /// unclassified rather than asserting it is regional. An unclassified place
+  /// is visible and fixable; a falsely regional one is neither.
+  regionalStatus   RegionalStatus    @default(UNKNOWN) @map("regional_status")
+  regionalCategory RegionalCategory? @map("regional_category")
+  regionalBasis    RegionalBasis     @default(NONE) @map("regional_basis")
+
+  /// Which instrument decided it, for example "LIN 22/022".
+  ///
+  /// Stored per row rather than assumed globally. When the instrument is
+  /// amended, rows carrying the superseded identifier are visibly stale and can
+  /// be reclassified, instead of every row silently claiming to have been
+  /// decided under a version that no longer exists.
+  regionalInstrument   String?   @map("regional_instrument")
+  regionalClassifiedAt DateTime? @map("regional_classified_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -396,6 +504,9 @@ model Location {
 
   @@index([geographyId])
   @@index([stateCode])
+  /// Search filters on this, and a regional-first product filters on it for
+  /// almost every query.
+  @@index([regionalStatus])
   @@map("location")
 }
 

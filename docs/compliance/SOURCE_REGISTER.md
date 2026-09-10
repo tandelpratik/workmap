@@ -4,9 +4,10 @@ The constitution requires every source to have a documented compliance status
 before production use. This register is that document.
 
 **Status of this register: incomplete.** It was created at milestone 01 so that
-no source can quietly reach production unverified. Four sources (`jsa-ivi`,
-`abs-asgs`, `adzuna` and `smartjobs-qld`) have now been verified against their
-published terms, and one (`jobs-wa`) has been verified as prohibited. The rest
+no source can quietly reach production unverified. Five sources (`jsa-ivi`,
+`abs-asgs`, `adzuna`, `smartjobs-qld` and `legislation-regional-areas`) have now
+been verified against their published terms, and one (`jobs-wa`) has been
+verified as prohibited. The rest
 have not been verified. Milestone 30 completes the remainder, and any milestone
 that touches a specific source must verify that source first.
 
@@ -48,19 +49,20 @@ this register.
 
 ## Current state
 
-| Source          | Kind                | Activation         | Compliance     | Production eligible                   |
-| --------------- | ------------------- | ------------------ | -------------- | ------------------------------------- |
-| `jsa-ivi`       | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
-| `abs-asgs`      | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
-| `anzsco`        | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
-| `adzuna`        | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
-| `smartjobs-qld` | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 3.0 AU                 |
-| `jobs-wa`       | Job listings        | `BLOCKED`          | `PROHIBITED`   | **Never**, without written permission |
-| `workday`       | Job listings        | `BLOCKED`          | `RESTRICTED`   | Only per employer, on written consent |
-| `pageup`        | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: access blocked, terms unread      |
-| `iworkfor-nsw`  | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: no data served, licence unknown   |
-| `careers-vic`   | Job listings        | `PENDING`          | `UNVERIFIED`   | No: not yet mapped                    |
-| `synthetic`     | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                             |
+| Source                       | Kind                | Activation         | Compliance     | Production eligible                   |
+| ---------------------------- | ------------------- | ------------------ | -------------- | ------------------------------------- |
+| `jsa-ivi`                    | Market indicator    | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `abs-asgs`                   | Geography           | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `legislation-regional-areas` | Classification      | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 4.0                    |
+| `anzsco`                     | Classification      | `PENDING`          | `UNVERIFIED`   | No                                    |
+| `adzuna`                     | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, for publishing listings only |
+| `smartjobs-qld`              | Job listings        | `ACTIVE`           | `VERIFIED`     | **Yes**, CC BY 3.0 AU                 |
+| `jobs-wa`                    | Job listings        | `BLOCKED`          | `PROHIBITED`   | **Never**, without written permission |
+| `workday`                    | Job listings        | `BLOCKED`          | `RESTRICTED`   | Only per employer, on written consent |
+| `pageup`                     | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: access blocked, terms unread      |
+| `iworkfor-nsw`               | Job listings        | `BLOCKED`          | `UNVERIFIED`   | No: no data served, licence unknown   |
+| `careers-vic`                | Job listings        | `PENDING`          | `UNVERIFIED`   | No: not yet mapped                    |
+| `synthetic`                  | Development fixture | `DEVELOPMENT_ONLY` | Not applicable | **Never**                             |
 
 The six job-listing candidates below `adzuna` were added on 2026-08-31 from
 [DIRECT_SOURCE_FEASIBILITY.md](DIRECT_SOURCE_FEASIBILITY.md), which records the
@@ -403,6 +405,158 @@ milestone 05.
   formats, datum and release date.
 - [How to cite ABS sources](https://abs.gov.au/websitedbs/d3310114.nsf/home/attributing+abs+material),
   citation format guidance.
+
+### ABS: Postal Areas, used to place coordinates
+
+Not a separate source. Postal Areas are part of the ASGS and fall under
+`abs-asgs`, already verified CC BY 4.0 on 2026-08-28. This section records the
+two things about _this particular use_ that a reader is entitled to know,
+because neither is obvious from the licence.
+
+**Used for:** turning the coordinates a job source published into a postcode, so
+the designated regional area instrument can be applied to it. Nothing else. A
+postal area is never stored as a geography, never drawn, and never joined to a
+statistical series.
+
+**File:** `POA_2021_AUST_GDA2020_SHP.zip`, 55,939,167 bytes, SHA-256
+`92182d5e491a2dc0d49bd282283722701eef8a347ae072c04c344b4aeac2c49a`, downloaded
+2026-09-10 from the ASGS Edition 3 digital boundary files. The checksum is
+verified on every run, so a re-publication under the same name fails loudly
+instead of silently changing every postcode the product holds.
+
+**Also used: the mesh block allocation files.** `MB_2021_AUST.xlsx` (SHA-256
+`cbfe8b98ed17c3be994f5635bd5fd4cc721b6f798d14f583c41a32c6b6973884`) and
+`POA_2021_AUST.xlsx` (SHA-256
+`e1b82115e4cb46691924f6aa996f928d3771596e1d015acc17efdd807bb12c2e`), downloaded
+2026-09-10 from the same ASGS Edition 3 release and checksummed on every run.
+They are joined on the mesh block to establish which postcodes each statistical
+area contains, which is the ABS's own allocation of both structures to the same
+atoms: no boundary is intersected and no overlap threshold is applied. The result
+is a 32 KB committed artefact. The spreadsheets themselves are gitignored and
+never redistributed.
+
+**Caveat 1: postal areas approximate postcodes.** ABS postal areas are built
+from mesh blocks so that census data can be published against postcodes. The ABS
+states they are an approximation of Australia Post postcodes rather than a
+reproduction of them. A postcode derived this way is therefore our inference
+from the source's coordinates, not a fact the source published, and the
+distinction is stored on the row in `postcode_source` rather than left to a
+reader to assume.
+
+**Caveat 2: an edition mismatch, deliberately confined.** Everything else in
+this product uses ASGS Edition 4 (2026). Postal Areas have not been released for
+Edition 4: the ABS download page states that Edition 4 boundaries "will be
+available progressively as each structure is released", and the Non-ABS
+Structures, which include Postal Areas and Suburbs and Localities, are not among
+those published. Edition 3 (2021) is therefore used.
+
+That mismatch is contained by design. A postal area produces a postcode and is
+then out of the picture; it never enters the geography registry, so it cannot
+mislabel an SA4 or corrupt a series keyed by one. Revisit when Edition 4
+Non-ABS Structures are released.
+
+**Attribution.** Covered by the existing `abs-asgs` wording, which already
+indicates that changes were made. No boundary is redistributed: the archive is
+gitignored, only derived postcodes are stored, and nothing from this file is
+served to a browser.
+
+### Federal Register of Legislation: designated regional areas
+
+- **Key:** `legislation-regional-areas`
+- **Kind:** Classification
+- **Activation:** `ACTIVE`
+- **Compliance:** `VERIFIED`
+- **Verified on:** 2026-09-10, by reading the pages listed under Evidence.
+- **Needed by:** The regional classification. It is the definition of "regional".
+
+**What it is.** The Migration (Designated regional areas for certain skilled and
+temporary graduate visas) Instrument (LIN 22/022) 2022, register identifier
+`F2022L00231`. Three pages, expressed entirely in postcodes. It is the published
+answer to which parts of Australia are regional, and it is the answer people
+mean when they use the word.
+
+**Status confirmed, not assumed.** The register's version list was checked on
+2026-09-10 and shows one version, in force since 5 March 2022, with no
+amendments made and none pending. It repealed its own predecessor, LIN 20/292
+(`F2021L00044`), which is why that earlier instrument must never be used.
+
+**Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0). The
+register's terms of use state it verbatim:
+
+> With the exception of the Commonwealth Coat of Arms, and where otherwise
+> noted, all content on the Federal Register of Legislation (the Legislation
+> Register) is provided under Creative Commons Attribution 4.0 International
+> (the CC BY 4.0 licence).
+
+**Answers to the twelve questions**
+
+| Question              | Answer                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| Commercial use        | Permitted. The terms say so explicitly: adapt "for any purpose, even commercially" |
+| Display rights        | Permitted, no volume or extent limit                                               |
+| Redistribution        | Permitted                                                                          |
+| Derived data          | Permitted. Parsing the ranges into a lookup table is an adaptation and is allowed  |
+| Caching and retention | No restriction                                                                     |
+| Deletion obligations  | None                                                                               |
+| Attribution           | Required. The register mandates one of two sentences; the modified form applies    |
+| Branding constraints  | The Commonwealth Coat of Arms is excluded from the licence and is never used       |
+| Application links     | Not applicable                                                                     |
+| Rate limits           | None published. The document is downloaded once, not fetched per request           |
+| Acceptable use        | No additional restrictions beyond CC BY 4.0                                        |
+| Terms reviewed        | 2026-09-10                                                                         |
+
+**Required attribution.** The register specifies the wording and says which form
+applies. This product parses the instrument's ranges into a lookup table rather
+than reproducing the document, which is a modification, so the "Based on" form
+is the one that applies and the date is the date of download:
+
+> Based on content from the Federal Register of Legislation at 10 September 2026. For the latest information on Australian Government legislation please
+> go to https://www.legislation.gov.au.
+
+**How it is used, and how it is not.** The instrument is used as a geographic
+definition: it answers which postcodes are within a designated regional area. It
+is never used to say anything about a visa, a subclass, an application, an
+employer or a person. The instrument governs the provisions it names, this
+product borrows only its map, and the distinction is enforced by
+`tests/legal.test.ts` as much as by this paragraph.
+
+**Transcription and its integrity.** The two tables are transcribed in
+`config/regional-areas.ts`. That file carries the register identifier, the
+document URL, the download date, the status-check date, and a SHA-256 of the
+document as downloaded
+(`655bb493eba7919b1dbb1b42d5b626b405bee72d2087240162426dd75130ce7e`), so a
+re-publication under the same identifier is detectable rather than assumed away.
+`tests/regional.test.ts` asserts the transcription structurally: every range
+ascending and non-overlapping, every postcode inside its own jurisdiction's
+thousand-block, no postcode in both tables, and the boundary postcode either
+side of the places where the instrument changes category.
+
+**A consequence worth recording.** Between the two tables the instrument lists
+every postcode in Western Australia, South Australia, Tasmania, the Australian
+Capital Territory, the Northern Territory, Norfolk Island and the other
+territories. Only New South Wales, Victoria and Queensland hold postcodes in
+neither table, and those are Sydney, Melbourne and Brisbane. A listing anywhere
+outside those three states is therefore in a designated regional area whether or
+not a postcode was ever recorded for it. The product derives that from the
+tables rather than hard-coding a list of states, so an amended instrument
+changes the behaviour instead of contradicting it.
+
+**A source not used.** `immi.homeaffairs.gov.au` publishes a summary of the same
+list. It returns HTTP 403 to automated requests, which is an access control and
+was not circumvented. It is also not the authority: the instrument is, and the
+instrument is openly licensed and machine-readable, so nothing is lost.
+
+**Evidence**
+
+- [Terms of use](https://www.legislation.gov.au/terms-of-use), the CC BY 4.0
+  statement, the Coat of Arms exclusion, and the two mandated attribution
+  sentences with the rule for which applies.
+- [LIN 22/022, current version](https://www.legislation.gov.au/F2022L00231/latest/text),
+  the instrument itself.
+- [Version list](https://www.legislation.gov.au/F2022L00231/latest/versions),
+  showing one version, in force, unamended.
+- [LIN 20/292](https://www.legislation.gov.au/Details/F2021L00044), the repealed
+  predecessor, recorded so it is not picked up by mistake.
 
 ### ANZSCO occupation classification
 
@@ -853,3 +1007,5 @@ Independent of any terms, and not subject to trade-off:
 | 2026-09-05 | `smartjobs-qld` coverage resolved: the crawler now reaches the whole portal (2,118 of 2,127 rows walked, nothing quarantined). Two faults of ours had capped it near 56: a parser that followed only one of the portal's two result-link forms, and a client with no retry, so one dropped connection ended a crawl. Abandoned runs are now released automatically rather than wedging the source.                                                                                                                                                                                                                                                                                                             |
 | 2026-09-07 | `smartjobs-qld` corpus filled: 2,213 listings held, all active, against a portal reporting 2,095 that day. A defect found while checking the fill: expiry read a `lastSeenAt` that was only refreshed for listings a run did not need to refetch, so a listing the budget never reached could be retired after 14 days while the portal advertised it throughout. Seen and verified are now distinct, and only a run that walks the whole portal may retire anything.                                                                                                                                                                                                                                          |
 | 2026-09-08 | Licence, rights and retrieval became structured fields on every descriptor rather than prose in `notes`, and are now asserted by `tests/rights.test.ts`. A per-field `jobContentRights` matrix was added for the two live listing sources, defaulting closed, gated once in the job repository. Contact details are removed from advertisement text at ingestion by `domain/personal-information.ts`, with `npm run jobs:redact` sweeping what was collected earlier. `termsUrl` no longer doubles as a licence link for the Creative Commons sources: the deed moved to `licence.url`, which is what lets the attribution component satisfy CC BY's requirement to link the licence rather than only name it. |
+| 2026-09-10 | `legislation-regional-areas` registered and verified. The Migration (Designated regional areas) Instrument LIN 22/022 (`F2022L00231`) is the definition of a designated regional area, it is CC BY 4.0 on the Federal Register of Legislation, and the register confirms one version, in force, unamended. Transcribed to `config/regional-areas.ts` with a checksum of the downloaded document. The Home Affairs summary page returns 403 to automated requests; it was not circumvented and is not the authority.                                                                                                                                                                                            |
+| 2026-09-10 | ABS Postal Areas brought into use under the existing `abs-asgs` verification, to place published coordinates in a postcode so the regional instrument can be applied. Two caveats recorded: postal areas approximate Australia Post postcodes, and the 2021 edition is used because Edition 4 Non-ABS Structures are not released. The mismatch is confined to this lookup and never reaches the geography registry. Archive checksummed and verified on every run.                                                                                                                                                                                                                                            |

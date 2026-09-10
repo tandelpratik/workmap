@@ -103,7 +103,17 @@ describe('source registry', () => {
     // adapter and ingestion were built and tested first, and activation was a
     // separate decision taken afterwards. That order is the point of the two
     // axes existing.
-    expect(eligible).toEqual(['jsa-ivi', 'abs-asgs', 'adzuna', 'smartjobs-qld']);
+    // legislation-regional-areas joined on 2026-09-10. It is the instrument
+    // that defines a designated regional area, its licence was read the same
+    // day (CC BY 4.0 on the Federal Register of Legislation), and the register
+    // was checked to confirm the instrument is in force and unamended.
+    expect(eligible).toEqual([
+      'jsa-ivi',
+      'abs-asgs',
+      'legislation-regional-areas',
+      'adzuna',
+      'smartjobs-qld',
+    ]);
   });
 
   it('gives every verified source that requires attribution its exact wording', () => {
@@ -148,7 +158,15 @@ describe('source registry', () => {
     // the licence permits and what a figure means are still different
     // questions: these are Queensland Government vacancies, never the
     // Queensland labour market, and anything published from them has to say so.
-    expect(aggregable).toEqual(['jsa-ivi', 'abs-asgs', 'smartjobs-qld']);
+    // legislation-regional-areas is CC BY 4.0, so adaptation is permitted and
+    // the flag says so. Nothing aggregates a postcode table in practice: the
+    // field records what the licence allows, not what this product does.
+    expect(aggregable).toEqual([
+      'jsa-ivi',
+      'abs-asgs',
+      'legislation-regional-areas',
+      'smartjobs-qld',
+    ]);
   });
 
   it('records Queensland as CC BY, live, and permitted for aggregation', () => {
