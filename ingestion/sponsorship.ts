@@ -34,7 +34,7 @@ export function sponsorshipFieldsFor(job: {
       finding.evidence.length > 0
         ? finding.evidence.map((item) => ({
             phrase: item.phrase,
-            context: item.context,
+            sentence: item.sentence,
           }))
         : Prisma.DbNull,
   };

@@ -1,4 +1,5 @@
 import { findSourceDescriptor } from '@/config/sources';
+import { sponsorshipLabel, sponsorshipSignals } from '@/domain/sponsorship';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
@@ -177,9 +178,17 @@ export function JobSearchForm({
           className={control}
         >
           <option value="">Any</option>
-          <option value="MENTIONED">Mentioned in the ad</option>
-          <option value="EXCLUDED">Ad says not available</option>
-          <option value="NOT_MENTIONED">Not mentioned</option>
+          {/*
+            Built from the domain's own list, weakest reading last among the
+            affirmatives, so the order a reader scans matches the order of
+            strength. A hand-written copy of the vocabulary is how a control
+            comes to offer a setting the search does not understand.
+          */}
+          {sponsorshipSignals.map((signal) => (
+            <option key={signal} value={signal}>
+              {sponsorshipLabel(signal)}
+            </option>
+          ))}
         </select>
       </HairlineCell>
 

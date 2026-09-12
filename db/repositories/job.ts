@@ -184,9 +184,19 @@ function parseEvidence(value: unknown): readonly SponsorshipEvidence[] {
     if (item === null || typeof item !== 'object') continue;
     const record = item as Record<string, unknown>;
     const phrase = record['phrase'];
-    const context = record['context'];
-    if (typeof phrase !== 'string' || typeof context !== 'string') continue;
-    out.push({ phrase, context });
+    /*
+     * `sentence` is the field written now. `context` is what rows written
+     * before the six-way split carry: a window of characters either side of
+     * the phrase rather than the sentence it sat in.
+     *
+     * Both are read, because a reclassification run is a separate step from a
+     * deployment and the gap between them is exactly when a reader would
+     * otherwise see a label with its quotation missing. The old shape is a
+     * worse quotation, not a wrong one.
+     */
+    const sentence = record['sentence'] ?? record['context'];
+    if (typeof phrase !== 'string' || typeof sentence !== 'string') continue;
+    out.push({ phrase, sentence });
   }
   return out;
 }

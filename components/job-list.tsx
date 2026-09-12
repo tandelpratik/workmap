@@ -189,6 +189,25 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               />
             </div>
 
+            {/*
+              The original, linked in its own right.
+
+              The title is already a link to it, but a reader who has just read
+              a quoted sentence about sponsorship is being asked to take our
+              word for it, and the answer to that is a way to go and check
+              rather than a heading they have to know is clickable.
+            */}
+            <p className="mt-2 text-sm">
+              <a
+                href={job.applyUrl}
+                target="_blank"
+                rel="noopener"
+                className={link({ underline: 'hover' })}
+              >
+                Read the original advertisement
+              </a>
+            </p>
+
             <p className="text-ink-faint text-label mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono uppercase">
               {/*
                 Where the listing is in its life, first, because it qualifies
@@ -211,18 +230,24 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
               )}
               {job.categoryLabel === null ? null : <span>{job.categoryLabel}</span>}
               {/*
-                Posted and verified are two different dates and both are shown.
+                Posted and checked are two different dates and both are shown.
                 The first is the employer's, the second is the last time the
                 source confirmed the advertisement was still there, and the
                 second is the one that tells a reader whether the role is
                 likely to still exist. Neither is the date this record was
                 written, which is an internal fact and stays internal.
+
+                "Checked", not "verified". The old word did two jobs on one
+                page: it meant "the source still had this advertisement" here
+                and "we found sponsorship wording" beside the quotation, and a
+                reader had no way to tell which sense was meant. Nothing about
+                the employer or the applicant is verified by anybody.
               */}
               {job.postedAt === null ? null : (
                 <span>Posted {formatDate(job.postedAt)}</span>
               )}
               {job.lastVerifiedAt === null ? null : (
-                <span>Verified {formatDate(job.lastVerifiedAt)}</span>
+                <span>Listing checked {formatDate(job.lastVerifiedAt)}</span>
               )}
               {job.descriptionIsExcerpt && job.description !== null ? (
                 <span>Excerpt</span>

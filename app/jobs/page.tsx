@@ -278,7 +278,7 @@ export default async function JobsPage({
           if (at === undefined) return [];
           return [
             {
-              label: `${findSourceDescriptor(key)?.displayName ?? key} verified`,
+              label: `${findSourceDescriptor(key)?.displayName ?? key} last checked`,
               value: dateFormat.format(at),
             },
           ];

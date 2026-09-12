@@ -1,3 +1,4 @@
+import { sponsorshipLabel, sponsorshipSignals } from '@/domain/sponsorship';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
@@ -81,8 +82,11 @@ export function ExploreForm({
           className={control}
         >
           <option value="">Any</option>
-          <option value="MENTIONED">Mentioned in the ad</option>
-          <option value="NOT_MENTIONED">Not mentioned</option>
+          {sponsorshipSignals.map((signal) => (
+            <option key={signal} value={signal}>
+              {sponsorshipLabel(signal)}
+            </option>
+          ))}
         </select>
         <p className="text-ink-faint mt-1 text-xs">Applies to the advertisements only</p>
       </HairlineCell>

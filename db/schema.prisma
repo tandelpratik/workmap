@@ -110,8 +110,17 @@ enum GeographyLevel {
 /// listings arrive as excerpts: silence in a fragment is not silence in the
 /// advertisement, and reporting it as NOT_MENTIONED would turn a gap in our
 /// data into a claim about someone's job advertisement.
+///
+/// The three affirmative members replaced a single MENTIONED. An employer who
+/// states sponsorship is available and one who might consider it for the right
+/// person are making different statements, and the difference is the one a
+/// reader deciding whether to move house actually needs. Where wording is
+/// capable of more than one strength the weaker is recorded; see
+/// domain/sponsorship.ts for why that asymmetry is deliberate.
 enum SponsorshipSignal {
-  MENTIONED
+  OFFERED
+  OPEN_TO
+  MAY_BE_CONSIDERED
   EXCLUDED
   NOT_MENTIONED
   INDETERMINATE
@@ -559,7 +568,8 @@ model Job {
   ///
   /// The evidence is not decoration. A label without the wording behind it is
   /// our claim rather than the employer's statement, and it must be shown
-  /// beside the label so a reader can check it against the original.
+  /// beside the label so a reader can check it against the original. Each
+  /// entry carries the phrase that matched and the whole sentence it sat in.
   sponsorshipSignal   SponsorshipSignal @default(INDETERMINATE) @map("sponsorship_signal")
   sponsorshipEvidence Json?             @map("sponsorship_evidence")
 

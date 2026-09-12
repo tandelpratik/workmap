@@ -321,12 +321,16 @@ async function datesArePossible(db: Database): Promise<CheckResult[]> {
  * The label is a report of what an advertisement said, and a label without its
  * quotation is our claim rather than the employer's statement. INDETERMINATE
  * and NOT_MENTIONED are findings about absence and correctly carry no evidence;
- * the other two must be able to show their working.
+ * the other four must be able to show their working.
+ *
+ * The list is written out rather than expressed as "everything else", so that
+ * adding a signal to the enum without deciding whether it needs evidence fails
+ * this check rather than silently escaping it.
  */
 async function sponsorshipIsEvidenced(db: Database): Promise<CheckResult[]> {
   const rows = await db.$queryRaw<{ id: string }[]>`
     SELECT id FROM job
-    WHERE sponsorship_signal IN ('MENTIONED', 'EXCLUDED')
+    WHERE sponsorship_signal IN ('OFFERED', 'OPEN_TO', 'MAY_BE_CONSIDERED', 'EXCLUDED')
       AND (
         sponsorship_evidence IS NULL
         OR jsonb_array_length(sponsorship_evidence::jsonb) = 0
