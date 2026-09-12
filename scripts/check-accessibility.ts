@@ -44,6 +44,7 @@ const ROUTES = [
   '/explore?occupation=26',
   '/methodology',
   '/data-and-licensing',
+  '/what-this-is',
   '/this-route-does-not-exist',
 ] as const;
 

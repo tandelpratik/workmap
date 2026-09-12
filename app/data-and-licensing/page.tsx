@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { brand } from '@/config/brand';
+import { legal } from '@/config/legal';
 import { sourceDescriptors } from '@/config/sources';
 import {
   contentRightFor,
@@ -462,12 +462,7 @@ export default function DataAndLicensingPage() {
               and Skills Australia figure would misattribute arithmetic done on this site
               to a government agency that never published it.
             </p>
-            <p>
-              {brand.productName} is an independent project. It is not affiliated with,
-              endorsed by, or sponsored by Jobs and Skills Australia, the Australian
-              Bureau of Statistics, the State of Queensland, or any other organisation
-              whose data it draws on.
-            </p>
+            <p>{legal.notAffiliatedWithSources}</p>
           </Prose>
         </Section>
 

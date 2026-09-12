@@ -1,4 +1,5 @@
 import { brand } from '@/config/brand';
+import { legal } from '@/config/legal';
 import { findSourceDescriptor } from '@/config/sources';
 import { DataAttribution, type SourceCitation } from '@/components/data/data-attribution';
 import { Label } from '@/components/ui/label';
@@ -28,11 +29,22 @@ import { Label } from '@/components/ui/label';
  * part in this leaves the reader to assume the obvious wrong thing, and the
  * assumption gets more plausible the more official the figures look.
  */
-const INDEPENDENCE =
-  `${brand.productName} is an independent project. It is not affiliated with, ` +
-  'endorsed by, or sponsored by Jobs and Skills Australia, the Australian ' +
-  'Bureau of Statistics, the State of Queensland, or any other organisation ' +
-  'whose data it draws on.';
+/*
+ * Taken from config/legal.ts rather than written here.
+ *
+ * There were three hand-written copies of this sentence, in the colophon, the
+ * methodology page and the licensing page, and every one of them enumerated
+ * Jobs and Skills Australia, the Australian Bureau of Statistics and the State
+ * of Queensland. Then the Federal Register of Legislation became a source and
+ * all three sentences were silently incomplete: they named three publishers and
+ * implied there were no others.
+ *
+ * So the wording no longer enumerates. It disclaims any organisation whose
+ * material the product carries, and the colophon immediately below names the
+ * ones this particular page drew on. A generic sentence beside a specific list
+ * is both complete and incapable of falling behind the register.
+ */
+const INDEPENDENCE = legal.notAffiliatedWithSources;
 
 export function Colophon({
   sources,

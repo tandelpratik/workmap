@@ -43,6 +43,7 @@ const explore: readonly FooterLink[] = [
 ];
 
 const data: readonly FooterLink[] = [
+  { href: '/what-this-is', label: 'What this is, and is not' },
   { href: '/methodology', label: 'Methodology' },
   { href: '/data-and-licensing', label: 'Data and licensing' },
 ];
@@ -105,6 +106,14 @@ export function SiteFooter() {
         <div className="border-rule mt-10 space-y-3 border-t pt-5">
           <p className="text-ink-muted max-w-measure text-sm leading-relaxed">
             {legal.disclaimer}{' '}
+            <Link
+              href="/what-this-is"
+              prefetch={false}
+              className="underline underline-offset-4"
+            >
+              What this is, and what it is not
+            </Link>{' '}
+            sets out the boundary in full, and the{' '}
             <a
               href={legal.officialVisaInformation.url}
               target="_blank"

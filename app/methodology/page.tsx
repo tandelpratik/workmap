@@ -1,6 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { brand } from '@/config/brand';
+import { legal } from '@/config/legal';
+import { regionalAreas } from '@/config/regional-areas';
+import {
+  sponsorshipLabel,
+  sponsorshipMeaning,
+  sponsorshipSignals,
+} from '@/domain/sponsorship';
+import {
+  classificationBases,
+  regionalBasisExplanation,
+  regionalBasisLabel,
+  regionalLabel,
+  regionalStatuses,
+} from '@/domain/regional';
 import { lifecycle } from '@/config/lifecycle';
 import { retention } from '@/config/retention';
 import { cachedOccupationTotals } from '@/app/cached-queries';
@@ -45,6 +58,7 @@ const SECTIONS = [
   { id: 'periods', title: 'Reference periods and change' },
   { id: 'missing', title: 'Missing figures' },
   { id: 'advertisements', title: 'Job advertisements' },
+  { id: 'area', title: 'Where a job is' },
   { id: 'sponsorship', title: 'Visa sponsorship labels' },
   { id: 'limitations', title: 'Limitations' },
   { id: 'corrections', title: 'Corrections' },
@@ -332,6 +346,89 @@ export default async function MethodologyPage() {
           </Prose>
         </Section>
 
+        <Section id="area" kicker="Listings" title="Where a job is">
+          <Prose>
+            <p>
+              This site is a search for work in regional Australia, so every listing is
+              placed against the published definition of a designated regional area: the{' '}
+              <a
+                href={regionalAreas.instrument.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={link()}
+              >
+                {regionalAreas.instrument.title}
+              </a>
+              , in force since{' '}
+              {new Date(regionalAreas.instrument.commencedOn).toLocaleDateString(
+                'en-AU',
+                {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  timeZone: 'UTC',
+                },
+              )}
+              . The instrument is three pages long and is written entirely in postcodes.
+              Two tables list the postcodes that are inside the definition; a postcode in
+              neither is outside it, and in practice that means Sydney, Melbourne and
+              Brisbane. The instrument never names those three.
+            </p>
+            <p>
+              Nothing here interprets it. Every answer is a lookup against a table a
+              reader can open, and each listing states the postcode and the rule that
+              placed it so the lookup can be repeated. These labels describe where a job
+              is. They are not a statement about any person&rsquo;s visa position, and
+              nothing on this site decides whether anyone may apply for or hold any visa.
+            </p>
+          </Prose>
+
+          <Definitions>
+            {regionalStatuses.map((status) => (
+              <Definition key={status} term={regionalLabel(status)}>
+                {status === 'REGIONAL'
+                  ? 'The place the advertisement names sits inside the postcodes the instrument lists.'
+                  : status === 'NOT_REGIONAL'
+                    ? 'The place sits outside them.'
+                    : 'The advertisement could not be placed. Most often it names several regions at once, or a region holding postcodes on both sides of the line, so no single answer is available. It is not a fault in the advertisement, and it is never reported as being outside the definition.'}
+              </Definition>
+            ))}
+          </Definitions>
+
+          <Prose>
+            <p className="mt-6">
+              Sources do not all publish a postcode, so three rules are used and the one
+              that applied is shown on the listing. They are not equally strong, which is
+              why the difference is published rather than smoothed away.
+            </p>
+          </Prose>
+
+          <Definitions>
+            {classificationBases.map((basis) => {
+              const label = regionalBasisLabel(basis);
+              const explanation = regionalBasisExplanation(basis);
+              if (label === null || explanation === null) return null;
+              return (
+                <Definition key={basis} term={`Placed by ${label}`}>
+                  {explanation}
+                </Definition>
+              );
+            })}
+          </Definitions>
+
+          <Prose>
+            <p className="mt-6">
+              Where a source publishes map coordinates rather than a postcode, the
+              postcode is found by locating those coordinates inside an Australian Bureau
+              of Statistics postal area, and the listing says so. Postal areas approximate
+              Australia Post postcodes rather than reproducing them, which is the
+              Bureau&rsquo;s own caveat and belongs beside any label resting on one. No
+              postcode is ever invented: a listing whose coordinates fall in no postal
+              area falls through to a weaker rule, or goes unplaced.
+            </p>
+          </Prose>
+        </Section>
+
         <Section id="sponsorship" kicker="Listings" title="Visa sponsorship labels">
           <Prose>
             <p>
@@ -342,32 +439,40 @@ export default async function MethodologyPage() {
             </p>
           </Prose>
 
+          {/*
+            Rendered from the domain's own list and its own wording, not from a
+            second copy of it. The four labels written out here by hand went
+            stale the moment the signal was split six ways, and a methodology
+            page describing labels the product no longer shows is worse than one
+            describing none: it is checkable and wrong.
+          */}
           <Definitions>
-            <Definition term="Sponsorship mentioned">
-              The advertisement states that sponsorship is offered or available. The
-              phrase that says so is quoted beside the label.
-            </Definition>
-            <Definition term="Sponsorship excluded">
-              The advertisement states that sponsorship is not available.
-            </Definition>
-            <Definition term="Not mentioned">
-              The whole advertisement was read and says nothing either way. This is not a
-              statement that sponsorship is unavailable.
-            </Definition>
-            <Definition term="Not known">
-              Only part of the advertisement is held, so its silence proves nothing. Most
-              listings from one source arrive as excerpts and land here. Absence of
-              evidence is not evidence of absence, and this label exists so the two are
-              not confused.
-            </Definition>
+            {sponsorshipSignals.map((signal) => (
+              <Definition key={signal} term={sponsorshipLabel(signal)}>
+                {sponsorshipMeaning(signal)}
+              </Definition>
+            ))}
           </Definitions>
 
           <Prose>
             <p className="mt-6">
+              The three affirmative labels record how firmly an advertisement put it,
+              because an employer stating sponsorship is available and one who might
+              consider it for the right person are making different statements. Where
+              wording could be read at more than one strength, the weaker reading is
+              published. That is deliberate: telling a reader an employer offers
+              sponsorship when the advertisement only raised the possibility may send them
+              to relocate on a false basis, whereas the reverse understates an employer
+              whose own sentence is printed directly beneath the label. A statement that
+              sponsorship is not available outranks everything else in the same
+              advertisement.
+            </p>
+            <p>
               Labels are matched on phrases rather than keywords, because
               &ldquo;visa&rdquo; alone appears in job titles and in descriptions of who
-              may apply, neither of which is an offer to sponsor anyone. For anything
-              about a visa, see the{' '}
+              may apply, and &ldquo;sponsorship&rdquo; alone appears in marketing and
+              events roles that have nothing to do with visas. Neither is an offer to
+              sponsor anyone. For anything about a visa, see the{' '}
               <a
                 href="https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing"
                 target="_blank"
@@ -432,12 +537,7 @@ export default async function MethodologyPage() {
               they released, and every listing and figure on this site links back to its
               source.
             </p>
-            <p>
-              {brand.productName} is an independent project. It is not affiliated with,
-              endorsed by, or sponsored by Jobs and Skills Australia, the Australian
-              Bureau of Statistics, the State of Queensland, or any other organisation
-              whose data it draws on.
-            </p>
+            <p>{legal.notAffiliatedWithSources}</p>
           </Prose>
         </Section>
       </PageBody>
