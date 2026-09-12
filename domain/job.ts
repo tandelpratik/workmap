@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SponsorshipFinding } from './sponsorship';
+import type { RegionalPlacement } from './regional';
 
 /**
  * Job listing contracts (ADR-0001).
@@ -121,6 +122,16 @@ export interface JobListing {
   readonly companyName: string | null;
   readonly locationLabel: string | null;
   readonly stateCode: string | null;
+  /**
+   * Where this advertisement sits against the designated regional area
+   * instrument, and what settled it.
+   *
+   * On the listing rather than looked up beside it, because it is only ever
+   * shown next to the advertisement it describes. It is a statement about a
+   * place, never about a reader's visa position, and the postcode it rests on
+   * travels with it so the label can be checked rather than taken on trust.
+   */
+  readonly place: RegionalPlacement;
   readonly description: string | null;
   readonly descriptionIsExcerpt: boolean;
   /**

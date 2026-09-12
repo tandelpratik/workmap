@@ -14,6 +14,13 @@ import type {
   SalaryPeriod,
 } from '@/domain/job';
 import type { SponsorshipEvidence, SponsorshipSignal } from '@/domain/sponsorship';
+import { unplaced } from '@/domain/regional';
+import type {
+  ClassificationBasis,
+  RegionalCategory,
+  RegionalPlacement,
+  RegionalStatus,
+} from '@/domain/regional';
 
 /**
  * Job repository.
@@ -56,6 +63,21 @@ export interface JobSearchQuery {
    * weight to give a listing may reasonably want only one of them.
    */
   readonly source?: string;
+  /**
+   * Restrict to advertisements by where they sit against the regional
+   * instrument.
+   *
+   * Omitted means every advertisement, which is deliberately not what the pages
+   * ask for: the jobs page defaults to REGIONAL and says so. The default lives
+   * there rather than here, because a repository that quietly filtered would
+   * make an unfiltered count impossible to obtain and hide the size of what is
+   * being left out.
+   *
+   * UNKNOWN is selectable in its own right. Advertisements the product cannot
+   * place are not failures to be hidden; they are a fifth of the corpus and a
+   * reader is entitled to look at them knowing what they are.
+   */
+  readonly regional?: RegionalStatus;
   /**
    * Restrict to advertisements posted within this many days.
    *
@@ -102,7 +124,15 @@ interface JobRow {
   retrievedAt: Date;
   sourceKey: string;
   company: { name: string } | null;
-  location: { rawText: string; stateCode: string | null } | null;
+  location: {
+    rawText: string;
+    stateCode: string | null;
+    postcode: string | null;
+    postcodeSource: string | null;
+    regionalStatus: string;
+    regionalCategory: string | null;
+    regionalBasis: string;
+  } | null;
 }
 
 function toSalary(row: JobRow): Salary | null {
@@ -175,6 +205,29 @@ function mayShowDescription(sourceKey: string): boolean {
   return descriptor !== undefined && mayRepublishField(descriptor, 'description');
 }
 
+/**
+ * Where the advertisement sits, read off the location it was resolved to.
+ *
+ * A listing with no location row is unplaced rather than not regional. The two
+ * are different facts and only one of them is about the job, which is the same
+ * distinction the classifier itself refuses to collapse.
+ *
+ * The stored values are enums written by our own ingestion, so they are cast
+ * rather than validated. The one thing worth defending against is the absence
+ * of a location, which happens for real.
+ */
+function toPlacement(row: JobRow): RegionalPlacement {
+  if (row.location === null) return unplaced;
+
+  return {
+    status: row.location.regionalStatus as RegionalStatus,
+    category: row.location.regionalCategory as RegionalCategory | null,
+    basis: row.location.regionalBasis as ClassificationBasis,
+    postcode: row.location.postcode,
+    postcodeIsDerived: row.location.postcodeSource === 'DERIVED_FROM_COORDINATES',
+  };
+}
+
 function toDomain(row: JobRow): JobListing {
   const descriptionPermitted = mayShowDescription(row.sourceKey);
 
@@ -191,6 +244,7 @@ function toDomain(row: JobRow): JobListing {
     companyName: row.company?.name ?? null,
     locationLabel: row.location?.rawText ?? null,
     stateCode: row.location?.stateCode ?? null,
+    place: toPlacement(row),
     description: descriptionPermitted ? row.description : null,
     descriptionIsExcerpt: row.descriptionIsExcerpt,
     // Only withheld when there was something to withhold. A source we may not
@@ -235,7 +289,17 @@ const jobSelect = {
   retrievedAt: true,
   sourceKey: true,
   company: { select: { name: true } },
-  location: { select: { rawText: true, stateCode: true } },
+  location: {
+    select: {
+      rawText: true,
+      stateCode: true,
+      postcode: true,
+      postcodeSource: true,
+      regionalStatus: true,
+      regionalCategory: true,
+      regionalBasis: true,
+    },
+  },
 } as const;
 
 export async function searchJobs(
@@ -266,6 +330,25 @@ export async function searchJobs(
     ...(query.category ? { sourceCategoryTag: query.category } : {}),
     ...(query.employmentType ? { employmentType: query.employmentType } : {}),
     ...(query.sponsorship ? { sponsorshipSignal: query.sponsorship } : {}),
+    /*
+     * Where the advertisement sits against the instrument.
+     *
+     * UNKNOWN has to reach through the relation and past it at once: a listing
+     * is unplaced either because the place it resolved to could not be settled,
+     * or because it resolved to no place at all. Filtering only on the relation
+     * would silently drop the second kind, which is the group most in need of
+     * being visible.
+     */
+    ...(query.regional === undefined
+      ? {}
+      : query.regional === 'UNKNOWN'
+        ? {
+            OR: [
+              { location: { is: { regionalStatus: 'UNKNOWN' as const } } },
+              { locationId: null },
+            ],
+          }
+        : { location: { is: { regionalStatus: query.regional } } }),
     ...(query.source ? { sourceKey: query.source } : {}),
     ...(query.postedWithinDays === undefined
       ? {}

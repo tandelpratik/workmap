@@ -8,8 +8,12 @@ import {
 } from '@/db/repositories/job';
 import { JobList } from '@/components/job-list';
 import { SponsorshipKey } from '@/components/sponsorship-badge';
+import { RegionalKey } from '@/components/regional-note';
 import { JobSearchForm } from '@/components/job-search-form';
 import { sponsorshipSignals } from '@/domain/sponsorship';
+import { regionalAreas } from '@/config/regional-areas';
+import { legal } from '@/config/legal';
+import type { RegionalStatus } from '@/domain/regional';
 import { employmentTypes } from '@/domain/job';
 import { Masthead } from '@/components/layout/masthead';
 import { Colophon } from '@/components/layout/colophon';
@@ -46,10 +50,54 @@ const PAGE_SIZE = 20;
  */
 const POSTED_WINDOWS = [3, 7, 14, 30] as const;
 
+/**
+ * The area filter, and the one place its default lives.
+ *
+ * A closed vocabulary in the address, mapped to the classification the
+ * repository understands. `all` maps to no filter at all rather than to a
+ * fourth status, because "everywhere" is the absence of the question.
+ *
+ * The default is `regional`, and it is a real default rather than an empty
+ * value that happens to behave like one. This product is a regional job search;
+ * a reader arriving at it should get regional work, and the page says in words
+ * that it has done so, because a filter removing four listings in five must
+ * announce itself rather than be inferred from a select box.
+ */
+const AREA_FILTERS = {
+  regional: 'REGIONAL',
+  elsewhere: 'NOT_REGIONAL',
+  unplaced: 'UNKNOWN',
+  all: undefined,
+} as const satisfies Record<string, RegionalStatus | undefined>;
+
+type AreaFilter = keyof typeof AREA_FILTERS;
+
+const DEFAULT_AREA: AreaFilter = 'regional';
+
+function isAreaFilter(value: string | undefined): value is AreaFilter {
+  return value !== undefined && Object.hasOwn(AREA_FILTERS, value);
+}
+
+/** What the results are, in the reader's words, for the heading above them. */
+const AREA_SUMMARY: Record<AreaFilter, string> = {
+  regional:
+    'Showing advertisements in a designated regional area. Change Area to see ' +
+    'the rest.',
+  elsewhere:
+    'Showing advertisements outside a designated regional area, which in ' +
+    'practice means Sydney, Melbourne and Brisbane.',
+  unplaced:
+    'Showing advertisements that could not be placed, usually because they ' +
+    'name several regions at once. They may or may not be regional.',
+  all: 'Showing every advertisement held, wherever it is.',
+};
+
 export const metadata: Metadata = {
-  title: 'Job advertisements',
+  title: 'Regional job search',
   description:
-    'Search Australian job advertisements, with the employer, location and salary exactly as the source published them.',
+    'One search across job advertisements in regional Australia, with the ' +
+    'employer, location and salary exactly as the source published them, and ' +
+    'what each advertisement says about visa sponsorship.',
 };
 
 const dateFormat = new Intl.DateTimeFormat('en-AU', {
@@ -80,6 +128,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
 interface Filters {
   q?: string | undefined;
   where?: string | undefined;
+  area?: string | undefined;
   sponsorship?: string | undefined;
   type?: string | undefined;
   source?: string | undefined;
@@ -116,6 +165,14 @@ export default async function JobsPage({
   // Bounded against the vocabulary rather than passed through: a query string
   // is external input, and an unrecognised value shows every listing rather
   // than erroring, which is how the other filters behave.
+  // Bounded against the vocabulary, and defaulted rather than left open. An
+  // unrecognised value falls back to the product's default instead of widening
+  // the search, which is the opposite of how the other filters degrade and is
+  // deliberate: this one is what the product is.
+  const requestedArea = first(params['area']);
+  const area: AreaFilter = isAreaFilter(requestedArea) ? requestedArea : DEFAULT_AREA;
+  const regional = AREA_FILTERS[area];
+
   const requestedSponsorship = first(params['sponsorship']);
   const sponsorship = sponsorshipSignals.find(
     (signal) => signal === requestedSponsorship,
@@ -144,6 +201,7 @@ export default async function JobsPage({
   const result = await searchJobs({
     ...(text ? { text } : {}),
     ...(location ? { location } : {}),
+    ...(regional === undefined ? {} : { regional }),
     ...(sponsorship ? { sponsorship } : {}),
     ...(employmentType ? { employmentType } : {}),
     ...(source ? { source } : {}),
@@ -161,6 +219,10 @@ export default async function JobsPage({
   const filters: Filters = {
     ...(text === undefined ? {} : { q: text }),
     ...(location === undefined ? {} : { where: location }),
+    // Carried only when it is not the default, so an ordinary search keeps a
+    // clean address and "clear filters" does not count the product's own
+    // premise as something the reader chose.
+    ...(area === DEFAULT_AREA ? {} : { area }),
     ...(sponsorship === undefined ? {} : { sponsorship }),
     ...(employmentType === undefined ? {} : { type: employmentType }),
     ...(source === undefined ? {} : { source }),
@@ -169,7 +231,18 @@ export default async function JobsPage({
   const activeFilters = Object.keys(filters).length;
 
   const credentialsConfigured = getAdzunaCredentials() !== null;
-  const hasQuery = activeFilters > 0;
+  /*
+   * Whether anything is narrowing the results.
+   *
+   * The area filter counts even when it is the default, because the default
+   * narrows: it removes roughly four listings in five. Without this the strip
+   * printed "In the index: 1,466 listings" over a regional-only result, which
+   * states the size of the whole index and gives the size of part of it. It
+   * also decides which empty state is shown, and "nothing has been ingested"
+   * would be the wrong thing to say to a reader whose regional search found
+   * nothing.
+   */
+  const hasQuery = activeFilters > 0 || regional !== undefined;
 
   // Only the sources that supplied a listing on this page. Adzuna's terms bind
   // "each displayed advert", so the obligation follows what is displayed.
@@ -233,16 +306,23 @@ export default async function JobsPage({
       <PageBody width="column">
         <header>
           <Dateline>Advertisements</Dateline>
-          <PageTitle>Job advertisements in Australia</PageTitle>
+          <PageTitle>Regional job search</PageTitle>
           <Lede>
-            Advertised roles from the sources this product is licensed to republish, with
-            the employer, location and salary exactly as each source published them.
+            One search across the regional job advertisements this product is licensed to
+            republish, with the employer, location and salary exactly as each source
+            published them. Where a listing sits is decided by its postcode against the
+            instrument that defines a designated regional area, and every listing says
+            which postcode and which rule placed it.
           </Lede>
+          <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">
+            {legal.disclaimer}
+          </p>
         </header>
 
         <JobSearchForm
           text={text}
           location={location}
+          area={area}
           sponsorship={sponsorship}
           employmentType={employmentType}
           source={source}
@@ -306,6 +386,20 @@ export default async function JobsPage({
               {location === undefined ? '' : ` ${location}`}. Try a broader term, or clear
               the location.
             </p>
+            {area === DEFAULT_AREA ? (
+              /*
+                The filter most likely to be responsible, named where a reader
+                will see it. Search defaults to regional, so an empty result is
+                often a regional result rather than an empty index, and saying
+                so is more useful than leaving them to find the control.
+              */
+              <p>
+                This search is limited to advertisements in a designated regional area,
+                which is most of what this site carries but not all of it. Set{' '}
+                <strong className="font-medium">Area</strong> to{' '}
+                <strong className="font-medium">Everywhere</strong> to include the rest.
+              </p>
+            ) : null}
             <p>
               The index holds advertisements collected from the licensed sources listed
               below, which is a sample of what is advertised online rather than every
@@ -329,6 +423,18 @@ export default async function JobsPage({
               </h2>
 
               <ReleaseStrip fields={fields} />
+
+              {/*
+                What this list is, in words, above the list itself.
+
+                The area filter defaults to regional and removes roughly four
+                listings in five. A default that large has to be stated rather
+                than left for a reader to deduce from a select box they may
+                never look at, and stated where they are already reading.
+              */}
+              <p className="text-ink-muted max-w-measure mt-4 text-sm leading-relaxed">
+                {AREA_SUMMARY[area]}
+              </p>
 
               <JobList jobs={result.value.jobs} />
 
@@ -354,6 +460,34 @@ export default async function JobsPage({
                   <span className="text-ink-faint">Next</span>
                 )}
               </nav>
+            </section>
+
+            {/*
+              What the area labels mean, and the document behind them.
+
+              First, because it is the filter the product is built on. The
+              instrument is named and linked so a reader can check any listing
+              against it rather than take our word, which is the difference
+              between reporting a published definition and asserting one.
+            */}
+            <section className="border-rule-strong mt-12 border-t pt-5">
+              <Label as="h2">About the area labels</Label>
+              <RegionalKey />
+              <p className="text-ink-faint max-w-measure mt-4 text-xs leading-relaxed">
+                Where a listing sits is decided by its postcode against the{' '}
+                <a
+                  href={regionalAreas.instrument.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={link()}
+                >
+                  {regionalAreas.instrument.title}
+                </a>
+                , which is the published definition of a designated regional area. These
+                labels describe where a job is. They are not a statement about any
+                person&rsquo;s visa position, and nothing here decides whether anyone may
+                apply for or hold any visa.
+              </p>
             </section>
 
             {/*

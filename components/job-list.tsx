@@ -4,6 +4,7 @@ import { lifecycleLabel, lifecycleOf } from '@/domain/lifecycle';
 import { salaryIsEstimated } from '@/domain/job';
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
 import { SponsorshipBadge } from './sponsorship-badge';
+import { RegionalNote } from './regional-note';
 import { JobsworthLabel } from './adzuna-attribution';
 import { link } from '@/components/ui/link';
 
@@ -65,6 +66,27 @@ function formatSalary(salary: Salary): string {
   if (min !== null) return `From ${formatMoney(min, currency)} ${suffix}`;
   if (max !== null) return `Up to ${formatMoney(max, currency)} ${suffix}`;
   return '';
+}
+
+/**
+ * How much of a description reaches the card.
+ *
+ * The card shows two clamped lines, which is around 180 characters at the
+ * widest the column ever gets, so this cap removes nothing a reader would have
+ * seen. What it removes is payload: without it a page of twenty listings ships
+ * twenty full advertisements, tens of thousands of characters of which none is
+ * visible, on a free tier that meters exactly that.
+ *
+ * Cut at a word boundary, and only when the remainder is long enough to be
+ * worth cutting, so the ellipsis never appears after a single trimmed word.
+ */
+const PREVIEW_CHARACTERS = 400;
+
+function preview(description: string): string {
+  if (description.length <= PREVIEW_CHARACTERS) return description;
+  const cut = description.slice(0, PREVIEW_CHARACTERS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${lastSpace > PREVIEW_CHARACTERS / 2 ? cut.slice(0, lastSpace) : cut}…`;
 }
 
 function formatDate(date: Date): string {
@@ -130,7 +152,7 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
 
             {job.description !== null ? (
               <p className="text-ink-muted max-w-measure mt-3 line-clamp-2 text-sm leading-relaxed">
-                {job.description}
+                {preview(job.description)}
               </p>
             ) : job.descriptionWithheld ? (
               /*
@@ -144,6 +166,16 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
                 original listing.
               </p>
             ) : null}
+
+            {/*
+              Where the job is, directly under where the source said it is.
+              The product's whole premise is this line, so it sits with the
+              location rather than in the metadata rail, and it states what
+              settled it so the label can be checked rather than trusted.
+            */}
+            <div className="mt-2">
+              <RegionalNote place={job.place} />
+            </div>
 
             {/*
               What the advertisement said about sponsorship, with the wording

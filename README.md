@@ -32,9 +32,15 @@ instrument leaves no postcode in that state unlisted. **2,076 of 2,713 listings
 are settled, 76.5%**; the rest are advertisements with no single place, and are
 labelled as such rather than guessed.
 
-Nothing in the interface says "regional" yet: the classification is in the
-database and no page reads it. That is the next milestone, along with removing
-`robots: noindex`.
+The interface reads it. Search is the front page rather than a link to one, the
+area filter defaults to a designated regional area and says so in words above
+the results, and every listing states the postcode and the rule that placed it.
+Advertisements that cannot be placed are a selectable category rather than a
+hidden one.
+
+`robots: noindex` stays set. The classification was one of three things gating
+it; the legal pages are the others, and they are blocked on a legal name and a
+contact address that do not exist yet.
 
 Two surfaces are live. Job search reads listings from Adzuna and Queensland
 Smart Jobs; the vacancy map reads the Jobs and Skills Australia Internet Vacancy

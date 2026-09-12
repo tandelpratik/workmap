@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { brand } from '@/config/brand';
+import { legal } from '@/config/legal';
+import { regionalAreas } from '@/config/regional-areas';
+import { listIndexedSources } from '@/db/repositories/job';
+import { JobSearchForm } from '@/components/job-search-form';
 import {
   cachedOccupationTotals,
   cachedRegionTotals,
@@ -25,15 +29,27 @@ import { cn } from '@/components/ui/cn';
 /**
  * The front page.
  *
- * Interim. The product is a regional job search and this page is still the
- * labour market section front it was built as, with search promoted to the top
- * of it and the figures framed as the supporting layer they now are. Rebuilding
- * it around search is its own piece of work and depends on the regional
- * classification landing first: a search-led front page with nothing to filter
- * by would be a mock, not a milestone.
+ * Search first, and search itself rather than a button that promises it. The
+ * product exists so that somebody looking for regional work can type what they
+ * do and where, once, instead of opening hundreds of postcodes; putting the
+ * form anywhere but the top would be describing that rather than doing it.
  *
- * What follows describes that section front, which is still what the body of
- * the page is.
+ * It is the same form the search page carries, not a cut-down copy. A reduced
+ * hero form teaches a reader a set of controls and then replaces them with a
+ * different set on the next page, and the maintenance cost of the second copy
+ * is paid every time a filter changes.
+ *
+ * There is deliberately no count of listings anywhere on this page. Counts
+ * derived from Adzuna data are outside what their terms permit us to publish,
+ * and a headline figure on the front page is the least defensible place to test
+ * that line.
+ *
+ * Below the search sits the labour market layer, which used to be the whole
+ * product and is now context: where employment demand is concentrated, and what
+ * is being advertised. It is kept because it answers a question the listings
+ * cannot, and demoted because it is not what anybody came for.
+ *
+ * What follows describes that layer.
  *
  * A section front, in the sense a newspaper means it: the name of the
  * publication, the current release, and the two questions the product answers
@@ -101,7 +117,7 @@ export default async function HomePage({
   }
   if (carried.size > 0) redirect(`/jobs?${carried.toString()}`);
 
-  const [totals, stateList, byOccupation] = await Promise.all([
+  const [totals, stateList, byOccupation, indexed] = await Promise.all([
     cachedRegionTotals({
       sourceKey: SOURCE_KEY,
       dataset: DATASET,
@@ -116,6 +132,10 @@ export default async function HomePage({
       edition: EDITION,
       levels: ['GCCSA', 'SA4'],
     }),
+    // Run with the rest rather than after it. The search form needs to know
+    // which sources actually hold listings so it can offer that filter only
+    // when there is a choice to make, and it is one grouped query.
+    listIndexedSources(),
   ]);
 
   const period = totals.ok ? totals.value.period : null;
@@ -229,7 +249,7 @@ export default async function HomePage({
 
       <PageBody>
         <header>
-          <Dateline>Job advertisements and the labour market behind them</Dateline>
+          <Dateline>Regional Australia</Dateline>
           <h1 className="text-ink text-display mt-3 max-w-3xl font-serif font-semibold text-balance">
             {brand.tagline}
           </h1>
@@ -237,43 +257,48 @@ export default async function HomePage({
             {brand.description}
           </p>
 
-          <p className="mt-6">
-            <Link
-              href="/jobs"
-              prefetch={false}
-              className="text-paper-raised bg-ink hover:bg-accent inline-flex min-h-11 items-center px-5 text-sm font-medium transition-colors"
-            >
-              Search job advertisements
-            </Link>
-          </p>
-
           {/*
-            What the search does not do yet, said here rather than discovered on
-            the results page.
-
-            Nothing in the index is classified against the official regional
-            definition, so nothing on this site is labelled regional. Naming the
-            product for a filter it does not yet apply and staying quiet about
-            it would be the one kind of dishonesty this product cannot afford.
-            Delete this note when the classification lands, not before.
+            The search itself, not a link to it. Defaulted to regional, which is
+            what the product is for, and every other filter is here rather than
+            a page away because this is the search rather than a preview of one.
           */}
-          <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">
-            Search currently covers advertisements from across Australia. Classifying
-            every listing against the official regional definition is the next piece of
-            work, and until it is done nothing here is described as regional.
-          </p>
+          <JobSearchForm
+            text={undefined}
+            location={undefined}
+            area="regional"
+            sponsorship={undefined}
+            employmentType={undefined}
+            source={undefined}
+            postedWithin={undefined}
+            sources={indexed.ok ? indexed.value : []}
+          />
 
-          <div className="border-rule-strong mt-10 border-t pt-6">
-            <p className="text-ink-muted max-w-measure text-sm leading-relaxed">
-              Below is the labour market layer that sits behind the advertisements: where
-              employment demand is concentrated, and what is being advertised. Every
-              figure is traceable to the release it came from, and nothing is shown that a
-              source did not publish.
-            </p>
-          </div>
+          <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">
+            Where a listing sits is decided by its postcode against the{' '}
+            <a
+              href={regionalAreas.instrument.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={link()}
+            >
+              instrument that defines a designated regional area
+            </a>
+            , and every listing says which postcode and which rule placed it.{' '}
+            {legal.disclaimer}
+          </p>
+        </header>
+
+        <section className="border-rule-heavy mt-14 border-t-2 pt-6">
+          <Label as="h2">The labour market behind the advertisements</Label>
+          <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
+            Where employment demand is concentrated across the country, and what is being
+            advertised. Every figure is traceable to the release it came from, and nothing
+            is shown that a source did not publish. These are counts of advertisements
+            appearing on a defined set of job boards, not of vacancies.
+          </p>
 
           <ReleaseStrip fields={fields} />
-        </header>
+        </section>
 
         {hasFigures && geometry !== null ? (
           <section className="mt-12 grid grid-cols-1 gap-x-10 gap-y-12 lg:grid-cols-2">
@@ -391,17 +416,23 @@ export default async function HomePage({
 
               <div className="border-rule-strong mt-10 border-t pt-5">
                 <h2 className="text-ink font-serif text-2xl font-semibold">
-                  The advertisements themselves
+                  How &ldquo;regional&rdquo; is decided
                 </h2>
                 <p className="text-ink-muted max-w-measure mt-3 text-sm leading-relaxed">
-                  The index above counts advertisements. Separately, this site republishes
-                  individual listings from the sources it is licensed to carry, with the
-                  employer, location and salary exactly as published, and labels what each
-                  advertisement says about visa sponsorship.
+                  By one published instrument, {regionalAreas.instrument.id}, which is
+                  written entirely in postcodes. A listing is placed by its postcode where
+                  a source publishes one, by its region where every postcode in that
+                  region agrees, and by its state where the instrument lists that state in
+                  full. An advertisement that cannot be placed says so rather than being
+                  guessed at.
                 </p>
                 <p className="mt-4">
-                  <Link href="/jobs" prefetch={false} className={cn(link(), 'text-sm')}>
-                    Search advertisements
+                  <Link
+                    href="/data-and-licensing"
+                    prefetch={false}
+                    className={cn(link(), 'text-sm')}
+                  >
+                    Sources and licensing
                   </Link>
                 </p>
               </div>

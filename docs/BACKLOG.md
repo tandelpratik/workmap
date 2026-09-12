@@ -43,11 +43,11 @@ rather than inventing them (ADR-0007). A placeholder domain or contact address
 would be fabricated data in a product whose constitution forbids exactly that,
 so these stay null until the values exist and the work that needs them waits.
 
-| Needed                | Blocks                                                                                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Contact email         | `/report`, `/contact`, `/methodology#corrections`, the contact clause of `/privacy`                                                                                      |
-| Legal display name    | Copyright line, `/terms`, the operator identity in `/privacy`                                                                                                            |
-| ~~Registered domain~~ | Supplied 2026-09-10 (`regionalsponsor.com.au`). `metadataBase` is now set; canonical URLs, sitemap and indexation are unblocked but gated on the regional classification |
+| Needed                | Blocks                                                                                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contact email         | `/report`, `/contact`, `/methodology#corrections`, the contact clause of `/privacy`                                                                                        |
+| Legal display name    | Copyright line, `/terms`, the operator identity in `/privacy`                                                                                                              |
+| ~~Registered domain~~ | Supplied 2026-09-10 (`regionalsponsor.com.au`). `metadataBase` is set and the regional classification has landed, so indexation is now gated only on the legal pages above |
 
 ### The legal pages
 

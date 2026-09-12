@@ -47,6 +47,25 @@ import { FieldLabel } from '@/components/ui/label';
  */
 const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
 
+/**
+ * Where an advertisement sits against the designated regional area instrument.
+ *
+ * The defining filter of the product, so it has an explicit default rather than
+ * an "any" that happens to mean regional. `regional` is selected when nothing
+ * is asked for, and the page says so in words above the results: a filter that
+ * silently removes four listings in five has to announce itself.
+ *
+ * "Everywhere" is offered rather than withheld. A reader who wants to see what
+ * is being left out is entitled to, and hiding the rest of the corpus would
+ * make the size of the regional set impossible to judge.
+ */
+const AREA_CHOICES = [
+  { value: 'regional', label: 'In a designated regional area' },
+  { value: 'elsewhere', label: 'Not in one' },
+  { value: 'unplaced', label: 'Location not established' },
+  { value: 'all', label: 'Everywhere' },
+] as const;
+
 /** How recently an advertisement was posted, by the employer's own date. */
 const POSTED_CHOICES = [
   { value: '3', label: 'Last 3 days' },
@@ -58,6 +77,7 @@ const POSTED_CHOICES = [
 export function JobSearchForm({
   text,
   location,
+  area,
   sponsorship,
   employmentType,
   source,
@@ -66,6 +86,8 @@ export function JobSearchForm({
 }: {
   text: string | undefined;
   location: string | undefined;
+  /** One of AREA_CHOICES. The page resolves the default before rendering. */
+  area: string;
   sponsorship: string | undefined;
   employmentType: string | undefined;
   source: string | undefined;
@@ -105,6 +127,23 @@ export function JobSearchForm({
           placeholder="Melbourne, or VIC"
           className={cn(control, 'placeholder:text-ink-faint')}
         />
+      </HairlineCell>
+
+      {/*
+        Beside the location field rather than among the secondary filters. It
+        qualifies the place, it is the question the product exists to answer,
+        and burying it next to "posted within" would make the defining filter
+        look like a refinement.
+      */}
+      <HairlineCell className="py-2.5">
+        <FieldLabel htmlFor="area">Area</FieldLabel>
+        <select id="area" name="area" defaultValue={area} className={control}>
+          {AREA_CHOICES.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
       </HairlineCell>
 
       <HairlineCell className="py-2.5">

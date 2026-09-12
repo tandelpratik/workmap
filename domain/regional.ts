@@ -173,6 +173,112 @@ export interface RegionalClassification {
 }
 
 /**
+ * Where an advertisement sits, as the product shows it to a reader.
+ *
+ * Carries the answer, what settled it, and the postcode it rests on, because
+ * all three are shown together. A regional label with nothing behind it is our
+ * assertion about someone's job advertisement; a label that names the postcode
+ * and the instrument is a lookup the reader can repeat.
+ */
+export interface RegionalPlacement {
+  readonly status: RegionalStatus;
+  readonly category: RegionalCategory | null;
+  readonly basis: ClassificationBasis;
+  /** The postcode the answer rests on, where it rests on one. */
+  readonly postcode: string | null;
+  /**
+   * Whether that postcode was derived from the source's coordinates rather
+   * than published by the source.
+   *
+   * Shown, not hidden. A derived postcode inherits the limits of the boundary
+   * set that placed it, and a reader comparing our answer against an address
+   * deserves to know which kind they are looking at.
+   */
+  readonly postcodeIsDerived: boolean;
+}
+
+/** A listing with no location row at all. Unplaced, and honest about it. */
+export const unplaced: RegionalPlacement = {
+  status: 'UNKNOWN',
+  category: null,
+  basis: 'NONE',
+  postcode: null,
+  postcodeIsDerived: false,
+};
+
+/**
+ * How a placement is worded to a reader.
+ *
+ * Every label describes a place, never a person and never a visa. "In a
+ * designated regional area" is a statement about where the job is; "you would
+ * qualify for a regional visa" would be advice about the reader, which this
+ * product does not give and is not permitted to give.
+ */
+export function regionalLabel(status: RegionalStatus): string {
+  switch (status) {
+    case 'REGIONAL':
+      return 'In a designated regional area';
+    case 'NOT_REGIONAL':
+      return 'Not in a designated regional area';
+    case 'UNKNOWN':
+      return 'Location not established';
+  }
+}
+
+/** The instrument's own words for its two categories. */
+export function regionalCategoryLabel(category: RegionalCategory): string {
+  switch (category) {
+    case 'CITY_OR_MAJOR_CENTRE':
+      return 'designated city or major regional centre';
+    case 'REGIONAL_CENTRE_OR_OTHER':
+      return 'regional centre or other regional area';
+  }
+}
+
+/**
+ * What settled it, in a phrase that completes "decided by ...".
+ *
+ * Published beside the answer rather than kept for operators. The three bases
+ * are not equally strong and pretending otherwise would flatten a real
+ * difference: a postcode is the instrument's own unit, a region is unanimity
+ * among the postcodes inside it, and a state is the instrument leaving nothing
+ * in that state unlisted.
+ */
+export function regionalBasisLabel(basis: ClassificationBasis): string | null {
+  switch (basis) {
+    case 'POSTCODE':
+      return 'postcode';
+    case 'REGION':
+      return 'region';
+    case 'STATE':
+      return 'state';
+    case 'NONE':
+      return null;
+  }
+}
+
+/**
+ * What each basis actually rests on, for the key rather than the card.
+ *
+ * The card gets two words because a hundred rows of explanation is not calm,
+ * it is noise, and a reader scanning results is not reading a methodology. The
+ * explanation still has to exist somewhere, so it exists once, where somebody
+ * who wants it will look.
+ */
+export function regionalBasisExplanation(basis: ClassificationBasis): string | null {
+  switch (basis) {
+    case 'POSTCODE':
+      return 'The postcode was looked up directly in the instrument.';
+    case 'REGION':
+      return 'The advertisement named a region rather than a place, and every postcode inside that region falls the same side of the instrument.';
+    case 'STATE':
+      return 'The instrument lists every postcode in that state or territory, so no postcode was needed.';
+    case 'NONE':
+      return null;
+  }
+}
+
+/**
  * A postcode as the instrument writes them: exactly four digits.
  *
  * Deliberately strict. Three digits are not silently padded, even though the
