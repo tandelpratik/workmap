@@ -13,7 +13,12 @@ import { JobSearchForm } from '@/components/job-search-form';
 import { sponsorshipSignals } from '@/domain/sponsorship';
 import { regionalAreas } from '@/config/regional-areas';
 import { legal } from '@/config/legal';
-import type { RegionalStatus } from '@/domain/regional';
+import {
+  areaFilters,
+  defaultAreaFilter,
+  isAreaFilter,
+  type AreaFilter,
+} from '@/domain/regional';
 import { employmentTypes } from '@/domain/job';
 import { Masthead } from '@/components/layout/masthead';
 import { Colophon } from '@/components/layout/colophon';
@@ -49,34 +54,6 @@ const PAGE_SIZE = 20;
  * offer different choices.
  */
 const POSTED_WINDOWS = [3, 7, 14, 30] as const;
-
-/**
- * The area filter, and the one place its default lives.
- *
- * A closed vocabulary in the address, mapped to the classification the
- * repository understands. `all` maps to no filter at all rather than to a
- * fourth status, because "everywhere" is the absence of the question.
- *
- * The default is `regional`, and it is a real default rather than an empty
- * value that happens to behave like one. This product is a regional job search;
- * a reader arriving at it should get regional work, and the page says in words
- * that it has done so, because a filter removing four listings in five must
- * announce itself rather than be inferred from a select box.
- */
-const AREA_FILTERS = {
-  regional: 'REGIONAL',
-  elsewhere: 'NOT_REGIONAL',
-  unplaced: 'UNKNOWN',
-  all: undefined,
-} as const satisfies Record<string, RegionalStatus | undefined>;
-
-type AreaFilter = keyof typeof AREA_FILTERS;
-
-const DEFAULT_AREA: AreaFilter = 'regional';
-
-function isAreaFilter(value: string | undefined): value is AreaFilter {
-  return value !== undefined && Object.hasOwn(AREA_FILTERS, value);
-}
 
 /** What the results are, in the reader's words, for the heading above them. */
 const AREA_SUMMARY: Record<AreaFilter, string> = {
@@ -170,8 +147,10 @@ export default async function JobsPage({
   // the search, which is the opposite of how the other filters degrade and is
   // deliberate: this one is what the product is.
   const requestedArea = first(params['area']);
-  const area: AreaFilter = isAreaFilter(requestedArea) ? requestedArea : DEFAULT_AREA;
-  const regional = AREA_FILTERS[area];
+  const area: AreaFilter = isAreaFilter(requestedArea)
+    ? requestedArea
+    : defaultAreaFilter;
+  const regional = areaFilters[area] ?? undefined;
 
   const requestedSponsorship = first(params['sponsorship']);
   const sponsorship = sponsorshipSignals.find(
@@ -222,7 +201,7 @@ export default async function JobsPage({
     // Carried only when it is not the default, so an ordinary search keeps a
     // clean address and "clear filters" does not count the product's own
     // premise as something the reader chose.
-    ...(area === DEFAULT_AREA ? {} : { area }),
+    ...(area === defaultAreaFilter ? {} : { area }),
     ...(sponsorship === undefined ? {} : { sponsorship }),
     ...(employmentType === undefined ? {} : { type: employmentType }),
     ...(source === undefined ? {} : { source }),
@@ -386,7 +365,7 @@ export default async function JobsPage({
               {location === undefined ? '' : ` ${location}`}. Try a broader term, or clear
               the location.
             </p>
-            {area === DEFAULT_AREA ? (
+            {area === defaultAreaFilter ? (
               /*
                 The filter most likely to be responsible, named where a reader
                 will see it. Search defaults to regional, so an empty result is

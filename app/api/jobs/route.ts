@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { findSourceDescriptor } from '@/config/sources';
 import { searchJobs } from '@/db/repositories/job';
 import { employmentTypes } from '@/domain/job';
+import { sponsorshipSignals } from '@/domain/sponsorship';
+import { areaFilters, defaultAreaFilter } from '@/domain/regional';
 import { statusForFailure } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
@@ -25,6 +27,23 @@ const querySchema = z.object({
     .regex(/^[a-z0-9-]+$/i)
     .optional(),
   type: z.enum(employmentTypes).optional(),
+  /*
+   * Where the advertisement sits against the regional instrument.
+   *
+   * Defaulted rather than optional, and defaulted to the same value the search
+   * page uses. This is a regional job search, so an unqualified request for
+   * jobs means regional jobs, and the response echoes `filters` so a client can
+   * see what was applied rather than having to know.
+   *
+   * It was missing entirely until now, which meant the page and its own API
+   * disagreed about what the product does: the page returned regional work and
+   * the API returned everything, with no way to ask for either.
+   */
+  area: z
+    .enum(Object.keys(areaFilters) as [string, ...string[]])
+    .default(defaultAreaFilter),
+  /** A filter over what advertisements say, never over who may apply. */
+  sponsorship: z.enum(sponsorshipSignals).optional(),
   page: z.coerce.number().int().min(1).max(500).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -54,13 +73,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { q, where, category, type, page, pageSize } = parsed.data;
+  const { q, where, category, type, area, sponsorship, page, pageSize } = parsed.data;
+  const regional = areaFilters[area as keyof typeof areaFilters];
 
   const result = await searchJobs({
     ...(q ? { text: q } : {}),
     ...(where ? { location: where } : {}),
     ...(category ? { category } : {}),
     ...(type ? { employmentType: type } : {}),
+    ...(regional === null ? {} : { regional }),
+    ...(sponsorship ? { sponsorship } : {}),
     page,
     pageSize,
   });
@@ -97,6 +119,19 @@ export async function GET(request: NextRequest) {
        * such as vacancy counts for a written licence.
        */
       total: result.value.total,
+      /**
+       * What was actually applied, including the defaults the caller did not
+       * ask for. A response filtered by a default the client cannot see is a
+       * response the client will eventually misread as the whole corpus.
+       */
+      filters: {
+        area,
+        ...(sponsorship === undefined ? {} : { sponsorship }),
+        ...(q === undefined ? {} : { q }),
+        ...(where === undefined ? {} : { where }),
+        ...(category === undefined ? {} : { category }),
+        ...(type === undefined ? {} : { type }),
+      },
       attribution,
     },
     {

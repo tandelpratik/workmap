@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { regionalAreas } from '@/config/regional-areas';
 import {
+  areaFilterLabel,
+  areaFilters,
   classifyPlace,
+  defaultAreaFilter,
+  isAreaFilter,
   isWhollyRegional,
   normalisePostcode,
+  regionalStatuses,
   whollyRegionalJurisdictions,
+  type AreaFilter,
   type PostcodeSet,
 } from '@/domain/regional';
 
@@ -386,6 +392,54 @@ describe('classifying without a postcode', () => {
     expect(
       classifyPlace(regionalAreas, { postcode: null, jurisdiction: ' nt ' }).status,
     ).toBe('REGIONAL');
+  });
+});
+
+describe('the area filter vocabulary', () => {
+  it('reaches every placement a listing can have', () => {
+    /*
+     * The invariant worth having. Adding a status to the domain without adding
+     * a way to ask for it would make a slice of the corpus unreachable through
+     * the interface and through the API, and it would be invisible: every page
+     * would still work and simply never show those listings.
+     */
+    const reachable = new Set(
+      Object.values(areaFilters).filter((status) => status !== null),
+    );
+    for (const status of regionalStatuses) {
+      expect(reachable.has(status), `no area filter selects ${status}`).toBe(true);
+    }
+  });
+
+  it('treats everywhere as the absence of the question', () => {
+    // Not a fourth status. "Everywhere" means no filter at all, and mapping it
+    // to a status would need a status meaning "any", which is not a placement.
+    expect(areaFilters.all).toBeNull();
+  });
+
+  it('defaults to regional, because that is what the product is', () => {
+    expect(defaultAreaFilter).toBe('regional');
+    expect(areaFilters[defaultAreaFilter]).toBe('REGIONAL');
+  });
+
+  it('accepts only the tokens it defines', () => {
+    for (const token of Object.keys(areaFilters)) {
+      expect(isAreaFilter(token)).toBe(true);
+    }
+    // External input. An unrecognised token must not reach a query, and the
+    // callers fall back to the default rather than widening the search.
+    for (const token of ['banana', 'REGIONAL', '', 'Regional', undefined]) {
+      expect(isAreaFilter(token as string | undefined), String(token)).toBe(false);
+    }
+  });
+
+  it('offers a label for every choice', () => {
+    for (const token of Object.keys(areaFilters)) {
+      const label = areaFilterLabel(token as AreaFilter);
+      expect(label.length, token).toBeGreaterThan(0);
+      // A control's option, so it has to fit in one.
+      expect(label.length, token).toBeLessThan(40);
+    }
   });
 });
 

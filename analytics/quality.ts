@@ -1,5 +1,7 @@
 import type { PrismaClient } from '@/db/generated/client/client';
 import { getDatabase } from '@/db/client';
+import { regionalAreas } from '@/config/regional-areas';
+import { classifyPlace } from '@/domain/regional';
 import { listUnresolvedGeographies } from '@/db/repositories/labour-market';
 import { lifecycle } from '@/config/lifecycle';
 import { findSourceDescriptor, sourceDescriptors } from '@/config/sources';
@@ -316,6 +318,212 @@ async function datesArePossible(db: Database): Promise<CheckResult[]> {
 }
 
 /**
+ * A placement and the basis it rests on agree with each other.
+ *
+ * The product's headline filter reads `regional_status`, so a row where the
+ * status and the basis disagree is a listing shown, or withheld, for a reason
+ * nobody can state. These are the combinations the classifier cannot produce,
+ * and each one means something upstream wrote a placement by hand:
+ *
+ *   - UNKNOWN with a basis, or a placement with basis NONE. A basis is the
+ *     answer to "how was this decided", and an undecided row has no answer
+ *     while a decided one must have one.
+ *   - A basis of POSTCODE with no postcode. The postcode is the whole of the
+ *     evidence, and a row claiming to have been looked up without the value it
+ *     was looked up by is unfalsifiable.
+ *   - NOT_REGIONAL decided by STATE. The state rule only ever concludes
+ *     regional: it applies precisely where the instrument leaves no postcode in
+ *     that state unlisted, so it cannot place anything outside the definition.
+ *     A row like this would exclude a listing from a regional search on a rule
+ *     that has no power to exclude anything.
+ *   - A category on a row that is not regional. The categories are subdivisions
+ *     of the definition, so a row outside it has neither.
+ */
+async function regionalPlacementIsCoherent(db: Database): Promise<CheckResult[]> {
+  const rows = await db.$queryRaw<{ id: string; problem: string }[]>`
+    SELECT id, problem FROM (
+      SELECT id,
+        CASE
+          WHEN regional_status = 'UNKNOWN' AND regional_basis <> 'NONE'
+            THEN 'unplaced but carries a basis'
+          WHEN regional_status <> 'UNKNOWN' AND regional_basis = 'NONE'
+            THEN 'placed but carries no basis'
+          WHEN regional_basis = 'POSTCODE' AND postcode IS NULL
+            THEN 'placed by postcode but holds no postcode'
+          WHEN regional_status = 'NOT_REGIONAL' AND regional_basis = 'STATE'
+            THEN 'excluded by a rule that can only include'
+          WHEN regional_status <> 'REGIONAL' AND regional_category IS NOT NULL
+            THEN 'not regional but carries a category'
+          ELSE NULL
+        END AS problem
+      FROM location
+    ) AS checked
+    WHERE problem IS NOT NULL
+    LIMIT 50
+  `;
+
+  return [
+    fail(
+      'regional.placement-coherent',
+      'Every place agrees with itself about whether and how it was placed',
+      rows.length,
+      rows.map((row) => `${row.id}: ${row.problem}`),
+      'A status and a basis that disagree mean a placement was written by ' +
+        'something other than the classifier.',
+    ),
+  ];
+}
+
+/**
+ * A placement names the instrument that decided it.
+ *
+ * The definition of a designated regional area is a legislative instrument and
+ * instruments are amended. A row that does not say which one placed it cannot
+ * be told apart from one placed under a version that no longer exists, so an
+ * amendment would leave the corpus silently mixed and no way to find the half
+ * that needed redoing.
+ *
+ * Unplaced rows are excluded: nothing decided them, so there is nothing to name.
+ */
+async function regionalPlacementIsAttributed(db: Database): Promise<CheckResult[]> {
+  const rows = await db.$queryRaw<{ id: string }[]>`
+    SELECT id FROM location
+    WHERE regional_status <> 'UNKNOWN'
+      AND (regional_instrument IS NULL OR regional_classified_at IS NULL)
+    LIMIT 50
+  `;
+
+  return [
+    fail(
+      'regional.placement-attributed',
+      'Every placed location names the instrument that placed it, and when',
+      rows.length,
+      rows.map((row) => row.id),
+      'An unattributed placement cannot be told from one made under a ' +
+        'superseded version of the instrument.',
+    ),
+  ];
+}
+
+/**
+ * A derived postcode says which boundary set derived it.
+ *
+ * A postcode the source published and one this product inferred from
+ * coordinates are different kinds of fact, and the second inherits the limits
+ * of whatever placed it: ABS postal areas approximate Australia Post postcodes
+ * rather than reproducing them, and they are re-released. A row claiming a
+ * derived postcode without naming the vintage that produced it is asserting an
+ * inference nobody can reproduce or date.
+ */
+async function derivedPostcodeNamesItsReference(db: Database): Promise<CheckResult[]> {
+  const rows = await db.$queryRaw<{ id: string }[]>`
+    SELECT id FROM location
+    WHERE postcode_source = 'DERIVED_FROM_COORDINATES'
+      AND postcode_reference IS NULL
+    LIMIT 50
+  `;
+
+  return [
+    fail(
+      'regional.derived-postcode-sourced',
+      'Every postcode inferred from coordinates names the boundary set that placed it',
+      rows.length,
+      rows.map((row) => row.id),
+      'An inference without its reference cannot be reproduced or dated.',
+    ),
+  ];
+}
+
+/**
+ * Every stored postcode is four digits.
+ *
+ * The classifier is strict about this, and deliberately so: a lenient parser
+ * turns a malformed value into a confident wrong answer rather than an absent
+ * one. That strictness only protects the product if the column cannot hold
+ * something the classifier would refuse, because a three-digit postcode would
+ * not fail, it would silently make a place unplaceable while looking placed.
+ */
+async function storedPostcodesAreWellFormed(db: Database): Promise<CheckResult[]> {
+  const rows = await db.$queryRaw<{ id: string; postcode: string }[]>`
+    SELECT id, postcode FROM location
+    WHERE postcode IS NOT NULL AND postcode !~ '^[0-9]{4}$'
+    LIMIT 50
+  `;
+
+  return [
+    fail(
+      'regional.postcode-well-formed',
+      'Every stored postcode is four digits, which is what the instrument uses',
+      rows.length,
+      rows.map((row) => `${row.id}: ${row.postcode}`),
+      'The classifier refuses anything else, so a malformed value makes a ' +
+        'place unplaceable while appearing to be placed.',
+    ),
+  ];
+}
+
+/**
+ * The stored placement still agrees with the instrument.
+ *
+ * The checks above are about a row's internal consistency. This one re-reads
+ * the instrument: every location placed by postcode or by state is classified
+ * again from its own stored postcode and state, and the answer must match what
+ * is stored.
+ *
+ * It is the check that would catch the failure that matters most, which is a
+ * mistyped digit in the transcription of a statute. The unit tests assert the
+ * transcription's shape exhaustively; this asserts that the corpus was actually
+ * classified under the transcription the code currently holds, which is a
+ * different claim and the one that goes stale after an amendment or a
+ * half-finished backfill.
+ *
+ * Rows placed by region are excluded, and that exclusion is the point rather
+ * than an oversight: their answer comes from every postcode inside a named
+ * region agreeing, which is a relationship between two boundary sets and not
+ * something a single row's columns can reproduce. They are covered by
+ * `regional.placement-coherent` and by their own unit tests.
+ */
+async function storedPlacementMatchesInstrument(db: Database): Promise<CheckResult[]> {
+  const rows = await db.location.findMany({
+    where: { regionalBasis: { in: ['POSTCODE', 'STATE'] } },
+    select: {
+      id: true,
+      postcode: true,
+      stateCode: true,
+      regionalStatus: true,
+      regionalBasis: true,
+    },
+  });
+
+  const wrong: string[] = [];
+  for (const row of rows) {
+    // Classified from the same two columns the original pass used, so a
+    // mismatch is a change in the reference or a row nothing re-read.
+    const expected = classifyPlace(regionalAreas, {
+      postcode: row.regionalBasis === 'POSTCODE' ? row.postcode : null,
+      jurisdiction: row.stateCode,
+    });
+    if (expected.status !== row.regionalStatus) {
+      wrong.push(
+        `${row.id}: stored ${row.regionalStatus}, instrument says ${expected.status}`,
+      );
+    }
+    if (wrong.length >= MAX_EXAMPLES) break;
+  }
+
+  return [
+    fail(
+      'regional.matches-instrument',
+      'Every location placed by postcode or state still reads that way against the instrument',
+      wrong.length,
+      wrong,
+      'A mismatch means the reference changed, or a backfill did not finish. ' +
+        'Run npm run regional:classify.',
+    ),
+  ];
+}
+
+/**
  * A sponsorship label has the words that produced it.
  *
  * The label is a report of what an advertisement said, and a label without its
@@ -613,6 +821,11 @@ const CHECKS = [
   noDuplicateLiveListings,
   datesArePossible,
   sponsorshipIsEvidenced,
+  regionalPlacementIsCoherent,
+  regionalPlacementIsAttributed,
+  derivedPostcodeNamesItsReference,
+  storedPostcodesAreWellFormed,
+  storedPlacementMatchesInstrument,
   everyListingHasALicensedSource,
   storedContentIsPublishable,
   noPersonalInformationStored,

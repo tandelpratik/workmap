@@ -68,8 +68,9 @@ are ever seeded, so production cannot be populated with fabricated data.
 
 ## Deploying
 
-The repository has no git remote yet. Either push it to GitHub and import the
-project in Vercel, or deploy from this machine:
+The repository is on GitHub at `tandelpratik/workmap`, so either import that
+project in Vercel and let it deploy on push to `main`, or deploy from this
+machine:
 
 ```
 npx vercel login
@@ -100,6 +101,53 @@ Two consequences worth knowing:
 `ap-southeast-2`. Confirm the region is available on the current plan at first
 deploy; if it is not, the application still works, and every database round trip
 crosses the Pacific twice.
+
+## Data passes a deploy does not run
+
+Migrations run themselves. **One-off data passes do not**, and the schema
+changes that need them are already merged, so this section is the difference
+between a correct deployment and a plausible-looking one.
+
+Each pass is idempotent and each dry-runs by default. Run them in this order the
+first time, from a machine with `DATABASE_URL` pointing at the production
+database:
+
+```
+npm run db:seed                             # mirrors config/sources.ts into the registry
+npm run postcodes:resolve -- --apply        # coordinates to ABS postal areas
+npm run regional:classify -- --apply        # places every location against LIN 22/022
+npm run sponsorship:reclassify -- --apply   # re-reads every description for wording
+```
+
+Run each without `--apply` first. Every one of them prints what it would change,
+and the shape of the corpus is known well enough that a surprise in the counts is
+a bug rather than a discovery. `npm run sponsorship:reclassify` printing 2,713
+changes instead of about 15 is exactly the signal that caught a comparison
+defect before it rewrote the corpus.
+
+**Why these are not part of the build.** They are passes over data rather than
+over schema, they take minutes rather than seconds, and two of them rewrite a
+published label on every listing in the product. A build that silently did that
+on every deploy would make an unreviewed reclassification the default, and a
+build that timed out halfway through one would leave the corpus half-converted
+with nothing recording how far it got.
+
+**What a deploy without them looks like.** Nothing breaks, in every case by
+design, and that is the danger: the failure is quiet.
+
+| Missed pass              | What a reader sees                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| `db:seed`                | A new source is absent from the registry, so anything ingested from it is refused             |
+| `postcodes:resolve`      | No postcodes, so listings fall back to the state rule or go unplaced                          |
+| `regional:classify`      | Every location reads "Location not established", so a regional search returns nothing         |
+| `sponsorship:reclassify` | Old affirmative labels sit on "Sponsorship may be considered" rather than their real strength |
+
+Every one of those is the safe direction rather than a wrong claim, which is why
+they are defaults. None of them is the right answer.
+
+`npm run data:check` is the confirmation. It is read-only, safe against
+production at any time, and the five `regional.*` checks will fail loudly if a
+classification pass did not finish or did not run.
 
 ## Scheduled ingestion
 

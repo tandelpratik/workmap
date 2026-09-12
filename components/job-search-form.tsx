@@ -1,5 +1,6 @@
 import { findSourceDescriptor } from '@/config/sources';
 import { sponsorshipLabel, sponsorshipSignals } from '@/domain/sponsorship';
+import { areaFilterLabel, areaFilters, type AreaFilter } from '@/domain/regional';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
@@ -47,25 +48,6 @@ import { FieldLabel } from '@/components/ui/label';
  * it gets the night edition wrong. See the note in globals.css.
  */
 const control = 'text-ink bg-paper mt-1 block h-11 w-full text-base outline-none';
-
-/**
- * Where an advertisement sits against the designated regional area instrument.
- *
- * The defining filter of the product, so it has an explicit default rather than
- * an "any" that happens to mean regional. `regional` is selected when nothing
- * is asked for, and the page says so in words above the results: a filter that
- * silently removes four listings in five has to announce itself.
- *
- * "Everywhere" is offered rather than withheld. A reader who wants to see what
- * is being left out is entitled to, and hiding the rest of the corpus would
- * make the size of the regional set impossible to judge.
- */
-const AREA_CHOICES = [
-  { value: 'regional', label: 'In a designated regional area' },
-  { value: 'elsewhere', label: 'Not in one' },
-  { value: 'unplaced', label: 'Location not established' },
-  { value: 'all', label: 'Everywhere' },
-] as const;
 
 /** How recently an advertisement was posted, by the employer's own date. */
 const POSTED_CHOICES = [
@@ -138,10 +120,17 @@ export function JobSearchForm({
       */}
       <HairlineCell className="py-2.5">
         <FieldLabel htmlFor="area">Area</FieldLabel>
+        {/*
+          Built from the domain's vocabulary, which the search page and the
+          public API also read. "Everywhere" is offered rather than withheld: a
+          reader who wants to see what the default leaves out is entitled to,
+          and hiding the rest would make the size of the regional set impossible
+          to judge.
+        */}
         <select id="area" name="area" defaultValue={area} className={control}>
-          {AREA_CHOICES.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
+          {Object.keys(areaFilters).map((value) => (
+            <option key={value} value={value}>
+              {areaFilterLabel(value as AreaFilter)}
             </option>
           ))}
         </select>

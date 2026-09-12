@@ -225,6 +225,56 @@ export function regionalLabel(status: RegionalStatus): string {
   }
 }
 
+/**
+ * The short name each placement goes by in an address or a control.
+ *
+ * One vocabulary, read by the search page, the search form and the public API.
+ * It began as three copies: a map in the page, a list of options in the form and
+ * nothing at all in the API, which is how the product's defining filter came to
+ * be missing from its own interface. A filter offered in one place and absent
+ * from another is not a smaller feature, it is two components disagreeing about
+ * what the product does.
+ *
+ * `all` maps to no filter rather than to a fourth status, because "everywhere"
+ * is the absence of the question rather than an answer to it.
+ */
+export const areaFilters = {
+  regional: 'REGIONAL',
+  elsewhere: 'NOT_REGIONAL',
+  unplaced: 'UNKNOWN',
+  all: null,
+} as const satisfies Record<string, RegionalStatus | null>;
+
+export type AreaFilter = keyof typeof areaFilters;
+
+/**
+ * What a request with no area asked for.
+ *
+ * Regional, because that is what the product is. A reader arriving at a regional
+ * job search should get regional work, and the surfaces that apply this default
+ * say in words that they have, because a filter removing most of the corpus has
+ * to announce itself rather than be inferred from a control.
+ */
+export const defaultAreaFilter: AreaFilter = 'regional';
+
+export function isAreaFilter(value: string | undefined): value is AreaFilter {
+  return value !== undefined && Object.hasOwn(areaFilters, value);
+}
+
+/** How each choice is offered to a reader. */
+export function areaFilterLabel(filter: AreaFilter): string {
+  switch (filter) {
+    case 'regional':
+      return 'In a designated regional area';
+    case 'elsewhere':
+      return 'Not in one';
+    case 'unplaced':
+      return 'Location not established';
+    case 'all':
+      return 'Everywhere';
+  }
+}
+
 /** The instrument's own words for its two categories. */
 export function regionalCategoryLabel(category: RegionalCategory): string {
   switch (category) {
