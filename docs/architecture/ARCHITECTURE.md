@@ -47,11 +47,16 @@ constitution disagree, the constitution wins.
 | `ingestion/`    | Import orchestration, runs, quarantine    | domain, db, integrations     |
 | `analytics/`    | Aggregation, data quality, source health  | domain, db, config           |
 | `geography/`    | Registry, geometry manifest, projection   | domain, db                   |
-| `skills/`       | A boundary; nothing built yet             | domain, db                   |
+| `skills/`       | Deterministic skill extraction from text  | domain                       |
 | `lib/`          | Framework-neutral utilities               | types                        |
 | `types/`        | Shared type declarations                  | nothing                      |
 | `tests/`        | Unit, integration, contract tests         | anything                     |
 | `scripts/`      | Offline build tasks (geometry, data prep) | anything                     |
+
+`skills/` reads advertisement text and returns what it found, and depends on
+`domain/` alone. It does not reach `db/`: the pass that writes its results is
+`ingestion/extract-skills.ts`, which keeps the extractor testable without a
+database and keeps persistence out of a module whose job is reading English.
 
 Search lives in `db/repositories/job.ts` rather than in a module of its own. A
 `search/` directory existed for a while describing full-text search with trigram

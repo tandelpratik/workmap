@@ -6,6 +6,8 @@ import { listUnresolvedGeographies } from '@/db/repositories/labour-market';
 import { lifecycle } from '@/config/lifecycle';
 import { findSourceDescriptor, sourceDescriptors } from '@/config/sources';
 import { containsPersonalInformation } from '@/domain/personal-information';
+import { extractSkills } from '@/skills/extract';
+import { skillVocabulary, skillsByNormalizedName } from '@/skills/vocabulary';
 import {
   contentRightFor,
   isProductionEligible,
@@ -812,6 +814,170 @@ async function lifecycleThresholdsAreOrdered(): Promise<CheckResult[]> {
   ];
 }
 
+/**
+ * Every attachment quotes the words that produced it.
+ *
+ * The same rule sponsorship evidence follows, and it matters more here than it
+ * looks. A skill on a listing is a claim that the advertisement asked for it,
+ * and `matchedText` is the only thing standing between that claim and a guess.
+ * An attachment with no quotation cannot be audited, cannot be explained to a
+ * reader, and cannot be told apart from one a future non-deterministic
+ * extractor inferred.
+ */
+async function skillAttachmentsAreEvidenced(db: Database): Promise<CheckResult[]> {
+  const rows = await db.$queryRaw<{ job_id: string }[]>`
+    SELECT job_id FROM job_skill
+    WHERE matched_text IS NULL OR btrim(matched_text) = ''
+    LIMIT 50
+  `;
+
+  return [
+    fail(
+      'skills.attachment-evidenced',
+      'Every skill attached to a listing quotes the words that attached it',
+      rows.length,
+      rows.map((row) => row.job_id),
+      'An attachment without its quotation is a guess. Run npm run skills:extract -- --apply.',
+    ),
+  ];
+}
+
+/**
+ * The skill table still says what the vocabulary says.
+ *
+ * `skills/vocabulary.ts` is the authority and the table mirrors it, so the two
+ * can disagree in three ways and all three matter. A row whose name or kind has
+ * drifted shows a reader a label the code no longer uses. A vocabulary entry
+ * with no row means the sync never ran, and every listing mentioning it is
+ * unattached. A row with no vocabulary entry is a withdrawn skill still holding
+ * attachments, which the extraction pass deliberately does not delete: losing
+ * evidence silently is worse than reporting it here and letting somebody
+ * decide.
+ */
+async function skillVocabularyIsInStep(db: Database): Promise<CheckResult[]> {
+  const rows = await db.skill.findMany({
+    select: { normalizedName: true, name: true, kind: true },
+  });
+
+  const stored = new Map(rows.map((row) => [row.normalizedName, row]));
+  const problems: string[] = [];
+
+  for (const skill of skillVocabulary) {
+    const row = stored.get(skill.normalizedName);
+    if (row === undefined) {
+      problems.push(`${skill.normalizedName}: in the vocabulary, not in the table`);
+      continue;
+    }
+    if (row.name !== skill.name) {
+      problems.push(`${skill.normalizedName}: stored name has drifted`);
+    }
+    if (row.kind !== skill.kind) {
+      problems.push(`${skill.normalizedName}: stored kind has drifted`);
+    }
+  }
+
+  for (const normalizedName of stored.keys()) {
+    if (!skillsByNormalizedName.has(normalizedName)) {
+      problems.push(`${normalizedName}: in the table, not in the vocabulary`);
+    }
+  }
+
+  return [
+    fail(
+      'skills.vocabulary-in-step',
+      'The stored skill table matches the vocabulary in name and kind, both ways',
+      problems.length,
+      problems.slice(0, MAX_EXAMPLES),
+      'Run npm run skills:extract -- --apply, which syncs the table before it attaches anything.',
+    ),
+  ];
+}
+
+/**
+ * The stored attachments are still the ones the extractor would produce.
+ *
+ * This is the check that earns its keep, and it is the skills equivalent of
+ * `regional.matches-instrument`. The unit tests assert the vocabulary behaves
+ * correctly on text written to exercise it; this asserts the corpus was
+ * actually read by the vocabulary the code currently holds, which is a
+ * different claim and the one that goes stale.
+ *
+ * Three things make it go stale, and none of them announces itself: tightening
+ * a pattern without re-running the pass, the redaction sweep rewriting a
+ * description out from under an attachment derived from it, and a re-import
+ * replacing a description with a longer or shorter one.
+ *
+ * Manual attachments are excluded. They are not derived from the text and are
+ * not supposed to be reproducible from it; that is what `MANUAL` means.
+ */
+async function storedSkillsMatchTheVocabulary(db: Database): Promise<CheckResult[]> {
+  const BATCH = 500;
+  let cursor: string | undefined;
+  let failures = 0;
+  const examples: string[] = [];
+
+  for (;;) {
+    const rows = await db.job.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        company: { select: { name: true } },
+        skills: {
+          where: { method: 'DETERMINISTIC' },
+          select: { matchedText: true, skill: { select: { normalizedName: true } } },
+        },
+      },
+      orderBy: { id: 'asc' },
+      take: BATCH,
+      ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+    });
+    if (rows.length === 0) break;
+    cursor = rows[rows.length - 1]?.id;
+
+    for (const row of rows) {
+      const expected = new Map(
+        extractSkills({
+          title: row.title,
+          description: row.description,
+          companyName: row.company?.name ?? null,
+        }).map((match) => [match.skill.normalizedName, match.matchedText]),
+      );
+
+      const actual = new Map(
+        row.skills.map((link) => [link.skill.normalizedName, link.matchedText ?? '']),
+      );
+
+      let agrees = expected.size === actual.size;
+      if (agrees) {
+        for (const [name, matchedText] of expected) {
+          if (actual.get(name) !== matchedText) {
+            agrees = false;
+            break;
+          }
+        }
+      }
+
+      if (agrees) continue;
+      failures += 1;
+      if (examples.length < MAX_EXAMPLES) examples.push(row.id);
+    }
+
+    if (rows.length < BATCH) break;
+  }
+
+  return [
+    fail(
+      'skills.matches-vocabulary',
+      'Every stored attachment is one the current vocabulary still reads from the text',
+      failures,
+      examples,
+      'The vocabulary changed without the pass being re-run, or a description was rewritten ' +
+        'under it. Run npm run skills:extract to see the difference first.',
+    ),
+  ];
+}
+
 const CHECKS = [
   noNegativeValues,
   missingnessIsModelled,
@@ -829,6 +995,9 @@ const CHECKS = [
   everyListingHasALicensedSource,
   storedContentIsPublishable,
   noPersonalInformationStored,
+  skillAttachmentsAreEvidenced,
+  skillVocabularyIsInStep,
+  storedSkillsMatchTheVocabulary,
 ] as const;
 
 /** Checks that need no database, so they run even with nothing configured. */

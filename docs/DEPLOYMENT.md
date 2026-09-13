@@ -117,6 +117,7 @@ npm run db:seed                             # mirrors config/sources.ts into the
 npm run postcodes:resolve -- --apply        # coordinates to ABS postal areas
 npm run regional:classify -- --apply        # places every location against LIN 22/022
 npm run sponsorship:reclassify -- --apply   # re-reads every description for wording
+npm run skills:extract -- --apply           # attaches the skills each advertisement names
 ```
 
 Run each without `--apply` first. Every one of them prints what it would change,
@@ -141,13 +142,17 @@ design, and that is the danger: the failure is quiet.
 | `postcodes:resolve`      | No postcodes, so listings fall back to the state rule or go unplaced                          |
 | `regional:classify`      | Every location reads "Location not established", so a regional search returns nothing         |
 | `sponsorship:reclassify` | Old affirmative labels sit on "Sponsorship may be considered" rather than their real strength |
+| `skills:extract`         | No listing carries a skill, so the credential a role requires is not recorded anywhere        |
 
 Every one of those is the safe direction rather than a wrong claim, which is why
 they are defaults. None of them is the right answer.
 
 `npm run data:check` is the confirmation. It is read-only, safe against
 production at any time, and the five `regional.*` checks will fail loudly if a
-classification pass did not finish or did not run.
+classification pass did not finish or did not run. `skills.matches-vocabulary`
+does the same for the extraction pass, and unlike the others it also catches the
+case where the pass ran correctly and the vocabulary has changed underneath it
+since.
 
 ## Scheduled ingestion
 

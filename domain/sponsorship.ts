@@ -67,6 +67,8 @@
  * which is true.
  */
 
+import { plainText, sentenceAt } from './text';
+
 export const sponsorshipSignals = [
   /** The advertisement states sponsorship is available, offered or provided. */
   'OFFERED',
@@ -240,99 +242,13 @@ const MENTIONED_WITHOUT_STRENGTH = [
 const NEGATORS =
   /\b(?:not|no|never|unable|cannot|can't|won't|will not|does not|do not|isn't|is not|are not|without|ineligible for|unavailable)\b/i;
 
-/**
- * How long a run of text may be before it stops being a sentence.
- *
- * Advertisements arrive as HTML and a bulleted list has no terminating
- * punctuation at all, so stripping the markup can leave hundreds of characters
- * with nothing to split on. Past this length the quotation is trimmed around
- * the phrase instead, which is a worse quotation than a sentence and a better
- * one than a wall of text.
+/*
+ * Text handling moved to domain/text.ts when skill extraction came to need the
+ * same two functions. Re-exported here because the sponsorship tests and the
+ * detector below are their oldest callers, and because what a sentence is was
+ * worked out for this module even though it does not belong to it.
  */
-const MAX_SENTENCE = 320;
-
-/** How much text either side of a phrase is kept when no sentence is found. */
-const FALLBACK_RADIUS = 110;
-
-/**
- * Strips markup and collapses whitespace.
- *
- * Advertisements arrive as HTML. A phrase split by a tag ("visa<b>
- * sponsorship</b>") must still match, so tags become spaces rather than
- * being deleted, which would fuse the words either side of them.
- */
-export function plainText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * The sentence a phrase sits in.
- *
- * Bounded by sentence-ending punctuation, and trimmed to a window around the
- * phrase where the text has no punctuation to bound it.
- *
- * The returned `from` and `to` are the sentence's own bounds, and stay the
- * sentence's bounds even when the quoted text has been trimmed to a window
- * inside them. They are the identity of the sentence for grouping, and that
- * distinction is the whole reason they are returned separately from the text.
- *
- * Two phrases in one sentence must resolve together, or an advertisement saying
- * "sponsorship is available for the right candidate" would be read as two
- * sentences disagreeing with each other. Returning the window bounds instead
- * broke exactly that: two overlapping patterns matched the same words with
- * different lengths, produced two windows differing by four characters, and a
- * real listing showed the reader the same quotation twice.
- */
-export function sentenceAt(
-  text: string,
-  start: number,
-  end: number,
-): { readonly text: string; readonly from: number; readonly to: number } {
-  let from = 0;
-  for (let index = start - 1; index >= 0; index -= 1) {
-    if (/[.!?]/.test(text[index] ?? '')) {
-      from = index + 1;
-      break;
-    }
-  }
-
-  let to = text.length;
-  for (let index = end; index < text.length; index += 1) {
-    if (/[.!?]/.test(text[index] ?? '')) {
-      to = index + 1;
-      break;
-    }
-  }
-
-  // Unpunctuated text, usually a flattened bullet list. Fall back to a window
-  // around the phrase rather than quoting a paragraph as though it were one
-  // sentence.
-  if (to - from > MAX_SENTENCE) {
-    const windowFrom = Math.max(from, start - FALLBACK_RADIUS);
-    const windowTo = Math.min(to, end + FALLBACK_RADIUS);
-    const prefix = windowFrom > from ? '…' : '';
-    const suffix = windowTo < to ? '…' : '';
-    return {
-      text: `${prefix}${text.slice(windowFrom, windowTo).trim()}${suffix}`,
-      // The sentence's bounds, not the window's. See the note above: these are
-      // an identity for grouping, and a window that moves with the phrase is
-      // not one.
-      from,
-      to,
-    };
-  }
-
-  return { text: text.slice(from, to).trim(), from, to };
-}
+export { plainText, sentenceAt } from './text';
 
 /**
  * Whether the words just before a match refuse it.

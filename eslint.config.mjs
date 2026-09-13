@@ -37,6 +37,15 @@ const boundaries = [
       'into the web layer or analytics.',
   },
   {
+    name: 'skills',
+    files: ['skills/**/*.ts'],
+    forbid: ['@/integrations/*', '@/ingestion/*', '@/db/*', '@/app/*', '@/components/*'],
+    reason:
+      'skills/ reads advertisement text and returns what it found. It must not know where ' +
+      'that text was stored or which provider supplied it. The batch pass that writes the ' +
+      'results lives in ingestion/.',
+  },
+  {
     name: 'lib',
     files: ['lib/**/*.ts'],
     forbid: ['@/app/*', '@/components/*', '@/db/*', '@/integrations/*', '@/domain/*'],

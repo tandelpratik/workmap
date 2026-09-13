@@ -103,6 +103,26 @@ blocked on an open licence question, ANZSCO against OSCA, recorded in the source
 register. Until it resolves, an unmapped listing stays unmapped rather than
 being guessed into a plausible code.
 
+## Skills have no reader-facing surface
+
+Extraction is built and the attachments are stored: 403 of 2,713 listings carry
+at least one skill, 498 attachments over 22 recognised skills
+([milestone 26](milestones/26-skill-extraction.md)). No page shows one and no
+filter uses one.
+
+This is the same order the regional classification was built in, data first and
+interface second, and the interface is the obvious next milestone. `/api/jobs`
+should learn the filter in the same change rather than after it, for the reason
+milestone 25 had to teach it `area`: a filter the page has and the API does not
+is a product whose public interface disagrees with its own pages.
+
+**Aggregate skill analytics are constrained rather than merely unbuilt.**
+Adzuna's terms bar publishing aggregates derived from their listings, so a
+"skills in demand" figure could only be drawn from Queensland Smart Jobs, which
+is Queensland Government vacancies and not a picture of any labour market.
+Per-listing display and filtering are unaffected: showing what one advertisement
+says, and selecting listings by it, is not an aggregate.
+
 ## Known limits
 
 **`/api/jobs` has no rate limit.** It is a public read endpoint over the

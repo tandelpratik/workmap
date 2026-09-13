@@ -34,6 +34,7 @@
     "jobs:dedupe": "tsx scripts/dedupe-jobs.ts",
     "jobs:redact": "tsx scripts/redact-stored-listings.ts",
     "sponsorship:reclassify": "tsx scripts/reclassify-sponsorship.ts",
+    "skills:extract": "tsx scripts/extract-skills.ts",
     "regional:build-regions": "tsx --max-old-space-size=8192 scripts/build-region-postcodes.ts",
     "postcodes:resolve": "tsx scripts/resolve-postcodes.ts",
     "regional:classify": "tsx scripts/classify-regional.ts",

@@ -63,6 +63,11 @@ advertised, and where it is unusually concentrated.
 describe a permission the software does not hold. Both derived datasets are
 downloadable as CSV or JSON with the licence written inside the file.
 
+Every listing is also read for the skills it names, deterministically and
+against a measured vocabulary: 403 of 2,713 listings carry at least one, mostly
+the credential a role requires. Nothing reader-facing uses them yet
+([milestone 26](milestones/26-skill-extraction.md)).
+
 ### Held back
 
 Labour market history is retained at two reference periods

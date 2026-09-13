@@ -54,10 +54,11 @@ and no corpus-wide listing count is published anywhere. See the
 [source register](docs/compliance/SOURCE_REGISTER.md).
 
 The site is not indexed. `robots: { index: false, follow: false }` stays set
-until the legal pages, canonical URLs and the regional classification exist,
-because a site that cannot answer for itself should not be inviting readers. The
-tagline names a filter the search does not yet apply, and indexing before it
-does would publish a claim the data cannot support.
+until the remaining legal pages exist, because a site that cannot answer for
+itself should not be inviting readers. The regional classification and the
+canonical URLs were the other two conditions and both have landed, so a privacy
+policy and terms of use are the last thing behind it, and those wait on a legal
+name and a contact address. See [BACKLOG.md](docs/BACKLOG.md).
 
 ## Requirements
 
@@ -98,6 +99,7 @@ The app runs at http://localhost:3000. Health is at `/api/health`.
 | `npm run data:check`             | Data quality checks. Read only, and exits non-zero on failure               |
 | `npm run jobs:redact`            | Sweep stored listings for contact details. Add `-- --apply`                 |
 | `npm run sponsorship:reclassify` | Re-read stored ads for sponsorship wording. Add `-- --apply`                |
+| `npm run skills:extract`         | Attach the skills each advertisement names. Add `-- --apply`                |
 | `npm run source:health`          | Whether each live source is still running                                   |
 | `npm run a11y:check`             | Structural accessibility, against a running server                          |
 
@@ -132,7 +134,7 @@ integrations/  one directory per external provider
 ingestion/     import orchestration
 analytics/     aggregation and summary refresh
 geography/     geography registry
-skills/        a boundary; nothing built yet
+skills/        deterministic skill extraction from advertisement text
 lib/           framework-neutral utilities
 tests/         unit and contract tests
 scripts/       offline build tasks
