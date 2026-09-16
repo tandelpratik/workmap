@@ -5,6 +5,7 @@ import { searchJobs } from '@/db/repositories/job';
 import { employmentTypes } from '@/domain/job';
 import { sponsorshipSignals } from '@/domain/sponsorship';
 import { areaFilters, defaultAreaFilter } from '@/domain/regional';
+import { skillsByNormalizedName } from '@/skills/vocabulary';
 import { statusForFailure } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
@@ -44,6 +45,27 @@ const querySchema = z.object({
     .default(defaultAreaFilter),
   /** A filter over what advertisements say, never over who may apply. */
   sponsorship: z.enum(sponsorshipSignals).optional(),
+  /*
+   * A skill the advertisement's own text names, by the vocabulary's stable
+   * key.
+   *
+   * Validated against the vocabulary rather than passed through, so an
+   * unrecognised value is a 400 naming the field rather than a silent empty
+   * result that a client would reasonably read as "no such jobs". The
+   * vocabulary is the same list the extraction pass and the search page read,
+   * so the three cannot disagree about what a skill is called.
+   *
+   * It filters on a mention. It does not assert the skill is mandatory, and an
+   * advertisement without it has not said it needs none: most listings here
+   * reach us as an excerpt.
+   */
+  skill: z
+    .string()
+    .trim()
+    .refine((value) => skillsByNormalizedName.has(value), {
+      message: 'Not a skill this product recognises.',
+    })
+    .optional(),
   page: z.coerce.number().int().min(1).max(500).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -73,7 +95,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { q, where, category, type, area, sponsorship, page, pageSize } = parsed.data;
+  const { q, where, category, type, area, sponsorship, skill, page, pageSize } =
+    parsed.data;
   const regional = areaFilters[area as keyof typeof areaFilters];
 
   const result = await searchJobs({
@@ -83,6 +106,7 @@ export async function GET(request: NextRequest) {
     ...(type ? { employmentType: type } : {}),
     ...(regional === null ? {} : { regional }),
     ...(sponsorship ? { sponsorship } : {}),
+    ...(skill ? { skill } : {}),
     page,
     pageSize,
   });
@@ -127,6 +151,7 @@ export async function GET(request: NextRequest) {
       filters: {
         area,
         ...(sponsorship === undefined ? {} : { sponsorship }),
+        ...(skill === undefined ? {} : { skill }),
         ...(q === undefined ? {} : { q }),
         ...(where === undefined ? {} : { where }),
         ...(category === undefined ? {} : { category }),

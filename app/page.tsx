@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { brand } from '@/config/brand';
 import { legal } from '@/config/legal';
 import { regionalAreas } from '@/config/regional-areas';
-import { listIndexedSources } from '@/db/repositories/job';
+import { listIndexedSources, listSkillsInUse } from '@/db/repositories/job';
 import { JobSearchForm } from '@/components/job-search-form';
 import {
   cachedOccupationTotals,
@@ -117,7 +117,7 @@ export default async function HomePage({
   }
   if (carried.size > 0) redirect(`/jobs?${carried.toString()}`);
 
-  const [totals, stateList, byOccupation, indexed] = await Promise.all([
+  const [totals, stateList, byOccupation, indexed, skillsHeld] = await Promise.all([
     cachedRegionTotals({
       sourceKey: SOURCE_KEY,
       dataset: DATASET,
@@ -136,6 +136,10 @@ export default async function HomePage({
     // which sources actually hold listings so it can offer that filter only
     // when there is a choice to make, and it is one grouped query.
     listIndexedSources(),
+    // The same, for the skills any live advertisement names. The front page
+    // carries the whole search rather than a preview of it, so it offers the
+    // same filters the search page does, built from the same two vocabularies.
+    listSkillsInUse(),
   ]);
 
   const period = totals.ok ? totals.value.period : null;
@@ -271,6 +275,8 @@ export default async function HomePage({
             source={undefined}
             postedWithin={undefined}
             sources={indexed.ok ? indexed.value : []}
+            skill={undefined}
+            skills={skillsHeld.ok ? skillsHeld.value : []}
           />
 
           <p className="text-ink-faint max-w-measure mt-4 text-sm leading-relaxed">

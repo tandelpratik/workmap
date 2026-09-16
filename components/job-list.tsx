@@ -5,6 +5,7 @@ import { salaryIsEstimated } from '@/domain/job';
 import type { EmploymentType, JobListing, Salary } from '@/domain/job';
 import { SponsorshipBadge } from './sponsorship-badge';
 import { RegionalNote } from './regional-note';
+import { SkillNote } from './skill-note';
 import { JobsworthLabel } from './adzuna-attribution';
 import { link } from '@/components/ui/link';
 
@@ -188,6 +189,20 @@ export function JobList({ jobs }: { jobs: readonly JobListing[] }) {
                 evidence={job.sponsorship.evidence}
               />
             </div>
+
+            {/*
+              What the advertisement's text named, under what it said about
+              sponsorship. The three readings of the document sit together and
+              in this order on purpose: where the job is, what it says about
+              who may apply, and what it asks of them. Nothing renders when
+              nothing was found, because a reassuring "no requirements listed"
+              would be a claim about the employer drawn from an excerpt.
+            */}
+            {job.skills.length === 0 ? null : (
+              <div className="mt-3">
+                <SkillNote skills={job.skills} />
+              </div>
+            )}
 
             {/*
               The original, linked in its own right.

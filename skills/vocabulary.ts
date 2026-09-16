@@ -1,4 +1,4 @@
-import type { SkillKind } from './kind';
+import type { SkillKind } from '@/domain/skill';
 
 /**
  * The controlled vocabulary of skills this product will recognise.
@@ -357,3 +357,38 @@ export const skillVocabulary: readonly SkillDefinition[] = [
 export const skillsByNormalizedName: ReadonlyMap<string, SkillDefinition> = new Map(
   skillVocabulary.map((skill) => [skill.normalizedName, skill]),
 );
+
+/** Where each entry sits in the list above. Built once, read by the sort. */
+const positions: ReadonlyMap<string, number> = new Map(
+  skillVocabulary.map((skill, index) => [skill.normalizedName, index]),
+);
+
+/**
+ * The order skills are shown in, wherever they are shown.
+ *
+ * One comparator rather than a rule written out at each surface. A listing
+ * names its skills in this order, the filter control offers them in this
+ * order, and the public API returns them in this order, so the three cannot
+ * drift into three different answers to a question a reader never asked.
+ *
+ * The order is the vocabulary's own: credentials first, then tools, then
+ * technical practice, each group most frequently observed first. That is
+ * roughly most useful first for this corpus, where the thing a reader needs to
+ * know is usually whether a role is closed to them until they hold a
+ * particular card.
+ *
+ * A key the vocabulary no longer holds sorts last, alphabetically, rather than
+ * to the front. Stored attachments outlive a withdrawn entry on purpose: the
+ * extraction pass reports such rows instead of cascading them away, because
+ * deleting evidence on an unrelated run destroys it quietly. Giving them
+ * position -1 would have promoted exactly those to the top of every list.
+ */
+export function compareSkills(
+  a: { readonly normalizedName: string; readonly name: string },
+  b: { readonly normalizedName: string; readonly name: string },
+): number {
+  const left = positions.get(a.normalizedName) ?? Number.MAX_SAFE_INTEGER;
+  const right = positions.get(b.normalizedName) ?? Number.MAX_SAFE_INTEGER;
+  if (left !== right) return left - right;
+  return a.name.localeCompare(b.name);
+}

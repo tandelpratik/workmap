@@ -37,6 +37,9 @@ const ROUTES = [
   '/occupations/24',
   '/jobs',
   '/jobs?where=QLD&type=FULL_TIME',
+  // A search that returns listings carrying skill lines, so the markup those
+  // produce is audited rather than only the markup of a listing without any.
+  '/jobs?skill=ahpra-registration&area=all',
   '/insights',
   '/compare',
   '/compare?placeA=queensland&placeB=victoria',

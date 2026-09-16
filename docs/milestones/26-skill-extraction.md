@@ -99,7 +99,12 @@ nothing to do with visas: the alternative was `skills/` importing the
 sponsorship module to find out where a full stop is.
 
 `skills/` now has a lint boundary like `domain/`, `components/`, `integrations/`
-and `lib/` before it. It may not import from `db/`, `ingestion/`,
+and `lib/` before it.
+
+(`skills/kind.ts` later moved to `domain/skill.ts`, in
+[milestone 27](27-skill-surface.md), so that a listing could carry a skill
+attachment without the domain importing the module that imports it. The
+patterns and the reading stayed here.) It may not import from `db/`, `ingestion/`,
 `integrations/`, `app/` or `components/`. It reads text and returns what it
 found; `ingestion/extract-skills.ts` is the half that knows where text is stored.
 

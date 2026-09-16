@@ -58,6 +58,15 @@ constitution disagree, the constitution wins.
 `ingestion/extract-skills.ts`, which keeps the extractor testable without a
 database and keeps persistence out of a module whose job is reading English.
 
+That dependency points one way and is kept pointing one way. The kind
+vocabulary, its reader-facing wording and the shape a listing carries are
+`domain/skill.ts`, beside `domain/sponsorship.ts` and `domain/regional.ts`,
+rather than inside `skills/`. A listing carries skill attachments, so
+`domain/job.ts` has to name a kind; had the vocabulary stayed in `skills/`, the
+centre of the graph would import from a module that imports it back. What lives
+in `skills/` is the reading: the patterns, the evidence they produce and the
+rule that nothing is attached to a listing that does not mention it.
+
 Search lives in `db/repositories/job.ts` rather than in a module of its own. A
 `search/` directory existed for a while describing full-text search with trigram
 fallback and keyset pagination; none of it was built, the query is `ILIKE`

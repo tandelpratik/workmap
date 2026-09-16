@@ -60,6 +60,7 @@ const SECTIONS = [
   { id: 'advertisements', title: 'Job advertisements' },
   { id: 'area', title: 'Where a job is' },
   { id: 'sponsorship', title: 'Visa sponsorship labels' },
+  { id: 'skills', title: 'Skills named in an advertisement' },
   { id: 'limitations', title: 'Limitations' },
   { id: 'corrections', title: 'Corrections' },
 ] as const;
@@ -482,6 +483,79 @@ export default async function MethodologyPage() {
                 Department of Home Affairs
               </a>
               .
+            </p>
+          </Prose>
+        </Section>
+
+        <Section id="skills" kicker="Listings" title="Skills named in an advertisement">
+          <Prose>
+            <p>
+              Some advertisements carry a line naming things their own text mentions: a
+              credential, a licence, a named piece of software. The line says the
+              advertisement mentions the thing. It does not say the employer treats it as
+              mandatory, and it is never an assessment of a reader.
+            </p>
+            <p>
+              Nothing is inferred. A skill is attached only where the advertisement writes
+              it, never from a job title and never because roles of that kind usually want
+              it. That rule is stricter than the one the sponsorship labels follow, and
+              deliberately: a wrong sponsorship label misstates an employer in public,
+              underneath the employer&rsquo;s own quoted sentence, where a reader can see
+              it. A wrong skill quietly removes a real job from a real person&rsquo;s
+              search and nobody ever sees it happen.
+            </p>
+          </Prose>
+
+          <Definitions>
+            <Definition term="A fixed list, measured first">
+              Only things on a list this product keeps are recognised, and every entry on
+              it was counted against the stored advertisements before it was added. The
+              list is credentials and licences first, because that is what this index is
+              mostly made of. A generic technology vocabulary would have produced a filter
+              that is empty on almost every search this site serves.
+            </Definition>
+            <Definition term="Phrases, not keywords">
+              A word alone is not enough where the word has another life.
+              &ldquo;Excel&rdquo; is a verb, and a professional who excels at critical
+              thinking is not a spreadsheet requirement, so a bare mention counts only
+              beside another Office program. &ldquo;Working with children&rdquo; describes
+              the work of an early-childhood role, so it counts as a Blue Card requirement
+              only where a check, card, clearance or screening follows it.
+            </Definition>
+            <Definition term="Required and desirable are not separated">
+              They cannot be, from this text. Advertisements in this index file mandatory
+              requirements under headings reading &ldquo;Highly Desirable&rdquo; and
+              desirable ones under &ldquo;Your mandatory requirements&rdquo;. The
+              advertisement&rsquo;s own words are shown beside the label instead, so a
+              reader can judge, and the original is one link away.
+            </Definition>
+            <Definition term="A listing with no line is not a job with no requirements">
+              It means this reading of the text held for that listing found nothing. Most
+              advertisements here reach us as a short excerpt rather than in full, and an
+              excerpt that stops before the requirements has nothing to read. Listings
+              that arrive whole name a skill around four times as often as excerpts do.
+            </Definition>
+          </Definitions>
+
+          <Prose>
+            <p className="mt-6">
+              Four things are deliberately not read. General working qualities such as
+              leadership and communication, because they appear in more than a quarter of
+              advertisements as description of the role rather than as anything asked of
+              an applicant, and a filter matching a quarter of an index separates nothing
+              from nothing. Occupations, because an occupation is the job rather than a
+              skill and classifying one is a separate problem with an unresolved licence
+              question behind it. Qualification levels, which say how much study a role
+              wants rather than what the holder can do. And vaccination status, which is
+              the most common requirement in this index and is health information about a
+              person rather than a skill.
+            </p>
+            <p>
+              No count of skills is published anywhere on this site. The licence covering
+              part of this index reserves aggregate figures, and a count drawn from the
+              rest would describe one state&rsquo;s public service rather than a labour
+              market. Showing what one advertisement says, and selecting advertisements by
+              it, is not an aggregate.
             </p>
           </Prose>
         </Section>

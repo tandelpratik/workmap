@@ -103,25 +103,41 @@ blocked on an open licence question, ANZSCO against OSCA, recorded in the source
 register. Until it resolves, an unmapped listing stays unmapped rather than
 being guessed into a plausible code.
 
-## Skills have no reader-facing surface
+## The skill attachment does not store its sentence
 
-Extraction is built and the attachments are stored: 403 of 2,713 listings carry
-at least one skill, 498 attachments over 22 recognised skills
-([milestone 26](milestones/26-skill-extraction.md)). No page shows one and no
-filter uses one.
+`skills/extract.ts` computes the whole sentence each match sits in and
+`ingestion/extract-skills.ts` writes only `matchedText`, the matched words. The
+listing lines built in [milestone 27](milestones/27-skill-surface.md) therefore
+quote a phrase where the sponsorship badge quotes a sentence.
 
-This is the same order the regional classification was built in, data first and
-interface second, and the interface is the obvious next milestone. `/api/jobs`
-should learn the filter in the same change rather than after it, for the reason
-milestone 25 had to teach it `area`: a filter the page has and the API does not
-is a product whose public interface disagrees with its own pages.
+The phrase is honest evidence and is often enough on its own: "blue card" under
+a Working with Children Check label shows a reader exactly what was read. It is
+weaker in the case that matters most, which is a requirement stated
+conditionally. "A current Blue Card, or the ability to obtain one" and "Blue
+Card held prior to commencement" reduce to the same two words.
+
+| Needed                                      | Cost                                   |
+| ------------------------------------------- | -------------------------------------- |
+| A `sentence` column on `job_skill`          | One migration                          |
+| Every stored attachment rewritten           | One `skills:extract --apply`, 498 rows |
+| `skills.attachment-evidenced` widened to it | One check, broken on purpose first     |
+
+Deliberately not done inside an interface milestone. Changing the stored shape
+of 498 rows as a side effect of building a page is how a data change reaches
+production without anybody having reviewed it as one, and the display works
+without it. Worth doing as its own small milestone, with the re-run reported the
+way the extraction pass reports every other one.
+
+Note that [milestone 26](milestones/26-skill-extraction.md) says "the attachment
+carries the sentence". That describes the extractor's return value, not the
+column, and is the one sentence in that document that overstates what was built.
 
 **Aggregate skill analytics are constrained rather than merely unbuilt.**
 Adzuna's terms bar publishing aggregates derived from their listings, so a
 "skills in demand" figure could only be drawn from Queensland Smart Jobs, which
 is Queensland Government vacancies and not a picture of any labour market.
-Per-listing display and filtering are unaffected: showing what one advertisement
-says, and selecting listings by it, is not an aggregate.
+Per-listing display and filtering are unaffected, and both now exist: showing
+what one advertisement says, and selecting listings by it, is not an aggregate.
 
 ## Known limits
 

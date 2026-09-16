@@ -1,3 +1,4 @@
+import type { Prisma } from '@/db/generated/client/client';
 import { getDatabase } from '../client';
 import { isSyntheticAllowed } from '@/config/env';
 import { findSourceDescriptor } from '@/config/sources';
@@ -13,8 +14,14 @@ import type {
   SalaryBasis,
   SalaryPeriod,
 } from '@/domain/job';
+import type { SkillAttachment } from '@/domain/skill';
 import type { SponsorshipEvidence, SponsorshipSignal } from '@/domain/sponsorship';
 import { unplaced } from '@/domain/regional';
+import {
+  compareSkills,
+  skillVocabulary,
+  type SkillDefinition,
+} from '@/skills/vocabulary';
 import type {
   ClassificationBasis,
   RegionalCategory,
@@ -79,6 +86,21 @@ export interface JobSearchQuery {
    */
   readonly regional?: RegionalStatus;
   /**
+   * Restrict to advertisements whose text names a particular skill.
+   *
+   * Keyed by the vocabulary's stable name, never by the display name, so
+   * rewording a skill for readers cannot silently change what a saved search
+   * returns.
+   *
+   * A filter over what an advertisement says, exactly as the sponsorship
+   * filter is. It selects advertisements that mention the thing; it does not
+   * assert the thing is mandatory, and it does not assert that an
+   * advertisement without it has no such requirement. Most of this corpus
+   * reaches us as an excerpt, so an absent skill is usually an absent
+   * paragraph.
+   */
+  readonly skill?: string;
+  /**
    * Restrict to advertisements posted within this many days.
    *
    * Measured from the employer's posting date, which every stored listing
@@ -133,6 +155,10 @@ interface JobRow {
     regionalCategory: string | null;
     regionalBasis: string;
   } | null;
+  skills: {
+    matchedText: string | null;
+    skill: { name: string; normalizedName: string; kind: string };
+  }[];
 }
 
 function toSalary(row: JobRow): Salary | null {
@@ -238,6 +264,30 @@ function toPlacement(row: JobRow): RegionalPlacement {
   };
 }
 
+/**
+ * What the advertisement's own text named, in the order everything shows it.
+ *
+ * Sorted here rather than in the page, so the public API and the page agree
+ * and neither has to know how a skill list is meant to read. The database has
+ * no opinion about the order of a join, and an unordered list would reshuffle
+ * itself between deployments for no reason a reader could see.
+ *
+ * `kind` is read from the row rather than looked up in the vocabulary. The two
+ * are kept in step by `skills.vocabulary-in-step`, and reading the stored
+ * value means a row whose vocabulary entry has been withdrawn still describes
+ * itself rather than arriving with a hole in it.
+ */
+function toSkills(row: JobRow): readonly SkillAttachment[] {
+  return row.skills
+    .map((link) => ({
+      name: link.skill.name,
+      normalizedName: link.skill.normalizedName,
+      kind: link.skill.kind as SkillAttachment['kind'],
+      matchedText: link.matchedText,
+    }))
+    .sort(compareSkills);
+}
+
 function toDomain(row: JobRow): JobListing {
   const descriptionPermitted = mayShowDescription(row.sourceKey);
 
@@ -271,6 +321,7 @@ function toDomain(row: JobRow): JobListing {
     lastVerifiedAt: row.lastVerifiedAt,
     firstSeenAt: row.firstSeenAt,
     status: row.status as JobStatus,
+    skills: toSkills(row),
     sourceKey: row.sourceKey,
     retrievedAt: row.retrievedAt,
   };
@@ -310,6 +361,25 @@ const jobSelect = {
       regionalBasis: true,
     },
   },
+  /*
+   * What each advertisement's text named, with the words that named it.
+   *
+   * `matchedText` travels with the skill because the label on its own is our
+   * reading of an advertisement and the label beside the advertisement's own
+   * words is a quotation a reader can check, which is the settlement the
+   * sponsorship evidence reached for the same reason.
+   *
+   * `method` is deliberately not selected. Whether a human or the batch pass
+   * attached a skill is an operational fact about this product, not a fact
+   * about the job, and publishing it would invite a reader to weigh two
+   * attachments differently when the evidence for both is the same sentence.
+   */
+  skills: {
+    select: {
+      matchedText: true,
+      skill: { select: { name: true, normalizedName: true, kind: true } },
+    },
+  },
 } as const;
 
 export async function searchJobs(
@@ -327,8 +397,131 @@ export async function searchJobs(
   const text = query.text?.trim();
   const location = query.location?.trim();
 
-  const where = {
-    status: 'ACTIVE' as const,
+  /*
+   * Every narrowing the caller asked for, as independent conditions.
+   *
+   * An array rather than one object, and that is a correctness fix rather than
+   * a tidying. Spreading each filter into a single literal means two filters
+   * that happen to reach for the same key silently overwrite each other, with
+   * the last one written winning and no error anywhere. Two pairs were doing
+   * exactly that:
+   *
+   *   - `regional` and `location` both wrote `location`. Any place search on
+   *     the jobs page therefore discarded the area filter, and because the page
+   *     defaults to regional and prints "Showing advertisements in a designated
+   *     regional area" above the results, a search for Brisbane returned 887
+   *     listings under a heading asserting they were regional, each carrying
+   *     its own label saying they were not. The product contradicted itself on
+   *     the same screen.
+   *   - `regional: 'UNKNOWN'` and `text` both wrote `OR`. A keyword search
+   *     inside the unplaced listings quietly widened to the whole corpus.
+   *
+   * Both were invisible because the collision produces a valid query returning
+   * plausible rows. Conditions that cannot share a key cannot collide, so this
+   * shape is what stops the next filter added here from doing it again, and
+   * `skill` below was going to be the next one.
+   */
+  const conditions: Prisma.JobWhereInput[] = [];
+
+  /*
+   * The plain-string filters test truthiness rather than definedness, so an
+   * empty string stays "no filter" instead of becoming "match the empty
+   * string", which is how a cleared form control would otherwise return
+   * nothing at all.
+   */
+  if (query.category) conditions.push({ sourceCategoryTag: query.category });
+  if (query.source) conditions.push({ sourceKey: query.source });
+  if (query.employmentType !== undefined) {
+    conditions.push({ employmentType: query.employmentType });
+  }
+  if (query.sponsorship !== undefined) {
+    conditions.push({ sponsorshipSignal: query.sponsorship });
+  }
+
+  /*
+   * Where the advertisement sits against the instrument.
+   *
+   * UNKNOWN has to reach through the relation and past it at once: a listing
+   * is unplaced either because the place it resolved to could not be settled,
+   * or because it resolved to no place at all. Filtering only on the relation
+   * would silently drop the second kind, which is the group most in need of
+   * being visible.
+   */
+  if (query.regional !== undefined) {
+    conditions.push(
+      query.regional === 'UNKNOWN'
+        ? {
+            OR: [
+              { location: { is: { regionalStatus: 'UNKNOWN' } } },
+              { locationId: null },
+            ],
+          }
+        : { location: { is: { regionalStatus: query.regional } } },
+    );
+  }
+
+  /*
+   * An advertisement whose text names this skill.
+   *
+   * `some` over the join, keyed by the vocabulary's stable name. The
+   * attachment itself is the claim, and it was written by a pass that quotes
+   * the words that produced it, so this filter inherits that evidence rather
+   * than adding a judgement of its own.
+   */
+  if (query.skill) {
+    conditions.push({
+      skills: { some: { skill: { is: { normalizedName: query.skill } } } },
+    });
+  }
+
+  if (query.postedWithinDays !== undefined) {
+    conditions.push({
+      postedAt: {
+        gte: new Date(Date.now() - query.postedWithinDays * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  /*
+   * A location term is one of two questions, and answering the wrong one is
+   * how "NT" came to return Queensland listings.
+   *
+   * A state abbreviation is matched against the resolved state and nothing
+   * else. Two letters are a substring of a great many Australian place
+   * names: "NT" sits inside Central, Mount and Sunshine, so a text match
+   * for the Northern Territory returned Central West Qld. Anything else is a
+   * place name, which is exactly what a substring match is for, and it keeps
+   * matching the state code as well so "Queensland" still works.
+   */
+  if (location !== undefined && location !== '') {
+    conditions.push(
+      isStateAbbreviation(location)
+        ? { location: { is: { stateCode: { equals: location.toUpperCase() } } } }
+        : {
+            location: {
+              is: {
+                OR: [
+                  { rawText: { contains: location, mode: 'insensitive' } },
+                  { stateCode: { equals: location.toUpperCase() } },
+                ],
+              },
+            },
+          },
+    );
+  }
+
+  if (text !== undefined && text !== '') {
+    conditions.push({
+      OR: [
+        { title: { contains: text, mode: 'insensitive' } },
+        { description: { contains: text, mode: 'insensitive' } },
+        { company: { is: { name: { contains: text, mode: 'insensitive' } } } },
+      ],
+    });
+  }
+
+  const where: Prisma.JobWhereInput = {
+    status: 'ACTIVE',
     // One row per vacancy. A listing grouped as a duplicate keeps its record
     // and its provenance and stops competing with the row that represents it
     // (milestone 15). Everything ungrouped is canonical by default, so this
@@ -337,72 +530,7 @@ export async function searchJobs(
     // Fixtures never reach a response unless this process is explicitly a
     // development one (ADR-0009).
     ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
-    ...(query.category ? { sourceCategoryTag: query.category } : {}),
-    ...(query.employmentType ? { employmentType: query.employmentType } : {}),
-    ...(query.sponsorship ? { sponsorshipSignal: query.sponsorship } : {}),
-    /*
-     * Where the advertisement sits against the instrument.
-     *
-     * UNKNOWN has to reach through the relation and past it at once: a listing
-     * is unplaced either because the place it resolved to could not be settled,
-     * or because it resolved to no place at all. Filtering only on the relation
-     * would silently drop the second kind, which is the group most in need of
-     * being visible.
-     */
-    ...(query.regional === undefined
-      ? {}
-      : query.regional === 'UNKNOWN'
-        ? {
-            OR: [
-              { location: { is: { regionalStatus: 'UNKNOWN' as const } } },
-              { locationId: null },
-            ],
-          }
-        : { location: { is: { regionalStatus: query.regional } } }),
-    ...(query.source ? { sourceKey: query.source } : {}),
-    ...(query.postedWithinDays === undefined
-      ? {}
-      : {
-          postedAt: {
-            gte: new Date(Date.now() - query.postedWithinDays * 24 * 60 * 60 * 1000),
-          },
-        }),
-    /*
-     * A location term is one of two questions, and answering the wrong one is
-     * how "NT" came to return Queensland listings.
-     *
-     * A state abbreviation is matched against the resolved state and nothing
-     * else. Two letters are a substring of a great many Australian place
-     * names: "NT" sits inside Central, Mount and Sunshine, so a text match
-     * for the Northern Territory returned Central West Qld. Anything else is a
-     * place name, which is exactly what a substring match is for, and it keeps
-     * matching the state code as well so "Queensland" still works.
-     */
-    ...(location
-      ? isStateAbbreviation(location)
-        ? { location: { is: { stateCode: { equals: location.trim().toUpperCase() } } } }
-        : {
-            location: {
-              is: {
-                OR: [
-                  { rawText: { contains: location, mode: 'insensitive' as const } },
-                  { stateCode: { equals: location.toUpperCase() } },
-                ],
-              },
-            },
-          }
-      : {}),
-    ...(text
-      ? {
-          OR: [
-            { title: { contains: text, mode: 'insensitive' as const } },
-            { description: { contains: text, mode: 'insensitive' as const } },
-            {
-              company: { is: { name: { contains: text, mode: 'insensitive' as const } } },
-            },
-          ],
-        }
-      : {}),
+    ...(conditions.length === 0 ? {} : { AND: conditions }),
   };
 
   const [rows, total] = await Promise.all([
@@ -470,6 +598,70 @@ export async function listIndexedSources(): Promise<Result<string[], Failure>> {
         ),
       ),
   );
+}
+
+/**
+ * Which skills any live advertisement actually names.
+ *
+ * Read so the skill control can offer only settings that can return something.
+ * The vocabulary holds 22 entries and every one of them was measured against
+ * the corpus before it was written, but that is a fact about the corpus on the
+ * day it was written: a re-import, a retirement sweep or a tightened pattern
+ * can empty one, and a control offering a skill nothing carries is a control
+ * with a setting that always returns nothing.
+ *
+ * **Deliberately without counts**, exactly as `listIndexedSources` is, and for
+ * the same reason. A list of skills is a filter vocabulary. A list of skills
+ * with a number beside each is a statistic about what employers are asking
+ * for, drawn from a corpus that includes Adzuna listings, and the Adzuna terms
+ * reserve "aggregation (including but not limited to vacancy counts, average
+ * salaries etc)" for a written licence. That a skill appears at all is what a
+ * control needs; how often it appears is the part we may not publish.
+ *
+ * Even if the licence allowed it, the figure would be worth little: 383 of the
+ * 403 skill-carrying listings are Queensland Government vacancies, so any
+ * count would describe one state's public service rather than a labour market.
+ *
+ * Returned as the vocabulary's own entries, in the vocabulary's order, so the
+ * control is grouped and worded from the single authority on what a skill is
+ * called. A stored row whose vocabulary entry has been withdrawn is dropped
+ * here rather than offered: its attachments are kept (the extraction pass
+ * never cascades them away) but a filter naming a skill the product no longer
+ * recognises would be offering a reader a definition it cannot explain.
+ */
+export async function listSkillsInUse(): Promise<
+  Result<readonly SkillDefinition[], Failure>
+> {
+  const database = getDatabase();
+  if (!database.ok) return database;
+
+  /*
+   * An existence test over the join rather than a group and count.
+   *
+   * It compiles to one EXISTS subquery, returns at most one row per skill, and
+   * is the shape of the question: which skills does any live advertisement
+   * name. A groupBy would compute the counts on the way to the same answer,
+   * and a count computed is a count that can later be returned by somebody who
+   * finds it already sitting there. The query that cannot produce the figure
+   * is the one to write.
+   */
+  const named = await database.value.skill.findMany({
+    where: {
+      jobs: {
+        some: {
+          job: {
+            status: 'ACTIVE',
+            isCanonical: true,
+            ...(isSyntheticAllowed() ? {} : { isSynthetic: false }),
+          },
+        },
+      },
+    },
+    select: { normalizedName: true },
+  });
+
+  const present = new Set(named.map((row) => row.normalizedName));
+  return ok(skillVocabulary.filter((skill) => present.has(skill.normalizedName)));
 }
 
 /**

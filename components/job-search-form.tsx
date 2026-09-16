@@ -1,6 +1,8 @@
 import { findSourceDescriptor } from '@/config/sources';
 import { sponsorshipLabel, sponsorshipSignals } from '@/domain/sponsorship';
 import { areaFilterLabel, areaFilters, type AreaFilter } from '@/domain/regional';
+import { skillKindLabel, type SkillKind } from '@/domain/skill';
+import type { SkillDefinition } from '@/skills/vocabulary';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 import { hairlineGrid, HairlineCell } from '@/components/ui/hairline-grid';
@@ -57,6 +59,36 @@ const POSTED_CHOICES = [
   { value: '30', label: 'Last month' },
 ] as const;
 
+/**
+ * How many blank cells the grid needs so no gap shows the rule colour.
+ *
+ * The band's dividers are its own background showing through a one pixel gap,
+ * which is what makes them one pixel at any zoom. The cost of that trick is
+ * that an unoccupied grid area is not empty space, it is a panel of
+ * `--color-rule`: a visible grey block beside the controls, in both editions.
+ *
+ * The column count changes twice, so the padding has to be worked out at each
+ * breakpoint and shown only there. One column never needs any. This replaces a
+ * single hand-placed filler that covered one arrangement of controls and
+ * stopped being right the moment a seventh was added.
+ */
+function fillerCount(cells: number, columns: number): number {
+  return (columns - (cells % columns)) % columns;
+}
+
+/** Skills grouped for the control, in the order the vocabulary lists them. */
+function groupByKind(
+  skills: readonly SkillDefinition[],
+): { kind: SkillKind; entries: SkillDefinition[] }[] {
+  const groups: { kind: SkillKind; entries: SkillDefinition[] }[] = [];
+  for (const skill of skills) {
+    const existing = groups.find((group) => group.kind === skill.kind);
+    if (existing) existing.entries.push(skill);
+    else groups.push({ kind: skill.kind, entries: [skill] });
+  }
+  return groups;
+}
+
 export function JobSearchForm({
   text,
   location,
@@ -66,6 +98,8 @@ export function JobSearchForm({
   source,
   postedWithin,
   sources,
+  skill,
+  skills,
 }: {
   text: string | undefined;
   location: string | undefined;
@@ -77,7 +111,25 @@ export function JobSearchForm({
   postedWithin: string | undefined;
   /** Registry keys of the sources actually holding listings. */
   sources: readonly string[];
+  /** The vocabulary key of the skill filtered on, if any. */
+  skill: string | undefined;
+  /**
+   * The vocabulary entries some live advertisement actually names.
+   *
+   * Passed in rather than read from the vocabulary directly, for the reason
+   * the source list is passed in: a control offering a setting that returns
+   * nothing is worse than a missing control, because it reports "none" where
+   * the truth is "nothing here says so".
+   */
+  skills: readonly SkillDefinition[];
 }) {
+  /*
+   * The controls actually rendered below. Six are unconditional; the other two
+   * appear only when they have something to offer, so the count is worked out
+   * here rather than written down and left to go stale.
+   */
+  const cells = 6 + (skills.length === 0 ? 0 : 1) + (sources.length < 2 ? 0 : 1);
+
   return (
     <form
       method="get"
@@ -199,13 +251,39 @@ export function JobSearchForm({
       </HairlineCell>
 
       {/*
+        What the advertisement's own text names.
+
+        Offered only over skills some live advertisement actually carries, and
+        worded as a mention rather than a requirement, which is the only claim
+        the extraction supports. Grouped by kind because "SAP" and "Yellow
+        Card" are not the same sort of answer to "what does this job ask for",
+        and ordered by the vocabulary so this control, the listing lines and
+        the public API read in one order.
+      */}
+      {skills.length === 0 ? null : (
+        <HairlineCell className="py-2.5">
+          <FieldLabel htmlFor="skill">Mentions</FieldLabel>
+          <select id="skill" name="skill" defaultValue={skill ?? ''} className={control}>
+            <option value="">Anything</option>
+            {groupByKind(skills).map((group) => (
+              <optgroup key={group.kind} label={skillKindLabel(group.kind)}>
+                {group.entries.map((entry) => (
+                  <option key={entry.normalizedName} value={entry.normalizedName}>
+                    {entry.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </HairlineCell>
+      )}
+
+      {/*
         Offered only when there is a choice to make. One source holding every
         listing makes this a control with a single meaningful setting, which is
         furniture rather than a filter.
       */}
-      {sources.length < 2 ? (
-        <div className="bg-paper hidden lg:block" />
-      ) : (
+      {sources.length < 2 ? null : (
         <HairlineCell className="py-2.5">
           <FieldLabel htmlFor="source">Source</FieldLabel>
           <select
@@ -223,6 +301,18 @@ export function JobSearchForm({
           </select>
         </HairlineCell>
       )}
+
+      {/*
+        The blanks that keep the last row from showing as a panel of rule
+        colour. Two counts rather than one, because the grid is two columns at
+        sm and three at lg and a single filler cannot be right at both.
+      */}
+      {Array.from({ length: fillerCount(cells, 2) }, (_, index) => (
+        <div key={`sm-${index}`} className="bg-paper hidden sm:block lg:hidden" />
+      ))}
+      {Array.from({ length: fillerCount(cells, 3) }, (_, index) => (
+        <div key={`lg-${index}`} className="bg-paper hidden lg:block" />
+      ))}
 
       <div className="bg-paper flex sm:col-span-2 lg:col-span-3">
         <Button type="submit" block className="m-2">

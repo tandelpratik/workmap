@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { SponsorshipFinding } from './sponsorship';
 import type { RegionalPlacement } from './regional';
+import type { SkillAttachment } from './skill';
 
 /**
  * Job listing contracts (ADR-0001).
@@ -172,6 +173,14 @@ export interface JobListing {
    * listing it was read from, never as a standalone claim about an employer.
    */
   readonly sponsorship: SponsorshipFinding;
+  /**
+   * What this advertisement's text named, as read by the skill vocabulary.
+   *
+   * On the listing for the reason the sponsorship finding is: it is only ever
+   * shown beside the advertisement it was read from, never as a standalone
+   * claim about an employer or an occupation.
+   */
+  readonly skills: readonly SkillAttachment[];
   readonly sourceKey: string;
   readonly retrievedAt: Date;
 }

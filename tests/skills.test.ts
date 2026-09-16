@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractSkills } from '@/skills/extract';
 import { skillVocabulary, skillsByNormalizedName } from '@/skills/vocabulary';
-import { skillKinds, skillKindLabel, type SkillKind } from '@/skills/kind';
+import { skillKinds, skillKindLabel, type SkillKind } from '@/domain/skill';
 import { SkillKind as PrismaSkillKind } from '@/db/generated/client/client';
 
 /**

@@ -4,11 +4,14 @@ import { findSourceDescriptor } from '@/config/sources';
 import {
   lastVerifiedBySource,
   listIndexedSources,
+  listSkillsInUse,
   searchJobs,
 } from '@/db/repositories/job';
 import { JobList } from '@/components/job-list';
 import { SponsorshipKey } from '@/components/sponsorship-badge';
 import { RegionalKey } from '@/components/regional-note';
+import { SkillKey } from '@/components/skill-note';
+import { skillsByNormalizedName } from '@/skills/vocabulary';
 import { JobSearchForm } from '@/components/job-search-form';
 import { sponsorshipSignals } from '@/domain/sponsorship';
 import { regionalAreas } from '@/config/regional-areas';
@@ -108,6 +111,7 @@ interface Filters {
   area?: string | undefined;
   sponsorship?: string | undefined;
   type?: string | undefined;
+  skill?: string | undefined;
   source?: string | undefined;
   posted?: string | undefined;
 }
@@ -129,6 +133,25 @@ function hrefFor(filters: Filters, page = 1): string {
   if (page > 1) search.set('page', String(page));
   const query = search.toString();
   return query === '' ? '/jobs' : `/jobs?${query}`;
+}
+
+/**
+ * The narrowings a reader can see themselves having typed, joined as a list.
+ *
+ * The empty state used to be assembled from the keyword and the location
+ * alone, so a search narrowed by anything else produced "Nothing in the index
+ * matches ." with a stray full stop, and then advised clearing a location that
+ * had never been set. That was reachable before by filtering on employment
+ * type alone; a skill filter makes it ordinary, because a skill is a filter a
+ * reader will use on its own.
+ *
+ * Only the three filters a reader phrased in their own words are named. The
+ * rest were chosen from a control that is still on screen showing what it is
+ * set to, and reciting them back would be a paragraph restating the form.
+ */
+function joinPhrases(phrases: readonly string[]): string {
+  if (phrases.length <= 1) return phrases[0] ?? '';
+  return `${phrases.slice(0, -1).join(', ')} and ${phrases.at(-1)}`;
 }
 
 export default async function JobsPage({
@@ -161,6 +184,24 @@ export default async function JobsPage({
   const requestedType = first(params['type']);
   const employmentType = employmentTypes.find((value) => value === requestedType);
 
+  /*
+   * Bounded against the vocabulary rather than against what the index happens
+   * to hold today.
+   *
+   * Two different authorities, deliberately. The vocabulary decides what a
+   * skill is, so a value it does not know is dropped; the corpus decides what
+   * the control offers, so a reader is never shown a setting that cannot
+   * return anything. A hand-typed key for a skill the vocabulary knows but no
+   * regional listing carries therefore reaches the search and produces the
+   * ordinary empty state, which already names the area filter as the likely
+   * cause. Silently widening the search instead would be the worse answer.
+   */
+  const requestedSkill = first(params['skill']);
+  const skill =
+    requestedSkill !== undefined && skillsByNormalizedName.has(requestedSkill)
+      ? requestedSkill
+      : undefined;
+
   const requestedSource = first(params['source']);
   const source =
     requestedSource !== undefined && findSourceDescriptor(requestedSource) !== undefined
@@ -183,6 +224,7 @@ export default async function JobsPage({
     ...(regional === undefined ? {} : { regional }),
     ...(sponsorship ? { sponsorship } : {}),
     ...(employmentType ? { employmentType } : {}),
+    ...(skill ? { skill } : {}),
     ...(source ? { source } : {}),
     ...(postedWithinDays === undefined ? {} : { postedWithinDays }),
     page,
@@ -204,10 +246,39 @@ export default async function JobsPage({
     ...(area === defaultAreaFilter ? {} : { area }),
     ...(sponsorship === undefined ? {} : { sponsorship }),
     ...(employmentType === undefined ? {} : { type: employmentType }),
+    ...(skill === undefined ? {} : { skill }),
     ...(source === undefined ? {} : { source }),
     ...(postedWithinDays === undefined ? {} : { posted: String(postedWithinDays) }),
   };
   const activeFilters = Object.keys(filters).length;
+
+  /*
+   * What the reader typed, in their own words, for the empty state.
+   *
+   * Read from the values that survived validation rather than the raw query
+   * string, so a discarded parameter is not quoted back at somebody as the
+   * reason their search found nothing.
+   */
+  const skillName =
+    skill === undefined ? undefined : skillsByNormalizedName.get(skill)?.name;
+  const searchedFor = [
+    ...(text === undefined ? [] : [`“${text}”`]),
+    ...(location === undefined ? [] : [`the location ${location}`]),
+    ...(skillName === undefined ? [] : [`advertisements naming ${skillName}`]),
+  ];
+  /*
+   * Advice that names something the reader actually set. Telling somebody to
+   * clear a location they never entered is worse than saying nothing: it sends
+   * them looking for a control they did not touch.
+   */
+  const advice =
+    text !== undefined && location !== undefined
+      ? 'Try a broader term, or clear the location.'
+      : text !== undefined
+        ? 'Try a broader term.'
+        : location !== undefined
+          ? 'Try a wider location.'
+          : 'Try clearing a filter.';
 
   const credentialsConfigured = getAdzunaCredentials() !== null;
   /*
@@ -240,11 +311,19 @@ export default async function JobsPage({
    */
   // Run together: the freshness of what is displayed, and the vocabulary the
   // source filter should offer. Two unrelated answers, one wait.
-  const [verified, indexed] = await Promise.all([
+  const [verified, indexed, skillsHeld] = await Promise.all([
     lastVerifiedBySource(shownSources),
     listIndexedSources(),
+    listSkillsInUse(),
   ]);
   const indexedSources = indexed.ok ? indexed.value : [];
+  /*
+   * An empty list on failure rather than an error, which is how the source
+   * vocabulary degrades too. A filter whose options could not be read is a
+   * missing control; it is not a reason to refuse a reader the search results
+   * that did load.
+   */
+  const heldSkills = skillsHeld.ok ? skillsHeld.value : [];
 
   const pages = result.ok
     ? Math.max(1, Math.ceil(result.value.total / result.value.pageSize))
@@ -309,6 +388,8 @@ export default async function JobsPage({
             postedWithinDays === undefined ? undefined : String(postedWithinDays)
           }
           sources={indexedSources}
+          skill={skill}
+          skills={heldSkills}
         />
 
         {activeFilters === 0 ? null : (
@@ -359,11 +440,10 @@ export default async function JobsPage({
         ) : result.value.total === 0 ? (
           <Notice title="No listings match this search">
             <p>
-              Nothing in the index matches
-              {text === undefined ? '' : ` “${text}”`}
-              {text !== undefined && location !== undefined ? ' in' : ''}
-              {location === undefined ? '' : ` ${location}`}. Try a broader term, or clear
-              the location.
+              {searchedFor.length === 0
+                ? 'Nothing in the index matches the filters set above.'
+                : `Nothing in the index matches ${joinPhrases(searchedFor)}.`}{' '}
+              {advice}
             </p>
             {area === defaultAreaFilter ? (
               /*
@@ -492,6 +572,37 @@ export default async function JobsPage({
                   Department of Home Affairs
                 </a>
                 .
+              </p>
+            </section>
+
+            {/*
+              What the lines naming skills mean, and more importantly what a
+              listing without any means.
+
+              Last of the three keys because it is the least consequential of
+              them: a misread area label sends somebody to the wrong side of a
+              migration instrument and a misread sponsorship label misstates an
+              employer, where a missed skill costs a reader one advertisement.
+              It still needs saying, because absence here is systematically
+              misleading in a way the other two are not. Six listings in
+              seven carry no skill line, and usually because the advertisement
+              reached us as an excerpt rather than because the job asks for
+              nothing.
+            */}
+            <section className="border-rule-strong mt-12 border-t pt-5">
+              <Label as="h2">About the skill lines</Label>
+              <SkillKey />
+              <p className="text-ink-faint max-w-measure mt-4 text-xs leading-relaxed">
+                Skills are read from the advertisement&rsquo;s own text against a fixed
+                list of things this product recognises, and every entry on that list was
+                counted against the stored advertisements before it was added. The list is
+                credentials and licences first because that is what this index is mostly
+                made of. It is not an occupation classification and does not try to be
+                one: see{' '}
+                <a href="/methodology" className={link()}>
+                  the methodology
+                </a>{' '}
+                for what is read and what is deliberately left alone.
               </p>
             </section>
           </>

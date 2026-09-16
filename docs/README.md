@@ -65,8 +65,13 @@ downloadable as CSV or JSON with the licence written inside the file.
 
 Every listing is also read for the skills it names, deterministically and
 against a measured vocabulary: 403 of 2,713 listings carry at least one, mostly
-the credential a role requires. Nothing reader-facing uses them yet
-([milestone 26](milestones/26-skill-extraction.md)).
+the credential a role requires
+([milestone 26](milestones/26-skill-extraction.md)). A listing that named one
+says so, quoting the advertisement's own words, and job search can be narrowed
+to it from the page and from `/api/jobs`
+([milestone 27](milestones/27-skill-surface.md)). No count of skills is
+published: showing what one advertisement says is not an aggregate, and an
+aggregate is what the Adzuna licence reserves.
 
 ### Held back
 
