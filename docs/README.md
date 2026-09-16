@@ -13,6 +13,8 @@ The product constitution and milestone specifications live in `.claude/`:
 
 | Document                                                                           | Purpose                                                                              |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [SETUP.md](SETUP.md)                                                               | Getting the project running locally, from nothing, at a beginner level               |
+| [DEPLOYMENT.md](DEPLOYMENT.md)                                                     | Deploying it, the environment it needs, and the data passes a deploy does not run    |
 | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)                       | Consolidated technical view: modules, boundaries, data flow                          |
 | [adr/README.md](adr/README.md)                                                     | Architecture decision records and their status                                       |
 | [compliance/SOURCE_REGISTER.md](compliance/SOURCE_REGISTER.md)                     | Per-source compliance status, and what each licence permits                          |
@@ -21,6 +23,9 @@ The product constitution and milestone specifications live in `.claude/`:
 | [BACKLOG.md](BACKLOG.md)                                                           | Deferred work, what each item waits on, and what it blocks in turn                   |
 
 ## Reading order for a new contributor
+
+Start with [SETUP.md](SETUP.md) if you need the project running first. It is
+written for someone who has not seen the repository before and assumes nothing.
 
 1. `.claude/CLAUDE.md`: the rules.
 2. [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md): the system.

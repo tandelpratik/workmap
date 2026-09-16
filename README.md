@@ -77,6 +77,13 @@ npm run dev
 
 The app runs at http://localhost:3000. Health is at `/api/health`.
 
+That is enough to see the site. It will have no data in it, because no listing
+in this product is ever fabricated and there is no fixture loader to pretend
+otherwise. [docs/SETUP.md](docs/SETUP.md) is the full walkthrough: a database of
+your own, real advertisements fetched from a source that needs no credentials,
+and the four passes that turn them into what the product shows. It assumes no
+prior knowledge of the stack.
+
 ## Commands
 
 | Command                          | Purpose                                                                     |
@@ -145,6 +152,8 @@ Each directory has a README stating its boundary. Search lives in
 
 ## Documentation
 
+- [Setup](docs/SETUP.md), the full local walkthrough for a new developer
+- [Deployment](docs/DEPLOYMENT.md), and the data passes a deploy does not run
 - [Architecture](docs/architecture/ARCHITECTURE.md), the consolidated view
 - [Design system](docs/architecture/DESIGN_SYSTEM.md), the house style and its rules
 - [Decision records](docs/adr/README.md), and why the system is shaped this way
